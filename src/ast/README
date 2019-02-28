@@ -1,0 +1,15 @@
+The purpose of constructing an AST is that:
+    1. the parse tree genereated by antlr has only limited ability.
+        Its nodes are plain and simple, with few methods or fields,
+        which means their polymorphism ability is low (can't do what
+        you wanna them to do), and they cannot hold as much synthesized
+        attribute as you want.
+
+    2. build ast frame out of parse tree is only the first small step of
+        ast IR building, which followed by several passes of semantic
+        analysis: variable resolution, type checking, quads building, etc.
+        They require polymorphism to accomplish such a complicated job.
+
+
+
+Hence, I need to reconstruct parse tree in the form of ast, honestly.
