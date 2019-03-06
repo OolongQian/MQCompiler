@@ -1,0 +1,46 @@
+Bread bro teaches me 
+
+龙书ch6
+
+LLVM文档
+
+如何设计三地址中间代码的数据结构，以便于基本块分析和代码优化？ - RednaxelaFX的回答 - 知乎
+https://www.zhihu.com/question/33518780/answer/56731699
+
+single static assignment 
+https://blog.csdn.net/liumf2005/article/details/8690377
+
+Basically, we are going to write a piece of linear text to represent the machine code.
+This is done by constructing a list of basic blocks.
+CFG can be constructed easily by traversing over these linked list in one pass.
+
+The data structure is organized as classes in JAVA.
+The number of their types are largely reduced compared with AST.
+Plan to construct a IRBuildVisitor which emits code during the traversal over AST.
+IRBuildVisitor returns IR object.
+
+Chen LeQun's data structure:
+IRNode, BranchInstruction, IntComparison, IntImmediate, LoadInstruction, PhiNode, StoreInstruction, UnaryOperation.
+
+I think duplicated variable names under different scopes is not a problem for IR generating,
+because don't misunderstand IR generation for IR interpreter.
+IR interpreter needs a symbol table and an abundant runtime environment to equip it for interpretation.
+
+
+Do alloca when declaration.
+Put it into the symbol table.
+Expressions are calculated using virtual registers.
+Assignment are used as store instructions.
+Symbol table lookup is implemented via load instruction.
+The virtual register indices are reset when jumping into a new function.
+
+Look, between functions, the local variable names won't shadow each other.
+But this doesn't address the scope problem, which means the same variable name
+appears repeatedly in multiple nested scopes within the same function.
+And llvm distinguishes them, and gives them different names, because note that
+there's no scope problem in llvm any more.
+How to distinguish associate variables with their declaration? thread is ok.
+
+BasicBlocks belong to functions.
+
+Logic Expression happens to be the one needs 短路求值, what a fortune.

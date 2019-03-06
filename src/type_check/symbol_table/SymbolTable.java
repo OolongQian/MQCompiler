@@ -14,7 +14,7 @@ import java.util.Enumeration;
 /**
  * This is a class private to front.Symbol package, used by SymbolTable class, and it is used to
  * 1. record value corresponding to key.
- * 2. record the previous Binder in the form of linkedList to build a stack (together with hashTable we get a linked
+ * 2. record the previous Binder in the form of linkedList to builder1 a stack (together with hashTable we get a linked
  *    -list for Binders).
  * 3. record the previous Binder with the same key (override by its insertion) so that the
  *    previous version of value can be recovered.

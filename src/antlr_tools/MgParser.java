@@ -72,7 +72,7 @@ public class MgParser extends Parser {
 			null, null, null, null, null, null, null, null, null, "LogicConstant", 
 			"PosIntegerConstant", "StringConstant", "LineComment", "BlockComment", 
 			"WhiteSpace", "NewLine", "Bool", "Int", "String", "Void", "Null", "True", 
-			"False", "If", "Else", "For", "While", "Break", "Continue", "Return", 
+			"False", "If", "Else", "For", "While", "Break", "Continue", "Return_",
 			"New", "Class", "This", "Identifier"
 		};
 	}

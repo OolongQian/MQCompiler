@@ -6,6 +6,11 @@ import ast.usage.AstBaseVisitor;
 public class BoolLiteralExp extends LiteralExp {
   public boolean value;
 
+  @Override
+  public String GetIrTmp() {
+    return Boolean.toString(value);
+  }
+
   public BoolLiteralExp() {
     this.varTypeRefDec = new VarTypeRef("bool");
   }
@@ -24,7 +29,7 @@ public class BoolLiteralExp extends LiteralExp {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

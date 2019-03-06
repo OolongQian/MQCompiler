@@ -71,7 +71,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
    * with which the actual classDec could be found in classTable.
    * */
   private SymbolTable<TypeRef> symbolTable = new SymbolTable<>();
-
+  private SymbolTable<VarDec> varAssociator = new SymbolTable<>();
   /**
    * curClass resolve the type of 'this'.
    * TODO : requirement 3. maybe there's a nicer way.
@@ -274,9 +274,10 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     classTable.put(key, classDec);
     // class creates a brand-new scope.
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     curClass = classDec;
 
-    // build fields first because they can be forwardly referenced.
+    // builder1 fields first because they can be forwardly referenced.
     for (int i = 0; i < classDec.field.size(); ++i)
       visit(classDec.field.get(i));
     // then, traverse over class methods and constructors.
@@ -288,6 +289,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     // exit class declaration.
     curClass = null;
     symbolTable.EndScope();
+    varAssociator.EndScope();
     return null;
   }
 
@@ -303,6 +305,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     if (varDec.inital != null)
       visit(varDec.inital);
     symbolTable.Put(key, varDec.varType);
+    varAssociator.Put(key, varDec);
     return null;
   }
 
@@ -326,6 +329,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     symbolTable.Put(key, functDec.functType);
 
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     // non-constructor function has explicit returnType.
     if (!(functDec instanceof ConstructDec))
       returnStack.push(functDec.returnType);
@@ -337,6 +341,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     if (!(functDec instanceof ConstructDec))
       returnStack.pop();
     symbolTable.EndScope();
+    varAssociator.EndScope();
     return null;
   }
 
@@ -354,9 +359,11 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
   @Override
   public Void visit(BlockStm blockStm) {
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     for (int i = 0; i < blockStm.children.size(); ++i)
       visit(blockStm.children.get(i));
     symbolTable.EndScope();
+    varAssociator.EndScope();
     return null;
   }
 
@@ -386,22 +393,27 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     if (symbolTypeRef == null)
       throw new RuntimeException("Reference an undefined variable...\n" + varExp.LocationToString());
     varExp.varTypeRefDec = symbolTypeRef;
+    varExp.varDec = varAssociator.Get(key);
     return null;
   }
 
   @Override
   public Void visit(ForStm forStm) {
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     super.visit(forStm);
     symbolTable.EndScope();
+    varAssociator.EndScope();
     return null;
   }
 
   @Override
   public Void visit(WhileStm whileStm) {
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     super.visit(whileStm);
     symbolTable.EndScope();
+    varAssociator.EndScope();
     return null;
   }
 
@@ -409,12 +421,16 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
   public Void visit(IfStm ifStm) {
     visit(ifStm.condition);
     symbolTable.BeginScope();
+    varAssociator.BeginScope();
     visit(ifStm.thenBody);
     symbolTable.EndScope();
+    varAssociator.EndScope();
     if (ifStm.elseBody != null) {
       symbolTable.BeginScope();
+      varAssociator.BeginScope();
       visit(ifStm.elseBody);
       symbolTable.EndScope();
+      varAssociator.EndScope();
     }
     return null;
   }

@@ -44,7 +44,7 @@ public class MgLexer extends Lexer {
 			"StringConstant", "StringCharacters", "StringCharacter", "EscapeSequence", 
 			"LineComment", "BlockComment", "WhiteSpace", "NewLine", "Bool", "Int", 
 			"String", "Void", "Null", "True", "False", "If", "Else", "For", "While", 
-			"Break", "Continue", "Return", "New", "Class", "This", "Identifier"
+			"Break", "Continue", "Return_", "New", "Class", "This", "Identifier"
 		};
 	}
 	public static final String[] ruleNames = makeRuleNames();
@@ -68,7 +68,7 @@ public class MgLexer extends Lexer {
 			null, null, null, null, null, null, null, null, null, "LogicConstant", 
 			"PosIntegerConstant", "StringConstant", "LineComment", "BlockComment", 
 			"WhiteSpace", "NewLine", "Bool", "Int", "String", "Void", "Null", "True", 
-			"False", "If", "Else", "For", "While", "Break", "Continue", "Return", 
+			"False", "If", "Else", "For", "While", "Break", "Continue", "Return_",
 			"New", "Class", "This", "Identifier"
 		};
 	}

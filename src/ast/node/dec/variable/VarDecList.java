@@ -16,7 +16,7 @@ public class VarDecList extends Dec {
 
   /**
    * Search for a variable from Variable Declaration List.
-   * Return null if the declaration cannot be found.
+   * Return_ null if the declaration cannot be found.
    * */
   public VarDec GetVarDec(String varName) {
     for (int i = 0; i < varDecs.size(); ++i) {
@@ -38,7 +38,7 @@ public class VarDecList extends Dec {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

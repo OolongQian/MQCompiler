@@ -18,7 +18,7 @@ abstract public class Ast implements ParserPosition {
     return self.SelfDeclare() + TabShift(raw);
   }
 
-  abstract public void Accept (AstBaseVisitor visitor);
+  abstract public <T> T Accept (AstBaseVisitor<T> visitor);
 
 
   /**

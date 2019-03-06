@@ -14,6 +14,10 @@ public class ForControl extends Stm {
   public Exp check;
   public List<Exp> updateExps = new LinkedList<>();
 
+  public boolean isInitNull() {
+    return initDec == null && initExps.size() == 0;
+  }
+
   @Override
   public String toString() {
     String selfie = "(";
@@ -38,7 +42,7 @@ public class ForControl extends Stm {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

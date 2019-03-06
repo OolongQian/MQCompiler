@@ -14,7 +14,7 @@ public class EmptyStm extends Stm {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

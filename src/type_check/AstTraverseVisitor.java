@@ -12,6 +12,7 @@ import ast.node.exp.FunctCallExp;
 import ast.node.exp.MethodCallExp;
 import ast.node.exp.binary.ArithBinaryExp;
 import ast.node.exp.binary.LogicBinaryExp;
+import ast.node.exp.literal.IntLiteralExp;
 import ast.node.exp.lvalue.ArrayAccessExp;
 import ast.node.exp.lvalue.FieldAccessExp;
 import ast.node.exp.lvalue.ThisExp;
@@ -274,4 +275,5 @@ public class AstTraverseVisitor<T> extends AstBaseVisitor<T> {
     }
     return null;
   }
+
 }

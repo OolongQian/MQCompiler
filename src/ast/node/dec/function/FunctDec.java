@@ -6,6 +6,7 @@ import ast.typeref.FunctTypeRef;
 import ast.typeref.VarTypeRef;
 import ast.usage.AstBaseVisitor;
 import ast.util.DecArgs;
+import ir_codegen.util.BasicBlock;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +16,10 @@ public class FunctDec extends Dec {
   public VarTypeRef returnType = new VarTypeRef();
   public DecArgs arguments = new DecArgs();
   public List<Stm> functBody = new LinkedList<>();
+
+  // used in ir-codegen.
+  private BasicBlock basicBlock = new BasicBlock();
+
 
   public FunctDec() {}
 
@@ -28,6 +33,10 @@ public class FunctDec extends Dec {
     returnType = other.returnType;
     arguments = other.arguments;
     functBody = other.functBody;
+  }
+
+  public BasicBlock GetHeadBB () {
+    return basicBlock;
   }
 
   @Override
@@ -54,7 +63,7 @@ public class FunctDec extends Dec {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

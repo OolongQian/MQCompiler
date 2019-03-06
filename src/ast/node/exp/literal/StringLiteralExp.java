@@ -6,6 +6,11 @@ import ast.usage.AstBaseVisitor;
 public class StringLiteralExp extends LiteralExp {
   public String value;
 
+  @Override
+  public String GetIrTmp() {
+    return value;
+  }
+
   public StringLiteralExp(String value) {
     this.varTypeRefDec = new VarTypeRef("string");
     this.value = value;
@@ -17,7 +22,7 @@ public class StringLiteralExp extends LiteralExp {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }

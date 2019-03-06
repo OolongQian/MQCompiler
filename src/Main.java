@@ -4,6 +4,8 @@ import antlr_tools.MgParser;
 import ast.builder.AstBuilder;
 import ast.builder.ParserErrorHandlerStrategy;
 import ast.node.prog.Prog;
+import ir_codegen_.IRPrintVisitor;
+import ir_codegen.builder.IRGenVisitor;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -14,32 +16,6 @@ import type_check.TypeThreadVisitor;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
-
-class Animal {
-  int a;
-
-  public Animal(int a) {
-    this.a = a;
-  }
-
-  boolean Equal (Animal animal) {
-    return a == animal.a;
-  }
-}
-
-class Dog extends Animal {
-  int b;
-
-  public Dog(int a, int b) {
-    super(a);
-    this.b = b;
-  }
-
-  boolean Equal (Dog dog) {
-    return b == dog.b;
-  }
-
-}
 
 public class Main {
 
@@ -68,5 +44,11 @@ public class Main {
 
     FormatCheckVisitor formatCheckVisitor = new FormatCheckVisitor(typeCheckVisitor);
     formatCheckVisitor.FormatCheck(prog);
+
+    IRGenVisitor irGenVisitor = new IRGenVisitor(formatCheckVisitor);
+    irGenVisitor.IRCodegen(prog);
+
+    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(irGenVisitor.GetIR());
+    System.out.println(irPrintVisitor.VisitAndPrintIR());
   }
 }

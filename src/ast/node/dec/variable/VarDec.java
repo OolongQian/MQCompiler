@@ -11,6 +11,8 @@ public class VarDec extends Dec {
   public String varName;
   public Exp inital;
 
+  public String hintName;
+
   public VarDec() { }
 
   public VarDec(VarTypeRef varType, String varName) {
@@ -32,8 +34,8 @@ public class VarDec extends Dec {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 
 }

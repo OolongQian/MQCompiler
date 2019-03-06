@@ -24,7 +24,7 @@ import ast.typeref.ArrayTypeRef;
 import ast.typeref.VarTypeRef;
 
 /**
- * This is an antlr parse tree visitor intended to build an abstracted syntax tree.
+ * This is an antlr parse tree visitor intended to builder1 an abstracted syntax tree.
  * This AstBuilder tries to duplicate antlr parse tree, following the original syntactic
  * format honestly. By recording the entire information literally, it provides a
  * playground for later type-checking.

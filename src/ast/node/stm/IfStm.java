@@ -2,6 +2,7 @@ package ast.node.stm;
 
 import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
+import ir_codegen.util.BasicBlock;
 
 /**
  * Condition and then can't be null.
@@ -10,6 +11,10 @@ public class IfStm extends Stm {
   public Exp condition;
   public Stm thenBody;
   public Stm elseBody;
+
+  public BasicBlock ifTrue;
+  public BasicBlock ifFalse;
+  public BasicBlock ifMerge;
 
   @Override
   protected String SelfDeclare() {
@@ -26,7 +31,7 @@ public class IfStm extends Stm {
   }
 
   @Override
-  public void Accept(AstBaseVisitor visitor) {
-    visitor.visit(this);
+  public <T> T Accept(AstBaseVisitor<T> visitor) {
+    return visitor.visit(this);
   }
 }
