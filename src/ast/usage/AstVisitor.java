@@ -19,8 +19,6 @@ import ast.node.exp.unary.PrefixExp;
 import ast.node.exp.unary.SuffixExp;
 import ast.node.prog.Prog;
 import ast.node.stm.*;
-import ast.typeref.ArrayTypeRef;
-import ast.typeref.FunctTypeRef;
 import ast.typeref.VarTypeRef;
 import ast.util.DecArgs;
 
@@ -31,8 +29,6 @@ public interface AstVisitor<T> {
   T visit (Dec dec);
 
   T visit (LiteralExp literalExp);
-
-  T visit (LValueExp lValueExp);
 
   T visit (Exp exp);
 
@@ -85,10 +81,6 @@ public interface AstVisitor<T> {
   T visit (MethodCallExp methodCallExp);
 
   T visit (NullExp nullExp);
-
-  T visit (ArrayTypeRef arrayTypeRef);
-
-  T visit (FunctTypeRef functTypeRef);
 
   T visit (VarTypeRef varTypeRef);
 

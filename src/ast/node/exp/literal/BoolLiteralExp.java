@@ -4,25 +4,20 @@ import ast.typeref.VarTypeRef;
 import ast.usage.AstBaseVisitor;
 
 public class BoolLiteralExp extends LiteralExp {
-  public boolean value;
-
-  @Override
-  public String GetIrTmp() {
-    return Boolean.toString(value);
-  }
+  public boolean val;
 
   public BoolLiteralExp() {
-    this.varTypeRefDec = new VarTypeRef("bool");
+    this.varTypeRef = VarTypeRef.CreatePrimitiveType("bool");
   }
 
   public BoolLiteralExp(boolean value) {
-    this.varTypeRefDec = new VarTypeRef("bool");
-    this.value = value;
+    this.varTypeRef = VarTypeRef.CreatePrimitiveType("bool");
+      this.val = value;
   }
 
   @Override
   public String toString() {
-    if (value)
+    if (val)
       return "true";
     else
       return "false";

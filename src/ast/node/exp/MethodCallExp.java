@@ -1,9 +1,13 @@
 package ast.node.exp;
 
+import ast.node.dec.class_.ClassDec;
+import ast.node.dec.function.MethodDec;
 import ast.usage.AstBaseVisitor;
 
 public class MethodCallExp extends FunctCallExp {
   public Exp objInstance;
+  public ClassDec calledClass;
+  public MethodDec calledMethod;
 
   public MethodCallExp(Exp objInstance, String methodName) {
     super(methodName);

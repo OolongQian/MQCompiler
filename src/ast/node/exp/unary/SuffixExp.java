@@ -5,6 +5,7 @@ import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
 
 public class SuffixExp extends Exp {
+  // NOTE : objInstance is a LValue Actually. 
   public Exp objInstance;
   public String op;
 

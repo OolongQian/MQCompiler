@@ -11,36 +11,67 @@ import ast.usage.AstBaseVisitor;
 import java.util.LinkedList;
 import java.util.List;
 
+import static ast.typeref.VarTypeRef.CreatePrimitiveType;
+
 public class ClassDec extends Dec {
-  public VarTypeRef classTypeName = new VarTypeRef();
-  public List<FieldDec> field = new LinkedList<>();
+  public VarTypeRef classType;
+  // NOTE : fieldList maintains format info, fields smash them off.
+  public List<FieldDec> fieldList = new LinkedList<>();
+  public List<VarDec> fields = new LinkedList<>();
   public List<MethodDec> method = new LinkedList<>();
   public ConstructDec constructor = null;
+  public boolean builtIn = false;
 
+  /**
+   * Constructor
+   * */
   public ClassDec(String className) {
-    classTypeName.typeName = className;
+    classType = CreatePrimitiveType(className);
+    classType.SetBaseType(this);
   }
 
   /**
+   * Getter and setter.
+   *********************************************************************/
+  public String GetClassName () {
+    return classType.typeName;
+  }
+
+  public void MarkBuiltIn() {
+    builtIn = true;
+    method.forEach(x -> x.builtIn = true);
+  }
+
+  public void AddFieldList(FieldDec fList) {
+    fieldList.add(fList);
+    fields.addAll(fList.varDecs);
+  }
+
+  /**
+   * Find method
    * Search for Field Declaration from a literal variable name string.
-   * */
+   ***********************************************************************/
   public VarDec FindField(String fieldName) {
-    VarDec temp;
-    for (int i = 0; i < field.size(); ++i) {
-      if ( (temp = field.get(i).GetVarDec(fieldName)) != null)
-        return temp;
+    VarDec tmp;
+    for(int i = 0; i < fields.size(); ++i) {
+      tmp = fields.get(i);
+      if (tmp.varName.equals(fieldName))
+        return tmp;
     }
     return null;
   }
 
   public MethodDec FindMethod(String methodName) {
     for (int i = 0; i < method.size(); ++i) {
-      if (method.get(i).functType.typeName.equals(methodName))
+      if (method.get(i).functName.equals(methodName))
         return method.get(i);
     }
     return null;
   }
 
+
+  /** utility
+   * *****************************************************************/
   @Override
   protected String SelfDeclare() {
     return "ClassDec: \n";
@@ -48,18 +79,7 @@ public class ClassDec extends Dec {
 
   @Override
   public String PrettyPrint() {
-    String selfie = "class " + classTypeName.toString() + "\n" + TabShift("{\n");
-    ++tab;
-    for (int i = 0; i < field.size(); ++i)
-      selfie += field.get(i).PrettyPrint();
-    for (int i = 0; i < method.size(); ++i)
-      selfie += method.get(i).PrettyPrint();
-    if (constructor != null)
-      constructor.PrettyPrint();
-
-    --tab;
-    selfie += TabShift("}\n");
-    return Formatter(this, selfie);
+    return null;
   }
 
   @Override

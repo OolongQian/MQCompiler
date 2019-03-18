@@ -1,9 +1,10 @@
 package ast.node.exp.lvalue;
 
 import ast.node.exp.Exp;
+import ast.node.stm.ExpStm;
 import ast.usage.AstBaseVisitor;
 
-public class ArrayAccessExp extends LValueExp {
+public class ArrayAccessExp extends Exp  {
   public Exp arrInstance;
   public Exp accessor;
 

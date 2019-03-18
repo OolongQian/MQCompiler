@@ -5,6 +5,7 @@ import ast.usage.AstBaseVisitor;
 public class GlobalVarDec extends VarDecList {
   public GlobalVarDec(VarDecList varDecList) {
     super(varDecList);
+    varDecList.varDecs.forEach(x -> x.isGlobal = true);
   }
 
   @Override

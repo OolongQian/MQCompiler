@@ -6,7 +6,7 @@ public class CreationExp extends Exp {
 
   @Override
   public String toString() {
-    return "new " + varTypeRefDec.toString();
+    return "new " + varTypeRef.toString();
   }
 
   @Override

@@ -2,13 +2,13 @@ package ast.node.exp.unary;
 
 
 import ast.node.exp.Exp;
-import ast.node.exp.lvalue.LValueExp;
 import ast.usage.AstBaseVisitor;
 
 /**
  * ++a is a left value.
  * */
-public class PrefixExp extends LValueExp {
+public class PrefixExp extends Exp {
+  // NOTE : objInstance is a LValue Actually.
   public Exp objInstance;
   public String op;
 

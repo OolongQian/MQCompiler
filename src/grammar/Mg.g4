@@ -346,7 +346,7 @@ NewLine
     ;
 
 // ---- Reserved Keywords ----
-Bool                : 'bool' ; // for data types
+Bool                : 'bool' ; // for reg types
 Int                 : 'int' ;
 String              : 'string' ;
 Void                : 'void' ;

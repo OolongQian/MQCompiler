@@ -2,7 +2,6 @@ package ast.node.stm;
 
 import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
-import ir_codegen.util.BasicBlock;
 
 /**
  * Condition can't be null.
@@ -10,15 +9,6 @@ import ir_codegen.util.BasicBlock;
 public class WhileStm extends Stm {
   public Exp condition;
   public Stm whileBody;
-
-  public BasicBlock cond;
-  public BasicBlock step; // run into next loop cycle
-  public BasicBlock after; // the piece of code
-
-  @Override
-  public BasicBlock GetLoopAfter() {
-    return after;
-  }
 
   @Override
   protected String SelfDeclare() {

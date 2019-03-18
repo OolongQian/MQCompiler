@@ -5,7 +5,7 @@ import ast.node.dec.Dec;
 import ast.node.dec.class_.ClassDec;
 import ast.node.dec.function.FunctDec;
 import ast.usage.AstBaseVisitor;
-import type_check.symbol_table.Symbol;
+import semantic.symbol_table.Symbol;
 
 import java.util.Hashtable;
 import java.util.LinkedList;

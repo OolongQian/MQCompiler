@@ -1,17 +1,13 @@
-// Generated from /Users/qiansucheng/Desktop/ACM班/2019春/编译原理/QMCompiler/MComplierQ_v4/src/grammar/Mg.g4 by ANTLR 4.7.2
-package antlr_tools;
+package antlr_tools;// Generated from Mg.g4 by ANTLR 4.7.1
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.misc.*;
 import org.antlr.v4.runtime.tree.*;
 import java.util.List;
-import java.util.Iterator;
-import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class MgParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -39,44 +35,35 @@ public class MgParser extends Parser {
 		RULE_stringLiteral = 35, RULE_logicLiteral = 36, RULE_type = 37, RULE_simpleType = 38, 
 		RULE_primitiveType = 39, RULE_userType = 40, RULE_arrayType = 41, RULE_arrayDimDecList = 42, 
 		RULE_arrayDimDec = 43;
-	private static String[] makeRuleNames() {
-		return new String[] {
-			"prog", "dec", "varDec", "varDeclaratorList", "varDeclarator", "functDec", 
-			"functDecParaList", "functDecPara", "classDec", "classBody", "classBodyDec", 
-			"constructorDec", "stm", "expStm", "blockStm", "varDecStm", "ifStm", 
-			"whileStm", "forStm", "forControl", "forInit", "forUpdate", "breakStm", 
-			"continueStm", "returnStm", "emptyStm", "exp", "primaryExp", "literal", 
-			"arrayAccessor", "arguments", "expList", "creator", "arrayCreatorDim", 
-			"integerLiteral", "stringLiteral", "logicLiteral", "type", "simpleType", 
-			"primitiveType", "userType", "arrayType", "arrayDimDecList", "arrayDimDec"
-		};
-	}
-	public static final String[] ruleNames = makeRuleNames();
+	public static final String[] ruleNames = {
+		"prog", "dec", "varDec", "varDeclaratorList", "varDeclarator", "functDec", 
+		"functDecParaList", "functDecPara", "classDec", "classBody", "classBodyDec", 
+		"constructorDec", "stm", "expStm", "blockStm", "varDecStm", "ifStm", "whileStm", 
+		"forStm", "forControl", "forInit", "forUpdate", "breakStm", "continueStm", 
+		"returnStm", "emptyStm", "exp", "primaryExp", "literal", "arrayAccessor", 
+		"arguments", "expList", "creator", "arrayCreatorDim", "integerLiteral", 
+		"stringLiteral", "logicLiteral", "type", "simpleType", "primitiveType", 
+		"userType", "arrayType", "arrayDimDecList", "arrayDimDec"
+	};
 
-	private static String[] makeLiteralNames() {
-		return new String[] {
-			null, "';'", "','", "'='", "'('", "')'", "'{'", "'}'", "'++'", "'--'", 
-			"'+'", "'-'", "'!'", "'~'", "'*'", "'/'", "'%'", "'<<'", "'>>'", "'>'", 
-			"'>='", "'<'", "'<='", "'=='", "'!='", "'&'", "'^'", "'|'", "'&&'", "'||'", 
-			"'.'", "'['", "']'", null, null, null, null, null, null, null, "'bool'", 
-			"'int'", "'string'", "'void'", "'null'", "'true'", "'false'", "'if'", 
-			"'else'", "'for'", "'while'", "'break'", "'continue'", "'return'", "'new'", 
-			"'class'", "'this'"
-		};
-	}
-	private static final String[] _LITERAL_NAMES = makeLiteralNames();
-	private static String[] makeSymbolicNames() {
-		return new String[] {
-			null, null, null, null, null, null, null, null, null, null, null, null, 
-			null, null, null, null, null, null, null, null, null, null, null, null, 
-			null, null, null, null, null, null, null, null, null, "LogicConstant", 
-			"PosIntegerConstant", "StringConstant", "LineComment", "BlockComment", 
-			"WhiteSpace", "NewLine", "Bool", "Int", "String", "Void", "Null", "True", 
-			"False", "If", "Else", "For", "While", "Break", "Continue", "Return_",
-			"New", "Class", "This", "Identifier"
-		};
-	}
-	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
+	private static final String[] _LITERAL_NAMES = {
+		null, "';'", "','", "'='", "'('", "')'", "'{'", "'}'", "'++'", "'--'", 
+		"'+'", "'-'", "'!'", "'~'", "'*'", "'/'", "'%'", "'<<'", "'>>'", "'>'", 
+		"'>='", "'<'", "'<='", "'=='", "'!='", "'&'", "'^'", "'|'", "'&&'", "'||'", 
+		"'.'", "'['", "']'", null, null, null, null, null, null, null, "'bool'", 
+		"'int'", "'string'", "'void'", "'null'", "'true'", "'false'", "'if'", 
+		"'else'", "'for'", "'while'", "'break'", "'continue'", "'return'", "'new'", 
+		"'class'", "'this'"
+	};
+	private static final String[] _SYMBOLIC_NAMES = {
+		null, null, null, null, null, null, null, null, null, null, null, null, 
+		null, null, null, null, null, null, null, null, null, null, null, null, 
+		null, null, null, null, null, null, null, null, null, "LogicConstant", 
+		"PosIntegerConstant", "StringConstant", "LineComment", "BlockComment", 
+		"WhiteSpace", "NewLine", "Bool", "Int", "String", "Void", "Null", "True", 
+		"False", "If", "Else", "For", "While", "Break", "Continue", "Return", 
+		"New", "Class", "This", "Identifier"
+	};
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 
 	/**
@@ -126,7 +113,6 @@ public class MgParser extends Parser {
 		super(input);
 		_interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
-
 	public static class ProgContext extends ParserRuleContext {
 		public TerminalNode EOF() { return getToken(MgParser.EOF, 0); }
 		public List<DecContext> dec() {
@@ -621,7 +607,6 @@ public class MgParser extends Parser {
 
 	public static class ClassDecContext extends ParserRuleContext {
 		public Token className;
-		public TerminalNode Class() { return getToken(MgParser.Class, 0); }
 		public ClassBodyContext classBody() {
 			return getRuleContext(ClassBodyContext.class,0);
 		}
@@ -1548,7 +1533,6 @@ public class MgParser extends Parser {
 	}
 
 	public static class BreakStmContext extends ParserRuleContext {
-		public TerminalNode Break() { return getToken(MgParser.Break, 0); }
 		public BreakStmContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -1592,7 +1576,6 @@ public class MgParser extends Parser {
 	}
 
 	public static class ContinueStmContext extends ParserRuleContext {
-		public TerminalNode Continue() { return getToken(MgParser.Continue, 0); }
 		public ContinueStmContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -1636,7 +1619,6 @@ public class MgParser extends Parser {
 	}
 
 	public static class ReturnStmContext extends ParserRuleContext {
-		public TerminalNode Return() { return getToken(MgParser.Return, 0); }
 		public ExpContext exp() {
 			return getRuleContext(ExpContext.class,0);
 		}

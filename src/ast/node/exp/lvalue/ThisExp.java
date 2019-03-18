@@ -1,8 +1,9 @@
 package ast.node.exp.lvalue;
 
+import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
 
-public class ThisExp extends LValueExp {
+public class ThisExp extends Exp {
 
   @Override
   public String toString() {

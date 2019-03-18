@@ -19,8 +19,6 @@ import ast.node.exp.unary.PrefixExp;
 import ast.node.exp.unary.SuffixExp;
 import ast.node.prog.Prog;
 import ast.node.stm.*;
-import ast.typeref.ArrayTypeRef;
-import ast.typeref.FunctTypeRef;
 import ast.typeref.VarTypeRef;
 import ast.util.DecArgs;
 
@@ -43,12 +41,6 @@ public class AstBaseVisitor<T> implements AstVisitor<T> {
   @Override
   public T visit(LiteralExp literalExp) {
     return literalExp.Accept(this);
-  }
-
-  @Override
-  public T visit(LValueExp lValueExp) {
-    return lValueExp.Accept(this);
-    
   }
 
   @Override
@@ -180,16 +172,6 @@ public class AstBaseVisitor<T> implements AstVisitor<T> {
 
   @Override
   public T visit(NullExp nullExp) {
-    return null;
-  }
-
-  @Override
-  public T visit(ArrayTypeRef arrayTypeRef) {
-    return null;
-  }
-
-  @Override
-  public T visit(FunctTypeRef functTypeRef) {
     return null;
   }
 

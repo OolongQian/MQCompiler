@@ -20,7 +20,6 @@ import ast.node.exp.unary.PrefixExp;
 import ast.node.exp.unary.SuffixExp;
 import ast.node.prog.Prog;
 import ast.node.stm.*;
-import ast.typeref.ArrayTypeRef;
 import ast.typeref.VarTypeRef;
 
 /**
@@ -64,14 +63,15 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
         classDec.constructor = (ConstructDec) ref;
       else if (ref instanceof MethodDec)
         classDec.method.add((MethodDec) ref);
-      else if (ref instanceof FieldDec)
-        classDec.field.add((FieldDec) ref);
+      else if (ref instanceof FieldDec) {
+        classDec.AddFieldList((FieldDec) ref);
+      }
     }
 //      classDec.member.add((Dec) visit(ctx.classBody().classBodyDec(i)));
     --scope;
 
     if (classDec.constructor != null)
-      classDec.constructor.returnType = classDec.classTypeName;
+      classDec.constructor.returnType = classDec.classType;
 
     return classDec;
   }
@@ -80,7 +80,7 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
   public Ast visitConstructorDec(MgParser.ConstructorDecContext ctx) {
     ConstructDec constructDec = new ConstructDec();
     constructDec.SetPosition(ctx);
-    constructDec.functType.typeName = ctx.className.getText();
+    constructDec.functName = ctx.className.getText();
 
     ++scope;
     inFunct = true;
@@ -101,8 +101,8 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
   public Ast visitFunctDec(MgParser.FunctDecContext ctx) {
     FunctDec functDec = new FunctDec();
     functDec.SetPosition(ctx);
-    functDec.functType.typeName = ctx.functName.getText();
-    functDec.returnType.typeName = ctx.simpleType().getText();
+    functDec.functName = ctx.functName.getText();
+    functDec.returnType = VarTypeRef.CreatePrimitiveType(ctx.simpleType().getText());
 
     ++scope;
     inFunct = true;
@@ -136,16 +136,19 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
 
   @Override
   public Ast visitSimpleType(MgParser.SimpleTypeContext ctx) {
-    VarTypeRef varTypeRef = new VarTypeRef(ctx.getText());
+    VarTypeRef varTypeRef = VarTypeRef.CreatePrimitiveType(ctx.getText());
     varTypeRef.SetPosition(ctx);
     return varTypeRef;
   }
 
   @Override
   public Ast visitArrayType(MgParser.ArrayTypeContext ctx) {
-    ArrayTypeRef arrayTypeRef = new ArrayTypeRef(ctx.simpleType().getText(), ctx.arrayDimDecList().arrayDimDec().size());
-    arrayTypeRef.SetPosition(ctx);
-    return arrayTypeRef;
+    VarTypeRef type = VarTypeRef.CreatePrimitiveType(ctx.simpleType().getText());
+    for (int i = 0; i < ctx.arrayDimDecList().arrayDimDec().size(); ++i) {
+      type = VarTypeRef.CreateArrayType(type, null);
+    }
+    type.SetPosition(ctx);
+    return type;
   }
 
   @Override
@@ -314,7 +317,7 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
 
   @Override
   public Ast visitAssignExp(MgParser.AssignExpContext ctx) {
-    AssignExp assignExp = new AssignExp((LValueExp) visit(ctx.lhs), (Exp) visit(ctx.rhs));
+    AssignExp assignExp = new AssignExp((Exp) visit(ctx.lhs), (Exp) visit(ctx.rhs));
     assignExp.SetPosition(ctx);
     return assignExp;
   }
@@ -360,9 +363,9 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
     BoolLiteralExp boolLiteralExp = new BoolLiteralExp();
     boolLiteralExp.SetPosition(ctx);
     if (ctx.LogicConstant().getText().equals("true"))
-      boolLiteralExp.value = true;
+      boolLiteralExp.val = true;
     else
-      boolLiteralExp.value = false;
+      boolLiteralExp.val = false;
     return boolLiteralExp;
   }
 
@@ -376,15 +379,18 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
     CreationExp creationExp = new CreationExp();
     creationExp.SetPosition(ctx);
     if (ctx.arrayCreatorDim() != null && ctx.arrayCreatorDim().size() != 0) {
-      ArrayTypeRef arrayTypeRef = new ArrayTypeRef(ctx.simpleType().getText(), ctx.arrayCreatorDim().size());
-      arrayTypeRef.SetPosition(ctx);
-      for (int i = 0; i < ctx.arrayCreatorDim().size(); ++i) {
+      VarTypeRef arrType = VarTypeRef.CreatePrimitiveType(ctx.simpleType().getText());
+      // NOTE : for arrayType, the right most dimension is its base dimension, we should create arrayType from right to left.
+      for (int i = ctx.arrayCreatorDim().size() - 1; i >= 0; --i) {
+        Exp bound = null;
         if (ctx.arrayCreatorDim(i).exp() != null)
-          arrayTypeRef.SetBound(i, (Exp) visit(ctx.arrayCreatorDim(i).exp()));
+          bound = (Exp) visit(ctx.arrayCreatorDim(i).exp());
+        arrType = VarTypeRef.CreateArrayType(arrType, bound);
       }
-      creationExp.varTypeRefDec = arrayTypeRef;
+      arrType.SetPosition(ctx);
+      creationExp.varTypeRef = arrType;
     } else {
-      creationExp.varTypeRefDec = (VarTypeRef) visit(ctx.simpleType());
+      creationExp.varTypeRef = (VarTypeRef) visit(ctx.simpleType());
     }
     return creationExp;
   }

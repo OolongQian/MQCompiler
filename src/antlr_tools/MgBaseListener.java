@@ -1,5 +1,4 @@
-// Generated from /Users/qiansucheng/Desktop/ACM班/2019春/编译原理/QMCompiler/MComplierQ_v4/src/grammar/Mg.g4 by ANTLR 4.7.2
-package antlr_tools;
+package antlr_tools;// Generated from Mg.g4 by ANTLR 4.7.1
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;

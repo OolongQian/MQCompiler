@@ -6,7 +6,7 @@ import ast.usage.AstBaseVisitor;
 public class NullExp extends Exp {
 
   public NullExp() {
-    varTypeRefDec = new VarTypeRef("null");
+    varTypeRef = VarTypeRef.CreatePrimitiveType("null");
   }
 
   @Override

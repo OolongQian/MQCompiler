@@ -1,17 +1,14 @@
-
 import antlr_tools.MgLexer;
 import antlr_tools.MgParser;
 import ast.builder.AstBuilder;
 import ast.builder.ParserErrorHandlerStrategy;
 import ast.node.prog.Prog;
-import ir_codegen_.IRPrintVisitor;
-import ir_codegen.builder.IRGenVisitor;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import type_check.FormatCheckVisitor;
-import type_check.TypeCheckVisitor;
-import type_check.TypeThreadVisitor;
+import semantic.FormatCheckVisitor;
+import semantic.TypeCheckVisitor;
+import semantic.TypeThreadVisitor;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -20,6 +17,7 @@ import java.io.InputStream;
 public class Main {
 
   public static void main(String[] args) throws Exception {
+  
     InputStream is = System.in;
     String inputFile = null;
     if (args.length > 0) inputFile = args[0];
@@ -35,7 +33,6 @@ public class Main {
     AstBuilder astBuilder = new AstBuilder();
     Prog prog = (Prog) astBuilder.visit(tree);
 
-    System.out.println(prog.PrettyPrint());
     TypeThreadVisitor typeThreadVisitor = new TypeThreadVisitor();
     typeThreadVisitor.BuildThread(prog);
 
@@ -45,10 +42,18 @@ public class Main {
     FormatCheckVisitor formatCheckVisitor = new FormatCheckVisitor(typeCheckVisitor);
     formatCheckVisitor.FormatCheck(prog);
 
-    IRGenVisitor irGenVisitor = new IRGenVisitor(formatCheckVisitor);
-    irGenVisitor.IRCodegen(prog);
-
-    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(irGenVisitor.GetIR());
-    System.out.println(irPrintVisitor.VisitAndPrintIR());
+//    String irFilePath = "ir.txt";
+//    BuilderContext irCtx = new BuilderContext(formatCheckVisitor);
+//    Builder irBuilder = new Builder(irCtx);
+//    irBuilder.build(prog);
+//    Printer irPrinter = new Printer(irFilePath);
+//    irCtx.Print(irPrinter);
+//
+//	  Interpreter interp = new Interpreter(irFilePath, null);
+//		interp.Parse();
+    
+//    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(deprecate);
+//    String irStr = irPrintVisitor.IrPrint(deprecate.ir);
+//    System.out.println(irStr);
   }
 }

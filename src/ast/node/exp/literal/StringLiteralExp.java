@@ -6,13 +6,8 @@ import ast.usage.AstBaseVisitor;
 public class StringLiteralExp extends LiteralExp {
   public String value;
 
-  @Override
-  public String GetIrTmp() {
-    return value;
-  }
-
   public StringLiteralExp(String value) {
-    this.varTypeRefDec = new VarTypeRef("string");
+    this.varTypeRef = VarTypeRef.CreatePrimitiveType("string");
     this.value = value;
   }
 
