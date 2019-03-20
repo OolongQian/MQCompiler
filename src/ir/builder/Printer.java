@@ -2,6 +2,8 @@ package ir.builder;
 
 import ir.quad.*;
 import ir.reg.GlobalReg;
+import ir.reg.Reg;
+import ir.reg.StringLiteral;
 import ir.util.BasicBlock;
 import ir.util.FunctCtx;
 
@@ -11,6 +13,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ir.builder.Config.TEST;
 import static ir.quad.Binary.Op.*;
 import static ir.quad.Binary.Op.LAND;
 import static ir.quad.Unary.Op.BITNOT;
@@ -20,9 +23,11 @@ public class Printer {
 
 	private PrintStream fout;
 	
-	
-	
 	public Printer(String path) {
+		if (TEST) {
+			fout = System.out;
+			return;
+		}
 		if (path == null) {
 			this.fout = System.out;
 			return;
@@ -59,6 +64,28 @@ public class Printer {
 	  binOpInterpMap.put(EQ, "==");
 	  binOpInterpMap.put(NE, "!=");
   }
+  
+	private static Map<Binary.Op, String> binOpStrMap = new HashMap<>();
+	static {
+		binOpStrMap.put(ADD, "add");
+		binOpStrMap.put(SUB, "sub");
+		binOpStrMap.put(MUL, "mul");
+		binOpStrMap.put(DIV, "div");
+		binOpStrMap.put(MOD, "mod");
+		binOpStrMap.put(SHL, "shl");
+		binOpStrMap.put(SHR, "shr");
+		binOpStrMap.put(AND, "and");
+		binOpStrMap.put(XOR, "xor");
+		binOpStrMap.put(OR,  "or");
+		binOpStrMap.put(LAND, "land");
+		binOpStrMap.put(LOR, "lor");
+		binOpStrMap.put(GT, "gt");
+		binOpStrMap.put(GE, "ge");
+		binOpStrMap.put(LT, "lt");
+		binOpStrMap.put(LE, "le");
+		binOpStrMap.put(EQ, "eq");
+		binOpStrMap.put(NE, "ne");
+	}
 	
 	private static Map<Unary.Op, String> uniOpInterpMap = new HashMap<>();
 	static {
@@ -66,16 +93,19 @@ public class Printer {
 		uniOpInterpMap.put(BITNOT, "^");
 	}
 	
+	public void print(StringLiteral str) {
+		fout.println("<*> " + str.val);
+	}
 	
 	public void print(GlobalReg reg) {
-    fout.println("@reg");
+    fout.println("TODO ! @reg");
   }
 
   public void print(FunctCtx functs) {
     fout.print("<Function> " + functs.name + " ");
-
-    for (String s : functs.args) {
-      fout.print(s + " ");
+    
+    for (Reg reg : functs.args) {
+      fout.print(reg.getText() + " ");
     }
     fout.println();
 
@@ -93,18 +123,19 @@ public class Printer {
 
   public void print(Binary quad) {
     fout.println(
-    				quad.ans.getText() + " = " + quad.src1.getText() + " " +
-								    binOpInterpMap.get(quad.op) + " " + quad.src2.getText());
+    				binOpStrMap.get(quad.op) + " " + quad.ans.getText() + " = " +
+								    quad.src1.getText() + " " + binOpInterpMap.get(quad.op) + " " +
+								    quad.src2.getText());
   }
   
   public void print(Branch quad) {
   	fout.println("branch " + quad.cond.getText() + " " +
-					  quad.ifTrue.getName() + ", " + quad.ifFalse.getName());
+					  quad.ifTrue.getName() + " " + quad.ifFalse.getName());
   }
   
   public void print(Call quad) {
     fout.print("call " + quad.funcName + " " + quad.ret.getText() + " ");
-    quad.args.forEach(x -> fout.print(x.getText()));
+    quad.args.forEach(x -> fout.print(x.getText() + " "));
     fout.println();
   }
   
@@ -140,5 +171,14 @@ public class Printer {
 	
 	public void print(Comment quad) {
 		fout.println("# " + quad.content);
+	}
+	
+	public void print(Phi quad) {
+		fout.print("phi " + quad.phiVal.getText());
+		
+		for (BasicBlock blk : quad.options.keySet()) {
+			fout.print(" " + blk.getName() + ":" + quad.options.get(blk).getText());
+		}
+		fout.println();
 	}
 }

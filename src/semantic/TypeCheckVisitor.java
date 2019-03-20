@@ -280,7 +280,7 @@ public class TypeCheckVisitor extends AstTraverseVisitor<Void> {
     // NOTE : methodCall is linking methodDec and classDec
     node.varTypeRef = methodDec.returnType;
     node.calledClass = objClass;
-    node.calledMethod = (MethodDec) methodDec;
+    node.functDec = methodDec;
     return null;
   }
 

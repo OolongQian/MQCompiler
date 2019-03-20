@@ -19,7 +19,7 @@ public class StringLiteral extends Reg {
   private int memAddr;
   
   public StringLiteral(String val) {
-    super('@' + val);
+    super('*' + val);
     this.val = val;
   }
   

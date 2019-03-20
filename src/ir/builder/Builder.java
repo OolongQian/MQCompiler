@@ -1,5 +1,6 @@
 package ir.builder;
 
+import ast.node.dec.Dec;
 import ast.node.dec.class_.ClassDec;
 import ast.node.dec.function.FunctDec;
 import ast.node.dec.function.MethodDec;
@@ -14,6 +15,7 @@ import ast.node.exp.literal.IntLiteralExp;
 import ast.node.exp.literal.StringLiteralExp;
 import ast.node.exp.lvalue.ArrayAccessExp;
 import ast.node.exp.lvalue.FieldAccessExp;
+import ast.node.exp.lvalue.ThisExp;
 import ast.node.exp.lvalue.VarExp;
 import ast.node.exp.unary.PrefixExp;
 import ast.node.exp.unary.SuffixExp;
@@ -25,9 +27,12 @@ import ir.quad.Binary.Op;
 import ir.reg.*;
 import ir.util.BasicBlock;
 import ir.util.FunctCtx;
+import ir.util.StringHandler;
 import semantic.AstTraverseVisitor;
+
 import java.util.*;
 
+import static ir.builder.Config.INT_SIZE;
 import static ir.quad.Binary.Op.*;
 import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
@@ -53,6 +58,43 @@ import static ir.quad.Unary.Op.NEG;
  *
  * But you know, sometimes when we are in Arithmetic calculation, what we have is uncertain, because it can be an
  * Immediate or a variable addr, so we want to integrate it in a single function. Let call it GetArithResult.
+ *
+ * If a function is builtin type, add a prefix ~.
+ * If a function is method type, format it as -className#methodName.
+ *
+ * One important thing about control flow logic evaluation, where to put the branch quad?
+ * Is it emplaced in child node Accept or after the call is returned ?
+ *
+ *
+ * -- short-circuit evaluation:
+ *    short-circuit evaluation provides an efficient way for logicBinaryExpr, i.e. && and ||.
+ *
+ *    it consists of two main situations, 1st is calculating values. It branches to different paths, and using a phi node to merge
+ *    the values calculated, using phi's value to carry on expr value evaluation. The branch is pushed when encountering leaf of
+ *    that structure.
+ *
+ *    2nd is control flow branching, taking on the roles of 'cond' in ifStm and loops. It jumps right to the corresponding next or
+ *    merge basic block when branching can be determined.
+ *
+ *    1st can live inside the instance of 2nd.
+ *
+ *    ***** Implementation manual :
+ *      LogicBinExpr : if it's a direct child of 'cond', its jump targets must have been set. if its targets are uninitialized, it
+ *                    means its branch targets merge here, it can assign itself.
+ *                    Now we generate code for a && b, FIXME : it can be removed certainly.
+ *                    if its child is no longer control flow evaluation expression, that will be the time to generate code and
+ *                    send back to this leaf control flow expr to stamp a branch Instruction.
+ *      Loop 'cond' : if LogicBinExpr is its direct son, set jump targets directly, and let him automates the branch and jump.
+ *                    otherwise implies a logic value evaluation case, just accept down cond, and receive a IrValue as a branch
+ *                    condition value.
+ *      Exprs : For '!' operator, if it's within a control flow evaluation process, it helps push down jump targets. Otherwise it
+ *              emplace a XOR operation. For other expressions, do it as normal -- don't need to worry about LogicBinExpr (the
+ *              beginning of control flow short-circuit evaluation), because it has handled 'uninitialized jump targets issue'
+ *              itself.
+ *
+ *      ** pay attention to current basic block problem. Assume the least guarantee of current BB recovery.
+ *
+ *      !!! NOTE : we haven't implemented operator '!' currently, because that will not be important.
  * */
 public class Builder extends AstTraverseVisitor<Void> {
 
@@ -67,21 +109,22 @@ public class Builder extends AstTraverseVisitor<Void> {
   }
 
   public void build(Prog prog) {
+  	// create globalInit function
+	  // use this context to generate global vars
     visit(prog);
+    // collect global variable allocation, and make an extra function called -globalInit
+	  ctx.WrapGlobalVarInit();
   }
 
 
-  private Reg MakeReg(String name, int mode) {
+  /**
+   * The thing is that, we won't make two globalReg with the same name, but
+   * frequently make alias local vars, needing a table to record its names.
+   * */
+  private HashMap<String, Integer> namer = new HashMap<>();
+  private Reg MakeReg(String name) {
     // mode 1: global, 2: local, 3: member, 4: temp
-    switch (mode) {
-      case 1:
-        return new GlobalReg('@' + name);
-      case 2:
-        return new LocalReg('$' + name);
-      case 3:
-        break;
-    }
-    return null;
+    return new GlobalReg('@' + name);
   }
 
   private IntLiteral MakeInt(int val) {
@@ -106,7 +149,7 @@ public class Builder extends AstTraverseVisitor<Void> {
       return new Jump(T);
     }
     // do non-trivial branch
-    return new Branch((Reg) cond, T, F);
+    return new Branch(cond, T, F);
   }
   /**
    * This function check whether the node is LogicBinaryExp or UnaryExp with operator '!'
@@ -126,7 +169,7 @@ public class Builder extends AstTraverseVisitor<Void> {
    * */
   private Reg MakeNewNonArray(VarTypeRef type) {
     // allocate a tmp register to hold the address return by heap malloc
-    Reg objAddr = ctx.GetTmpLocalReg();
+    Reg objAddr = ctx.GetCurFunc().GetTmpReg();
     IntLiteral size_ = MakeInt(ctx.CalTypeSize(type));
     ctx.EmplaceInst(new Malloc(objAddr, size_));
     // invoke constructor after memory space mallocating.
@@ -134,7 +177,7 @@ public class Builder extends AstTraverseVisitor<Void> {
     ClassDec userClass = type.baseType;
     String ctor = AddPrefix(userClass, type.typeName);
     if (ctx.FuncLookup(ctor) != null) {
-      ctx.EmplaceInst(new Call(ctor, MakeReg("null", 1), objAddr));
+      ctx.EmplaceInst(new Call(ctor, MakeReg("null"), objAddr));
     }
     // return the pointer to the constructed piece of objory.
     return objAddr;
@@ -153,18 +196,18 @@ public class Builder extends AstTraverseVisitor<Void> {
 	  
 	  // recursion stopper.
 	  if (dims.isEmpty())
-	  	return MakeReg("null", 1);
+	  	return MakeReg("null");
 	  
 	  // allocate a temp register to hold the allocated memory address.
-	  Reg arrAddr = ctx.GetTmpLocalReg();
+	  Reg arrAddr = ctx.GetCurFunc().GetTmpReg();
 	  // malloc some memory with suitable dimension, and let arrAddr takes on its address.
 	  IrValue dim = dims.poll();
 	  // add 1 to dim to hold array size.
-	  Reg exDim = ctx.GetTmpLocalReg();
+	  Reg exDim = ctx.GetCurFunc().GetTmpReg();
 	  ctx.EmplaceInst(new Binary(exDim, ADD, dim, MakeInt(1)));
-	  // multiply 8 to get the actual offset.
-	  Reg dimByte = ctx.GetTmpLocalReg();
-	  ctx.EmplaceInst(new Binary(dimByte, MUL, exDim, MakeInt(8)));
+	  // multiply INT_SIZE to get the actual offset.
+	  Reg dimByte = ctx.GetCurFunc().GetTmpReg();
+	  ctx.EmplaceInst(new Binary(dimByte, MUL, exDim, MakeInt(INT_SIZE)));
 	  // malloc mem space, let arrAddr take on the address.
 	  ctx.EmplaceInst(new Malloc(arrAddr, dimByte));
 	  // record array dimension after recording, right at the head of malloc_ed mem.
@@ -179,29 +222,29 @@ public class Builder extends AstTraverseVisitor<Void> {
 	  // collect and store the addresses malloc_ed during sub-problems into currently malloc_ed address.
 	  
 	  // first, get a endMarker.
-	  Reg arrEndMark = ctx.GetTmpLocalReg();
-	  Reg endByte = ctx.GetTmpLocalReg();
-	  ctx.EmplaceInst(new Binary(endByte, MUL, dim, MakeInt(8)));
+	  Reg arrEndMark = ctx.GetCurFunc().GetTmpReg();
+	  Reg endByte = ctx.GetCurFunc().GetTmpReg();
+	  ctx.EmplaceInst(new Binary(endByte, MUL, dim, MakeInt(INT_SIZE)));
 	  ctx.EmplaceInst(new Binary(arrEndMark, ADD, arrAddr, endByte));
 	  
 	  // before enter the loop, initialize a loop iterator.
-	  Reg iter = MakeReg("nIter", 2);
+	  Reg iter = ctx.GetCurFunc().GetLocReg("nIter");
 	  FunctCtx func = ctx.GetCurFunc();
-	  ctx.InsertQuadFront(func.GetHeadBB(), new Alloca(iter, 8));
+	  ctx.InsertQuadFront(func.GetHeadBB(), new Alloca(iter, 4));
 	  // store the address of the first element to it.
-	  Reg initAddr = ctx.GetTmpLocalReg();
-	  IrValue initByte = MakeInt(8);
+	  Reg initAddr = ctx.GetCurFunc().GetTmpReg();
+	  IrValue initByte = MakeInt(INT_SIZE);
 	  ctx.EmplaceInst(new Binary(initAddr, ADD, arrAddr, initByte));
 	  ctx.EmplaceInst(new Store(iter, initAddr));
 	
-	  BasicBlock cond = func.NewBBAfter(ctx.GetCurBB(), "new cond");
-	  BasicBlock then = func.NewBBAfter(cond, "new then");
-	  BasicBlock after = func.NewBBAfter(then, "new after");
+	  BasicBlock cond = func.NewBBAfter(ctx.GetCurBB(), "new_cond");
+	  BasicBlock then = func.NewBBAfter(cond, "new_then");
+	  BasicBlock after = func.NewBBAfter(then, "new_after");
 	  // when we haven't exceed the array to be constructed, continue to stay in then BB.
 	  ctx.SetCurBB(cond);
-	  Reg curAddr = ctx.GetTmpLocalReg();
+	  Reg curAddr = ctx.GetCurFunc().GetTmpReg();
 	  ctx.EmplaceInst(new Load(curAddr, iter));
-	  Reg cmp = ctx.GetTmpLocalReg();
+	  Reg cmp = ctx.GetCurFunc().GetTmpReg();
 	  ctx.EmplaceInst(new Binary(cmp, GT, curAddr, arrEndMark));
 	  // if exceed, break loop, else continue looping.
 	  ctx.EmplaceInst(new Branch(cmp, after, then));
@@ -212,12 +255,12 @@ public class Builder extends AstTraverseVisitor<Void> {
 	  // FIXME : not sure whether recursion changes curBB.
 	  ctx.EmplaceInst(new Store(curAddr, subArr));
 	  // increment curAddr and store it in iter.
-	  Reg increAddr = ctx.GetTmpLocalReg();
-	  ctx.EmplaceInst(new Binary(increAddr, ADD, curAddr, MakeInt(8)));
+	  Reg increAddr = ctx.GetCurFunc().GetTmpReg();
+	  ctx.EmplaceInst(new Binary(increAddr, ADD, curAddr, MakeInt(INT_SIZE)));
 	  ctx.EmplaceInst(new Store(iter, increAddr));
 	  // redirect to condition check.
 	  ctx.EmplaceInst(new Jump(cond));
-	  
+	  ctx.SetCurBB(after);
 	  return arrAddr;
   }
 
@@ -228,7 +271,7 @@ public class Builder extends AstTraverseVisitor<Void> {
       assert addr != null;
 
       // load the value into a tmpVal.
-      Reg tmpVal = ctx.GetTmpLocalReg();
+      Reg tmpVal = ctx.GetCurFunc().GetTmpReg();
       ctx.EmplaceInst(new Load(tmpVal, addr));
       // set value
       node.setIrValue(tmpVal);
@@ -252,21 +295,40 @@ public class Builder extends AstTraverseVisitor<Void> {
   /**
    * NOTE : In bread bro's implementation, here we have lots of things to do,
    * but here we push this complexity down to the assembly phase.
+   *
+   * StringLiteral's name in IR is modeled as a variable whose value is the address
+   * of the headAddr of a string residing in mem (static/heap).
    */
   @Override
   public Void visit(StringLiteralExp node) {
     // get the string address from which we could find the string head pointer.
-    Reg strAddr = ctx.TraceGlobalString(node.value);
+    // NOTE why here is strAddr, see above explanation.
+	  String cleanStr = StringHandler.unescape(node.value);
+    Reg strAddr = ctx.TraceGlobalString(cleanStr);
     node.setIrAddr(strAddr);
     return null;
   }
 
   @Override
   public Void visit(NullExp node) {
-    node.setIrValue(MakeReg("null", 1));
+    node.setIrValue(MakeReg("null"));
     return null;
   }
 
+  /**
+   * Make registers that binds to memory
+   * */
+  private Reg MakeLocReg(String name) {
+  	return ctx.GetCurFunc().GetLocReg(name);
+  }
+  
+  /**
+   * Make tmp registers.
+   * */
+  private Reg MakeTmpReg() {
+  	return ctx.GetCurFunc().GetTmpReg();
+  }
+  
   /**
    * Alloca a specially marked global register, holding
    * pointer or value for suitable type.
@@ -274,22 +336,26 @@ public class Builder extends AstTraverseVisitor<Void> {
    * because only function can have quad.
    */
   private void AddGlobalVar(VarDec node) {
-    GlobalReg addr = (GlobalReg) MakeReg(node.varName, 1);
-    addr.EmplaceInit(new Alloca(addr, MakeInt(4)));
+    GlobalReg addr = (GlobalReg) MakeReg(node.varName);
+    addr.EmplaceInit(new Alloca(addr, MakeInt(INT_SIZE)));
 
     if (node.inital != null) {
       // add a functctx to hold the initialization quad
       String initName = "_init_" + node.varName;
       FunctCtx func = new FunctCtx(initName, null);
+	    // add initial function to functs.
+	    ctx.AddFunct(func);
       // setBB directly because now we are outside of functions.
       ctx.SetCurBB(func.GetNewBB(null));
+      ctx.SetCurFunc(func.name);
       node.inital.Accept(this);
       // store initial value into reg
       IrValue initAddr = GetArithResult(node.inital);
       ctx.EmplaceInst(new Store(addr, initAddr));
-      ctx.EmplaceInst(new Ret(MakeReg("null", 1)));
+      ctx.EmplaceInst(new Ret(MakeReg("null")));
       // record initial and alloca info directly on global variable's allocated pointer, addr.
       addr.EmplaceInit(new Call(func.name));
+
     }
     // record global into context
     ctx.AddGlobalVar(addr);
@@ -306,17 +372,18 @@ public class Builder extends AstTraverseVisitor<Void> {
   /**
    * I don't need to record type information on IR,
    * because I have had AST already.
+   *
+   * See notes, this is complicated.
    */
   @Override
   public Void visit(FunctDec node) {
     // create FunctCtx, which needs args string.
     List<String> args = new LinkedList<>();
-    if (node instanceof MethodDec)
-      args.add("this");
     node.arguments.varDecs.forEach(x -> args.add(x.varName));
-
+		List<Reg> tmpArgs = new LinkedList<>();
     // append and set cur function
-    FunctCtx func = new FunctCtx(node.functName, args);
+	  // functCtx's args are to be assigned as tmpArgs.
+    FunctCtx func = new FunctCtx(node.functName, null);
     ctx.AddFunct(func);
     ctx.SetCurFunc(func.name);
     ctx.SetCurBB(func.GetNewBB(null));
@@ -324,20 +391,26 @@ public class Builder extends AstTraverseVisitor<Void> {
     // start generate function code.
     // Alloca a memory space for 'this'.
     if (node instanceof MethodDec) {
-      Reg reg = MakeReg("this", 2);
-      ctx.EmplaceInst(new Alloca(reg, MakeInt(4)));
-      ctx.EmplaceInst(new Store(reg, MakeReg("0", 2)));
+    	Reg regAddr = MakeLocReg("this");
+    	Reg tmpReg = MakeTmpReg();
+    	// record tmpRegs
+    	tmpArgs.add(tmpReg);
+      ctx.EmplaceInst(new Alloca(regAddr, MakeInt(INT_SIZE)));
+      ctx.EmplaceInst(new Store(regAddr, tmpReg));
+      ctx.BindThisToMethod((MethodDec) node, regAddr);
     }
 
     // Alloca tmp args to actual registers. First alloca, then store.
-    for (int i = 0; i < func.args.size(); ++i) {
-      int thisOffset = (node instanceof MethodDec) ? 1 : 0;
-      Reg tmpArg = MakeReg(Integer.toString(i + thisOffset), 2);
-      Reg reg = MakeReg(func.args.get(i), 2);
-      ctx.InsertQuadFront(func.GetHeadBB(), new Alloca(reg, MakeInt(4)));
-      ctx.EmplaceInst(new Store(reg, tmpArg));
-    }
-
+	  for (int i = 0; i < args.size(); ++i) {
+		  Reg regAddr = MakeLocReg(args.get(i));
+		  Reg tmpReg = MakeTmpReg();
+		  tmpArgs.add(tmpReg);
+		  ctx.EmplaceInst(new Alloca(regAddr, MakeInt(INT_SIZE)));
+		  ctx.EmplaceInst(new Store(regAddr, tmpReg));
+		  ctx.BindVarToAddr(node.arguments.varDecs.get(i), regAddr);
+	  }
+	  
+	  func.args = tmpArgs;
     // visit the rest of the statement.
     // NOTE : avoid generate dead code.
     for (Stm stm : node.functBody) {
@@ -346,7 +419,7 @@ public class Builder extends AstTraverseVisitor<Void> {
         break;
     }
     if (!ctx.GetCurBB().IsCompleted())
-      ctx.EmplaceInst(new Ret(MakeReg("null", 1)));
+      ctx.EmplaceInst(new Ret(MakeReg("null")));
     return null;
   }
 
@@ -369,7 +442,15 @@ public class Builder extends AstTraverseVisitor<Void> {
 
   @Override
   public Void visit(Prog node) {
-    node.children.forEach(x -> x.Accept(this));
+  	// first collect global
+	  for (Dec child : node.children) {
+		  if (child instanceof GlobalVarDec)
+		  	child.Accept(this);
+	  }
+	  for (Dec child : node.children) {
+		  if (!(child instanceof GlobalVarDec))
+			  child.Accept(this);
+	  }
     return null;
   }
 
@@ -387,8 +468,8 @@ public class Builder extends AstTraverseVisitor<Void> {
   @Override
   public Void visit(VarDec node) {
     FunctCtx func = ctx.GetCurFunc();
-    Reg addr = MakeReg(node.varName, 2);
-    ctx.InsertQuadFront(func.GetHeadBB(), new Alloca(addr, MakeInt(4)));
+    Reg addr = MakeLocReg(node.varName);
+    ctx.InsertQuadFront(func.GetHeadBB(), new Alloca(addr, MakeInt(INT_SIZE)));
 
     if (node.inital != null && !node.inital.varTypeRef.isNull()) {
       node.inital.Accept(this);
@@ -399,16 +480,21 @@ public class Builder extends AstTraverseVisitor<Void> {
     }
     else {
       // emplace a null mark in empty pointer slot.
-      ctx.EmplaceInst(new Store(addr, MakeReg("null", 1)));
+      ctx.EmplaceInst(new Store(addr, MakeReg("null")));
     }
 
     ctx.BindVarToAddr(node, addr);
     return null;
   }
 
+  /**
+   * Now we are clear, since every variable expression is linked with a memory address,
+   * we use ctx.TraceRegAddr to trace it, and record it on node.
+   * */
   @Override
   public Void visit(VarExp node) {
     // NOTE : shouldn't load it at this stage.
+    // record the address bounded with this variable onto the node.
     VarDec var = node.varDec;
     Reg addr = ctx.TraceRegAddr(var);
     node.setIrAddr(addr);
@@ -417,6 +503,8 @@ public class Builder extends AstTraverseVisitor<Void> {
 
   /**
    * This is a really brilliant thing to do.
+   *
+   * NOTE : set value here because what is returned is the 'address' of the created instance already.
    * */
   @Override
   public Void visit(CreationExp node) {
@@ -447,10 +535,15 @@ public class Builder extends AstTraverseVisitor<Void> {
     if (type.innerType == null)
       return;
 
-    IrValue curDim = (type.dim == null) ? MakeReg("null", 1) : GetArithResult(type.dim);
-    dims.add(curDim);
-
-    GetArrayDimension(type.innerType, dims);
+    // we don't need to care about @null dimension and further ones.
+//    IrValue curDim = (type.dim == null) ? MakeReg("null", 1) : GetArithResult(type.dim);
+//    dims.add(curDim);
+	  if (type.dim != null) {
+		  dims.add(GetArithResult(type.dim));
+		  GetArrayDimension(type.innerType, dims);
+	  } else {
+	  	return;
+	  }
   }
 
   /**
@@ -458,31 +551,43 @@ public class Builder extends AstTraverseVisitor<Void> {
    */
   @Override
   public Void visit(IfStm node) {
-    BasicBlock ifTrue = ctx.GetCurFunc().GetNewBB("then");
-    BasicBlock ifMerge = ctx.GetCurFunc().GetNewBB("merge");
-		// set initial control flow jump target.
-	  node.condition.ifTrue = ifTrue;
-		if (node.elseBody != null) {
-			node.condition.ifFalse = ctx.GetCurFunc().NewBBAfter(ifTrue, "else");
-		} else {
-			node.condition.ifFalse = ifMerge;
-		}
-    node.condition.Accept(this);
-
-    ctx.SetCurBB(ifTrue);
-    node.thenBody.Accept(this);
-    // then bb needs jump if there's else next.
-    if (node.elseBody != null) {
-	    ctx.EmplaceInst(new Jump(ifMerge));
+	
+	  BasicBlock then = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), "then");
+	  BasicBlock merge = ctx.GetCurFunc().NewBBAfter(then, "merge");
+	  BasicBlock else_ = (node.elseBody != null) ?
+					  ctx.GetCurFunc().NewBBAfter(then, "else") : null;
+    
+    if (node.condition instanceof LogicBinaryExp) {
+      // node.condition automates jump.
+	    // set jump targets and accept, everything about short-circuit should have been done.
+      node.condition.ifTrue = then;
+      node.condition.ifFalse = (else_ != null) ? else_ : merge;
+      node.condition.Accept(this);
     }
-
-    if (node.elseBody != null) {
-      ctx.SetCurBB(node.condition.ifFalse);
-      node.elseBody.Accept(this);
-      ctx.EmplaceInst(new Jump(ifMerge));
+    else {
+      // merge results and jump manually.
+	    // accept condition to get the cond result for branch.
+	    node.condition.Accept(this);
+	    IrValue brCond = GetArithResult(node.condition);
+	    BasicBlock ifFalse = (node.elseBody != null) ? else_ : merge;
+	    // emplace branch.
+	    ctx.EmplaceInst(new Branch(brCond, then, ifFalse));
+	    
     }
-
-    ctx.SetCurBB(ifMerge);
+    
+	  // then irGen, assume no curBB recovery.
+	  ctx.SetCurBB(then);
+	  node.thenBody.Accept(this);
+	  // emplace 'jump' from then to merge if necessary.
+	  if (else_ != null) ctx.EmplaceInst(new Jump(merge));
+	  // else irGen
+	  if (node.elseBody != null) {
+		  ctx.SetCurBB(else_);
+		  node.elseBody.Accept(this);
+	  }
+	  // set BB to merge
+	  ctx.SetCurBB(merge);
+	  
     return null;
   }
 
@@ -490,23 +595,33 @@ public class Builder extends AstTraverseVisitor<Void> {
   
   @Override
   public Void visit(WhileStm node) {
-
-    BasicBlock cond = ctx.GetCurFunc().GetNewBB("cond");
-    BasicBlock step = ctx.GetCurFunc().GetNewBB("step");
-    BasicBlock after = ctx.GetCurFunc().GetNewBB("after");
-
+	
+	  BasicBlock cond = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), "cond");
+	  BasicBlock step = ctx.GetCurFunc().NewBBAfter(cond, "step");
+	  BasicBlock after = ctx.GetCurFunc().NewBBAfter(step, "after");
+		
     ctx.SetCurBB(cond);
-    node.condition.ifTrue = step;
-    node.condition.ifFalse = after;
-    node.condition.Accept(this);
-
+    if (node.condition instanceof LogicBinaryExp) {
+      // node.condition automates jump.
+	    node.condition.ifTrue = step;
+	    node.condition.ifFalse = after;
+	    node.condition.Accept(this);
+    }
+    else {
+      // merge results and jump manually.
+	    node.condition.Accept(this);
+	    IrValue brCond = GetArithResult(node.condition);
+	    // emplace branch
+	    ctx.EmplaceInst(new Branch(brCond, step, after));
+    }
+    
     // record loop info for break and continue
     ctx.RecordLoop(cond, after);
 
     ctx.SetCurBB(step);
     node.whileBody.Accept(this);
-    ctx.EmplaceInst(new Jump(after));
-
+	  ctx.EmplaceInst(new Jump(cond));
+    
     ctx.ExitLoop();
     ctx.SetCurBB(after);
     return null;
@@ -514,6 +629,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 
   @Override
   public Void visit(ForStm node) {
+  	// forInit is executed before loop BB
     if (!node.forControl.isInitNull()) {
       if (node.forControl.initIsDec) {
         // visit a for dec
@@ -523,21 +639,29 @@ public class Builder extends AstTraverseVisitor<Void> {
         node.forControl.initExps.forEach(x -> x.Accept(this));
       }
     }
-
-    BasicBlock check = ctx.GetCurFunc().GetNewBB("cond");
-    BasicBlock step = ctx.GetCurFunc().GetNewBB("step");
-    BasicBlock after = ctx.GetCurFunc().GetNewBB("after");
-
+	
+	  BasicBlock check = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), "cond");
+	  BasicBlock step = ctx.GetCurFunc().NewBBAfter(check, "step");
+	  BasicBlock after = ctx.GetCurFunc().NewBBAfter(step, "after");
+   
+		ctx.SetCurBB(check);
+    if (node.forControl.check instanceof LogicBinaryExp) {
+    	node.forControl.check.ifTrue = step;
+    	node.forControl.check.ifFalse = after;
+    	node.forControl.check.Accept(this);
+    }
+    else {
+    	node.forControl.check.Accept(this);
+    	IrValue brCond = GetArithResult(node.forControl.check);
+    	ctx.EmplaceInst(new Branch(brCond, step, after));
+    }
+    
     ctx.RecordLoop(check, after);
-
-    ctx.SetCurBB(check);
-    node.forControl.check.ifTrue = step;
-    node.forControl.check.ifFalse = after;
-    node.forControl.check.Accept(this);
 
     ctx.SetCurBB(step);
     node.forBody.Accept(this);
-    ctx.EmplaceInst(new Jump(after));
+    node.forControl.updateExps.forEach(x -> x.Accept(this));
+    ctx.EmplaceInst(new Jump(check));
 
     ctx.ExitLoop();
     ctx.SetCurBB(after);
@@ -574,7 +698,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 
     // get values.
     IrValue oldVal = GetArithResult(node.objInstance);
-    Reg increVal = ctx.GetTmpLocalReg();
+    Reg increVal = ctx.GetCurFunc().GetTmpReg();
 
     ctx.EmplaceInst(new Binary(increVal, ADD, oldVal, MakeInt(1)));
     ctx.EmplaceInst(new Store(addr, increVal));
@@ -596,7 +720,7 @@ public class Builder extends AstTraverseVisitor<Void> {
     switch (node.op) {
       case "++": case "--":
         // similar to Suffix
-        Reg newVal = ctx.GetTmpLocalReg();
+        Reg newVal = ctx.GetCurFunc().GetTmpReg();
         Op op = (node.op.equals("++")) ? ADD : SUB;
         ctx.EmplaceInst(new Binary(newVal, op, oldVal, MakeInt(1)));
         ctx.EmplaceInst(new Store(addr, newVal));
@@ -605,7 +729,7 @@ public class Builder extends AstTraverseVisitor<Void> {
         node.setIrAddr(addr);
         break;
       case "~": case "-":
-        Reg newVal_ = ctx.GetTmpLocalReg();
+        Reg newVal_ = ctx.GetCurFunc().GetTmpReg();
         Unary.Op op_ = (node.op.equals("~")) ? BITNOT : NEG;
         ctx.EmplaceInst(new Unary(newVal_, op_, oldVal));
         ctx.EmplaceInst(new Store(addr, newVal_));
@@ -637,29 +761,55 @@ public class Builder extends AstTraverseVisitor<Void> {
        * Branch quad generation is handled in control flow node, because otherwise it will be ugly.
        * */
       case "!":
-        assert (node.ifTrue == null) == (node.ifFalse == null);
-        if (node.ifTrue == null) {
+//        if (node.ifTrue == null) {
           // value evaluation mode.
-          node.objInstance.Accept(this);
-          IrValue boo = GetArithResult(node.objInstance);
-          Reg negVal = ctx.GetTmpLocalReg();
-          ctx.EmplaceInst(new Unary(negVal, NEG, boo));
-          node.setIrValue(negVal);
-        }
-        else {
-          // control flow evaluation mode.
-          node.objInstance.ifTrue = node.ifFalse;
-          node.objInstance.ifFalse = node.ifTrue;
-          node.objInstance.Accept(this);
-          // generate branch if inner exp isn't logicEval anymore.
-          if (!isLogicEval(node.objInstance)) {
-            // condition must not be IntImmediate, otherwise it could be Jump directly.
-            IrValue cond = GetArithResult(node.objInstance);
-            Quad br = NewBranchJump(cond, node.objInstance.ifTrue, node.objInstance.ifFalse);
-            ctx.EmplaceInst(br);
-            // TODO : deal with curBB setting.
-          }
-        }
+	      assert (node.ifTrue == null) == (node.ifFalse == null);
+//	      boolean logicEval = node.ifTrue != null;
+	      
+	      // similar to what we did in logicBinExpr.
+//	      if (!logicEval) {
+	      // NOTE : incorporate ! into logic expression is difficult, because we don't know whether it's && or ||.
+	      // NOTE : that's OK, maybe we could do it twice, but that will be tedious. Do it later on.
+	      node.objInstance.Accept(this);
+	      IrValue boo = GetArithResult(node.objInstance);
+	      Reg negVal = ctx.GetCurFunc().GetTmpReg();
+	      ctx.EmplaceInst(new Unary(negVal, NEG, boo));
+	      node.setIrValue(negVal);
+//	      }
+//	      else {
+//
+		      // leaf logic node, directly evaluate its expr
+//	        if (!(node.objInstance instanceof LogicBinaryExp)) {
+//		        node.objInstance.Accept(this);
+//		        IrValue val = GetArithResult(node);
+//		         note, jump targets are opposite, because of '!'.
+//		        ctx.EmplaceInst(new Branch(val, node.ifFalse, node.ifTrue));
+//
+//	        }
+	        // intermediate logic node, push down jump targets.
+//	        else {
+//		        node.objInstance.ifTrue = node.ifFalse;
+//		        node.objInstance.ifFalse = node.ifTrue;
+//
+//	        }
+
+//	      }
+       
+//        }
+//        else {
+//           control flow evaluation mode.
+//          node.objInstance.ifTrue = node.ifFalse;
+//          node.objInstance.ifFalse = node.ifTrue;
+//          node.objInstance.Accept(this);
+//           generate branch if inner exp isn't logicEval anymore.
+//          if (!isLogicEval(node.objInstance)) {
+//             condition must not be IntImmediate, otherwise it could be Jump directly.
+//            IrValue cond = GetArithResult(node.objInstance);
+//            Quad br = NewBranchJump(cond, node.objInstance.ifTrue, node.objInstance.ifFalse);
+//            ctx.EmplaceInst(br);
+//             TODO : deal with curBB setting.
+//          }
+//        }
         break;
       default:
         throw new RuntimeException();
@@ -680,6 +830,7 @@ public class Builder extends AstTraverseVisitor<Void> {
     binaryOpMap.put("^",  XOR);
     binaryOpMap.put("|",  OR);
     binaryOpMap.put("&&", LAND);
+	  binaryOpMap.put("||", LOR);
     binaryOpMap.put(">", GT);
 	  binaryOpMap.put(">=", GE);
 	  binaryOpMap.put("<", LT);
@@ -688,50 +839,135 @@ public class Builder extends AstTraverseVisitor<Void> {
 	  binaryOpMap.put("!=", NE);
   }
 
+  private void PushDownTargetBB(LogicBinaryExp node, BasicBlock rhsBB) {
+	  Binary.Op op = binaryOpMap.get(node.op);
+	  switch (op) {
+		  case LAND:
+			  node.lhs.ifFalse = node.ifFalse;
+			  node.lhs.ifTrue = rhsBB;
+			  node.rhs.ifTrue = node.ifTrue;
+			  node.rhs.ifFalse = node.ifFalse;
+			  break;
+		  case LOR:
+			  node.lhs.ifTrue = node.ifTrue;
+			  node.lhs.ifFalse = rhsBB;
+			  node.rhs.ifTrue = node.ifTrue;
+			  node.rhs.ifFalse = node.ifFalse;
+			  break;
+		  default:
+	  }
+  }
+	
+	/**
+	 * associate jumping target and current node's value,
+	 * collect info for phi node.
+	 * */
+  private void ChildEvaluation(Exp node, Binary.Op op, boolean lhs) {
+	  // leaf logic node, directly evaluate its expr.
+	  if (!(node instanceof LogicBinaryExp)) {
+		  node.Accept(this);
+		  IrValue val = GetArithResult(node);
+		  ctx.EmplaceInst(NewBranchJump(val, node.ifTrue, node.ifFalse));
+		  BasicBlock curBB = ctx.GetCurBB();
+		  
+		  // lhs jump has chance to short-circuit
+		  // two jump targets can't be the same
+		  if (lhs) {
+		    if (op == LAND) {
+			    node.ifTrue.EnterWithVal(curBB, GetArithResult(node));
+			    node.ifFalse.EnterWithVal(curBB, new IntLiteral(0));
+		    }
+		    else {
+			    node.ifFalse.EnterWithVal(curBB, GetArithResult(node));
+			    node.ifTrue.EnterWithVal(curBB, new IntLiteral(1));
+		    }
+		  }
+		  // rhs jump is deterministic. If two targets are different, they can be distinguished by immeidate.
+		  // if two are the same, they cannot be distinguished unless using a register value representation.
+		  else {
+//			  if (op == LAND) {
+			  // NOTE : rhs is deterministic, no need to distinguish operator.
+			  if (node.ifTrue != node.ifFalse) {
+				  node.ifTrue.EnterWithVal(curBB, new IntLiteral(1));
+				  node.ifFalse.EnterWithVal(curBB, new IntLiteral(0));
+			  }
+			  else {
+				  node.ifTrue.EnterWithVal(curBB, GetArithResult(node));
+			  }
+//			  }
+//			  else {
+//		  		 op == LOR
+//				  if (node.ifTrue != node.ifFalse) {
+//					  node.ifTrue.EnterWithVal(curBB, new IntLiteral(1));
+//					  node.ifFalse.EnterWithVal(curBB, new IntLiteral(0));
+//				  }
+//				  else {
+//					  node.ifTrue.EnterWithVal(curBB, GetArithResult(node));
+//				  }
+//			  }
+		  }
+	  }
+	  // next short node, set and evaluate.
+	  else {
+		  node.Accept(this);
+	  }
+  }
+  
+  /**
+   * The whole short-evaluation can be regarded as a list of logic-valued expressions.
+   * And a short-evaluated ifTrue ifFalse jump targets are imposed as a structure over
+   * this list of boolean expressions.
+   * Hence, when the downstream expressions are no longer logic expression, we do branch
+   * since it's a leaf expr in this structure.
+   *
+   * NOTE logicBinaryExp jumps.
+   *
+   * Only the starter of logicBinaryExp needs to do phi node.
+   * The intermediate logicBinaryExp performs like a distributor, and the starter functions like a collector.
+   * */
   @Override
   public Void visit(LogicBinaryExp node) {
     assert (node.ifTrue == null) == (node.ifFalse == null);
-
-    if (node.ifFalse == null) {
-      // initial control flow evaluation mode.
-      BasicBlock merge = ctx.GetCurFunc().GetNewBB("merge");
-      node.ifTrue = merge;
-      node.ifFalse = merge;
-    }
-    // push down branch information.
-    Binary.Op op = binaryOpMap.get(node.op);
-    BasicBlock rhsBB = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), node.op + "rhs");
-    switch (op) {
-      case LAND:
-        node.lhs.ifFalse = node.ifFalse;
-        node.lhs.ifTrue = rhsBB;
-        node.rhs.ifTrue = node.ifTrue;
-        node.rhs.ifFalse = node.ifFalse;
-        break;
-      case LOR:
-        node.lhs.ifTrue = node.ifTrue;
-        node.lhs.ifFalse = rhsBB;
-        node.rhs.ifTrue = node.ifTrue;
-        node.rhs.ifFalse = node.ifFalse;
-        break;
-      default:
-    }
-    // visit lhs and rhs
-    // TODO : deal with curBB setting.
-    node.lhs.Accept(this);
-    // if lhs is not logicEval anymore, generate jump
-    if (!isLogicEval(node.lhs)) {
-      IrValue cond = GetArithResult(node.lhs);
-      Quad br = NewBranchJump(cond, node.lhs.ifTrue, node.lhs.ifFalse);
-      ctx.EmplaceInst(br);
-    }
-    ctx.SetCurBB(rhsBB);
-    node.rhs.Accept(this);
-	  if (!isLogicEval(node.lhs)) {
-		  IrValue cond = GetArithResult(node.rhs);
-		  Quad br = NewBranchJump(cond, node.rhs.ifTrue, node.rhs.ifFalse);
-		  ctx.EmplaceInst(br);
+    
+	  // initial control flow evaluation mode.
+	  // FIXME : split basic block brutally, even though it may never be used.
+	  boolean startLogic = node.ifFalse == null;
+	  
+	  if (startLogic) {
+	  	// create merge collector block.
+		  BasicBlock merge = ctx.GetCurFunc().GetNewBB("merge");
+		  node.ifTrue = merge;
+		  node.ifFalse = merge;
+		  
+		  // distribute jump target.
+		  BasicBlock rhsBB = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), node.op + "rhs");
+		  PushDownTargetBB(node, rhsBB);
+		  // child evaluation and record jump target&value pair.
+		  Binary.Op op = binaryOpMap.get(node.op);
+		  ChildEvaluation(node.lhs, op, true);
+		  // for rhs
+		  ctx.SetCurBB(rhsBB);
+		  ChildEvaluation(node.rhs, op, false);
+		  // collect information
+		  // TODO : actually, this phi node can be generated when calling.
+		  ctx.SetCurBB(merge);
+		  Reg phiReg = ctx.GetCurFunc().GetTmpReg();
+		  ctx.EmplaceInst(new Phi(phiReg, merge.phiOptions));
+		  node.setIrValue(phiReg);
 	  }
+	  else {
+		  // distribute jump target.
+		  BasicBlock rhsBB = ctx.GetCurFunc().NewBBAfter(ctx.GetCurBB(), node.op + "rhs");
+		  PushDownTargetBB(node, rhsBB);
+		  
+		  // downstream evaluation, and record jump target&value pair.
+		  Binary.Op op = binaryOpMap.get(node.op);
+		  ChildEvaluation(node.lhs, op, true);
+		
+		  ctx.SetCurBB(rhsBB);
+		  ChildEvaluation(node.rhs, op, false);
+	  }
+	  // NOTE : we don't guarantee where are we then.
     return null;
   }
 
@@ -741,7 +977,7 @@ public class Builder extends AstTraverseVisitor<Void> {
     node.lhs.Accept(this);
     node.rhs.Accept(this);
 
-    Reg ans = ctx.GetTmpLocalReg();
+    Reg ans = ctx.GetCurFunc().GetTmpReg();
     IrValue lVal = GetArithResult(node.lhs);
     IrValue rVal = GetArithResult(node.rhs);
     Binary.Op op = binaryOpMap.get(node.op);
@@ -756,7 +992,7 @@ public class Builder extends AstTraverseVisitor<Void> {
   public Void visit(FieldAccessExp node) {
     node.objInstance.Accept(this);
     Reg instAddr = node.objInstance.getIrAddr();
-    Reg elemAddr = ctx.GetTmpLocalReg();
+    Reg elemAddr = ctx.GetCurFunc().GetTmpReg();
 
     // get offset
     VarTypeRef instType = node.objInstance.varTypeRef;
@@ -775,8 +1011,7 @@ public class Builder extends AstTraverseVisitor<Void> {
     node.arrInstance.Accept(this);
     node.accessor.Accept(this);
 
-    Reg baseAddr = node.arrInstance.getIrAddr();
-//    IrValue index = GetArithResult(node.accessor);
+    IrValue baseAddr = GetArithResult(node.arrInstance);
 
     // NOTE : These are simple tricks, later we do it.
     // NOTE : if no offset, no need to get element.
@@ -785,7 +1020,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 //      return null;
 //    }
 
-    Reg elemAddr = ctx.GetTmpLocalReg();
+    Reg elemAddr = ctx.GetCurFunc().GetTmpReg();
     VarTypeRef arrElemType = node.arrInstance.varTypeRef.innerType;
     IrValue elemSize = MakeInt(arrElemType.GetTypeSpace());
 
@@ -798,9 +1033,15 @@ public class Builder extends AstTraverseVisitor<Void> {
 
     // now we need a MUL quad for offset calculation
 	  // shift index, because the first one is reserved to be array size.
-    Reg offset = ctx.GetTmpLocalReg();
-    ctx.EmplaceInst(new Binary(offset, MUL, offset, elemSize));
-    ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offset));
+    IrValue lenSpare = MakeInt(4);
+    IrValue acsIndex = GetArithResult(node.accessor);
+    Reg offsetNoLen = ctx.GetCurFunc().GetTmpReg();
+    Reg offsetWithLen = ctx.GetCurFunc().GetTmpReg();
+
+    // calculate array member access and reserve for length shift, add them up.
+    ctx.EmplaceInst(new Binary(offsetNoLen, MUL, acsIndex, elemSize));
+    ctx.EmplaceInst(new Binary(offsetWithLen, ADD, offsetNoLen, lenSpare));
+    ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offsetWithLen));
     node.setIrAddr(elemAddr);
 
     return null;
@@ -827,6 +1068,9 @@ public class Builder extends AstTraverseVisitor<Void> {
     return null;
   }
 
+  /**
+   * Args must be aligned with functDec.
+   * */
   @Override
   public Void visit(FunctCallExp node) {
     List<IrValue> args = new LinkedList<>();
@@ -837,27 +1081,44 @@ public class Builder extends AstTraverseVisitor<Void> {
 
     // note that this is the pointer to the return address. because we can also do field or array access to it.
     Reg retAddr = (node.varTypeRef.isVoid()) ?
-        MakeReg("null", 1) : MakeReg("ret", 2);
+        MakeReg("null") : ctx.GetCurFunc().GetTmpReg();
+	
+    // handle function name format -- built-in ? method ?
+    String mName = (node.isMethodCall()) ?
+				    AddPrefix(((MethodCallExp) node).calledClass, node.functName) :
+				    node.functName;
+	  String btinPref = "~";
+    String btmName = (node.functDec.builtIn) ? (btinPref + mName) : mName;
 
+    // handle method 'this' pointer problem.
     if (!node.isMethodCall()) {
-      ctx.EmplaceInst(new Call(node.functName, retAddr, args));
+		    ctx.EmplaceInst(new Call(btmName, retAddr, args));
     } else {
       /**
        * If we are in a class method already, and we are invoking another class method.
        * note that by default 'this' register is $0.
        * */
-      MethodCallExp mNode = (MethodCallExp) node;
-      String mName = AddPrefix(mNode.calledClass, mNode.functName);
-      ctx.EmplaceInst(new Call(mName, retAddr, MakeReg("0", 2), args));
+      ctx.EmplaceInst(new Call(btmName, retAddr, MakeLocReg("this"), args));
     }
-    node.setIrAddr(retAddr);
+    node.setIrValue(retAddr);
     return null;
   }
 
+  /**
+   * error example: this is correct
+   * load %0 *"hello_world"
+   * store $greeting %0
+   * load %1 $greeting # this is key ! which means %1 is value instead of addr.
+   * call -string#length %2 %1
+   * */
   @Override
   public Void visit(MethodCallExp node) {
     node.objInstance.Accept(this);
-    Reg instAddr = node.objInstance.getIrAddr();
+    // FIXME : here should be instValue, while instAddr is the address where the instance pointer is stored.
+	  // FIXME : instAddr must be a Reg, because it holds an address.
+	  
+//    Reg instAddr = node.objInstance.getIrAddr();
+	  Reg instAddr = (Reg) GetArithResult(node.objInstance);
 
     List<IrValue> args = new LinkedList<>();
     for (Exp arg : node.arguments.args) {
@@ -866,10 +1127,14 @@ public class Builder extends AstTraverseVisitor<Void> {
     }
     // note that this is the pointer to the return address. because we can also do field or array access to it.
     Reg retAddr = (node.varTypeRef.isVoid()) ?
-        MakeReg("null", 1) : ctx.GetTmpLocalReg();
-
+        MakeReg("null") : ctx.GetCurFunc().GetTmpReg();
+    
+    // add prefix ~ as marker for built-in function, this helps interpreter to parse.
     String mName = AddPrefix(node.calledClass, node.functName);
-    ctx.EmplaceInst(new Call(mName, retAddr, instAddr, args));
+    String btmName = (node.functDec.builtIn) ? "~" + mName : mName;
+    
+    ctx.EmplaceInst(new Call(btmName, retAddr, instAddr, args));
+    node.setIrValue(retAddr);
     return null;
   }
 
@@ -881,14 +1146,17 @@ public class Builder extends AstTraverseVisitor<Void> {
       node.retVal.Accept(this);
       retVal = GetArithResult(node.retVal);
     } else {
-      retVal = MakeReg("null", 1);
+      retVal = MakeReg("null");
     }
     ctx.EmplaceInst(new Ret(retVal));
     // TODO : basicBlock completion shouldn't be done in this way.
     ctx.GetCurBB().Complete();
     return null;
   }
-  
-  
-
+	
+	@Override
+	public Void visit(ThisExp node) {
+  	node.setIrAddr(ctx.TraceThisAddr(node.thisMethod));
+		return null;
+	}
 }

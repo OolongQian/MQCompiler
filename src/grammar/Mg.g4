@@ -106,12 +106,12 @@ forStm
 
 /*** check ***/
 forControl
-    :   '(' forInit? ';' exp? ';' forUpdate? ')'
+    :   '(' forInit? exp? ';' forUpdate? ')'
     ;
 
 forInit
     :   varDec
-    |   expList
+    |   expList ';'
     ;
 
 forUpdate

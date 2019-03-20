@@ -2,6 +2,7 @@ package ir.builder;
 
 import ast.node.dec.class_.ClassDec;
 import ast.node.dec.function.FunctDec;
+import ast.node.dec.function.MethodDec;
 import ast.node.dec.variable.VarDec;
 import ast.typeref.VarTypeRef;
 import ir.quad.Quad;
@@ -10,8 +11,10 @@ import ir.reg.Reg;
 import ir.reg.StringLiteral;
 import ir.util.BasicBlock;
 import ir.util.FunctCtx;
+import jdk.nashorn.internal.codegen.MethodEmitter;
 import semantic.FormatCheckVisitor;
 
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class BuilderContext {
@@ -34,9 +37,13 @@ public class BuilderContext {
   public Reg TraceRegAddr(VarDec var) {
     return varTracer.get(var);
   }
-
-  public Reg GetTmpLocalReg() {
-    return curFunc.GetTmpLocalReg();
+  
+  public void BindThisToMethod(MethodDec method, Reg reg) {
+  	thisTracer.put(method, reg);
+  }
+  
+  public Reg TraceThisAddr(MethodDec method) {
+  	return thisTracer.get(method);
   }
 
   public void InsertQuadFront(BasicBlock b, Quad q) {
@@ -48,7 +55,7 @@ public class BuilderContext {
   }
 
   public void AddGlobalVar(GlobalReg reg) {
-    globalRegs.add(reg);
+  	globalRegs.put(reg.getText(), reg);
   }
 
   public BasicBlock GetCurBB() {
@@ -77,6 +84,7 @@ public class BuilderContext {
     return globalStringPool.get(str);
   }
 
+  // use for trace continue break target.
   public void RecordLoop(BasicBlock check, BasicBlock after) {
     contStack.push(check);
     breakStack.push(after);
@@ -98,23 +106,36 @@ public class BuilderContext {
   }
 
   public void Print(Printer printer) {
-    globalRegs.forEach(printer::print);
+//  	globalRegs.values().forEach(printer::print);
+	  // global variable initialization has been done in functs's -globalInit.
+    globalStringPool.values().forEach(printer::print);
     functs.values().forEach(printer::print);
   }
 
+	// collect global variable allocation, and make an extra function called -globalInit
+  public void WrapGlobalVarInit() {
+    FunctCtx gInit = new FunctCtx("-globalInit", null);
+	  for (GlobalReg reg : globalRegs.values()) {
+		  BasicBlock head = gInit.GetNewBB(reg.getText());
+		  head.quads.addAll(reg.GetInit());
+	  }
+	  AddFunct(gInit);
+  }
+  
   public BuilderContext(FormatCheckVisitor vis) {
     this.classTable = vis.classTable;
     this.functTable = vis.functTable;
   }
 
 
-  private List<GlobalReg> globalRegs = new LinkedList<>();
-  private Map<String, StringLiteral> globalStringPool = new HashMap<>();
+  private Map<String, GlobalReg> globalRegs = new HashMap<>();
+  public Map<String, StringLiteral> globalStringPool = new HashMap<>();
   private Map<String, FunctCtx> functs = new HashMap<>();
   private Map<VarDec, Reg> varTracer = new HashMap<>();
+  private Map<MethodDec, Reg> thisTracer = new HashMap<>();
 
-  private Hashtable<String, ClassDec> classTable;
-  private Hashtable<String, FunctDec> functTable;
+  public Hashtable<String, ClassDec> classTable;
+  public Hashtable<String, FunctDec> functTable;
 
   private FunctCtx curFunc;
   private BasicBlock curbb;

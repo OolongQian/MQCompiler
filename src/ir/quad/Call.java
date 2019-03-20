@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.builder.Printer;
+import ir.reg.GlobalReg;
 import ir.reg.IrValue;
 import ir.reg.Reg;
 
@@ -10,10 +11,11 @@ import java.util.List;
 public class Call extends Quad {
   public String funcName;
   public Reg ret;
-  public List<IrValue> args;
+  public List<IrValue> args = new LinkedList<>();
   
 
   public Call(String funcName) {
+  	ret = new GlobalReg("@null");
     this.funcName = funcName;
   }
 

@@ -7,7 +7,6 @@ import ast.usage.AstBaseVisitor;
 public class MethodCallExp extends FunctCallExp {
   public Exp objInstance;
   public ClassDec calledClass;
-  public MethodDec calledMethod;
 
   public MethodCallExp(Exp objInstance, String methodName) {
     super(methodName);

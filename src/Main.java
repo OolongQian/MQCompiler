@@ -3,6 +3,10 @@ import antlr_tools.MgParser;
 import ast.builder.AstBuilder;
 import ast.builder.ParserErrorHandlerStrategy;
 import ast.node.prog.Prog;
+import ir.Interpreter.Interpreter;
+import ir.builder.Builder;
+import ir.builder.BuilderContext;
+import ir.builder.Printer;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -12,6 +16,8 @@ import semantic.TypeThreadVisitor;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+
+import static ir.builder.Config.TEST;
 
 
 public class Main {
@@ -42,16 +48,19 @@ public class Main {
     FormatCheckVisitor formatCheckVisitor = new FormatCheckVisitor(typeCheckVisitor);
     formatCheckVisitor.FormatCheck(prog);
 
-//    String irFilePath = "ir.txt";
-//    BuilderContext irCtx = new BuilderContext(formatCheckVisitor);
-//    Builder irBuilder = new Builder(irCtx);
-//    irBuilder.build(prog);
-//    Printer irPrinter = new Printer(irFilePath);
-//    irCtx.Print(irPrinter);
-//
-//	  Interpreter interp = new Interpreter(irFilePath, null);
-//		interp.Parse();
-    
+    String irFilePath = "ir.txt";
+    BuilderContext irCtx = new BuilderContext(formatCheckVisitor);
+    Builder irBuilder = new Builder(irCtx);
+    irBuilder.build(prog);
+    Printer irPrinter = new Printer(irFilePath);
+    irCtx.Print(irPrinter);
+
+    if (!TEST) {
+      Interpreter interp = new Interpreter(irFilePath, null);
+      interp.Parse();
+      interp.Execute();
+    }
+
 //    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(deprecate);
 //    String irStr = irPrintVisitor.IrPrint(deprecate.ir);
 //    System.out.println(irStr);

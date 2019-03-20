@@ -4,7 +4,7 @@ public class Reg extends IrValue {
   protected String name;
 
   public Reg(String name) {
-    this.name = name;
+	  this.name = name;
   }
 
   @Override

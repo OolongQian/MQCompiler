@@ -74,6 +74,8 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
    * TODO : requirement 3. maybe there's a nicer way.
    * */
   private ClassDec curClass = null;
+  
+  private MethodDec curMethod = null;
 
 
   /**
@@ -127,12 +129,14 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     ClassDec stringClass = new ClassDec("string");
 
     MethodDec lengthMethod = new MethodDec();
-    lengthMethod.functName = "length";
+	  lengthMethod.MarkBuiltIn();
+	  lengthMethod.functName = "length";
     lengthMethod.returnType = CreatePrimitiveType("int");
     stringClass.method.add(lengthMethod);
     functTable.put(AddPrefix(stringClass, "length"), lengthMethod);
 
     MethodDec substringMethod = new MethodDec();
+    substringMethod.MarkBuiltIn();
     substringMethod.functName = "substring";
     substringMethod.returnType = CreatePrimitiveType("string");
     substringMethod.arguments.varDecs.add(new VarDec(CreatePrimitiveType("int"), "left"));
@@ -141,12 +145,14 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     functTable.put(AddPrefix(stringClass, "substring"), substringMethod);
 
     MethodDec parseIntMethod = new MethodDec();
+    parseIntMethod.MarkBuiltIn();
     parseIntMethod.functName = "parseInt";
     parseIntMethod.returnType = CreatePrimitiveType("int");
     stringClass.method.add(parseIntMethod);
     functTable.put(AddPrefix(stringClass, "parseInt"), parseIntMethod);
 
     MethodDec ordMethod = new MethodDec();
+    ordMethod.MarkBuiltIn();
     ordMethod.functName = "ord";
     ordMethod.returnType = CreatePrimitiveType("int");
     ordMethod.arguments.varDecs.add(new VarDec(CreatePrimitiveType("int"), "pos"));
@@ -169,6 +175,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
     ClassDec arrayClass = new ClassDec("-array");
 
     MethodDec sizeMethod = new MethodDec();
+    sizeMethod.MarkBuiltIn();
     sizeMethod.functName = "size";
     sizeMethod.returnType = CreatePrimitiveType("int");
     arrayClass.method.add(sizeMethod);
@@ -378,9 +385,11 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
    * */
   @Override
   public Void visit(MethodDec methodDec) {
+    curMethod = methodDec;
     visit((FunctDec) methodDec);
     if (methodDec.GetFunctName().equals((methodDec.parentClass.GetClassName())))
       throw new RuntimeException("method takes constructor's name...\n" + methodDec.LocationToString());
+    curMethod = null;
     return null;
   }
 
@@ -398,6 +407,7 @@ public class TypeThreadVisitor extends AstTraverseVisitor<Void> {
   @Override
   public Void visit(ThisExp thisExp) {
     thisExp.varTypeRef = curClass.classType;
+    thisExp.thisMethod = curMethod;
     // NOTE LV
     thisExp.lValue = true;
     return null;

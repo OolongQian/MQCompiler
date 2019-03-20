@@ -7,6 +7,8 @@ import ast.usage.AstBaseVisitor;
 
 import java.util.Hashtable;
 
+import static ir.builder.Config.INT_SIZE;
+
 /**
  * This class is really something.
  *
@@ -47,21 +49,22 @@ public class VarTypeRef extends TypeRef {
       return typeSpace;
     }
 
+    // reserved for array_size and array_headPtr.
     if (isArray()) {
-      typeSpace = 8;
+      typeSpace = INT_SIZE;
     }
     else if(isInt() || isBool()) {
-      typeSpace = 4;
+      typeSpace = INT_SIZE;
     }
     else if (isString()) {
-      typeSpace = 8;
+      typeSpace = INT_SIZE;
     }
     else {
       // user defined type
       for (VarDec field : baseType.fields) {
         // FIXME : typeSpace += field.varType.GetTypeSpace();
         // NOTE : object type seems to be pointer, thus has typeSpace 4.
-        typeSpace += 4;
+        typeSpace += INT_SIZE;
       }
     }
     return typeSpace;
