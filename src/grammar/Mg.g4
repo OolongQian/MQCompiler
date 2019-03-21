@@ -10,14 +10,14 @@ prog
 
 /*** check ***/
 dec
-    :   varDec
+    :   varDec ';'
     |   functDec
     |   classDec
     ;
 
 /*** check ***/
 varDec
-    :   type varDeclaratorList ';'
+    :   type varDeclaratorList
     ;
 
 varDeclaratorList
@@ -54,7 +54,7 @@ classBody
 classBodyDec
     :   constructorDec
     |   functDec
-    |   varDec
+    |   varDec ';'
     |   classDec
     ;
 
@@ -86,7 +86,7 @@ blockStm
 
 /*** check ***/
 varDecStm
-    :   varDec
+    :   varDec ';'
     ;
 
 /*** check ***/
@@ -106,12 +106,12 @@ forStm
 
 /*** check ***/
 forControl
-    :   '(' forInit? exp? ';' forUpdate? ')'
+    :   '(' forInit? ';' exp? ';' forUpdate? ')'
     ;
 
 forInit
     :   varDec
-    |   expList ';'
+    |   expList
     ;
 
 forUpdate

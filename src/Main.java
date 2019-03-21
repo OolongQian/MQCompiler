@@ -56,7 +56,8 @@ public class Main {
     irCtx.Print(irPrinter);
 
     if (!TEST) {
-      Interpreter interp = new Interpreter(irFilePath, null);
+      Interpreter interp = new Interpreter();
+      interp.Config(irFilePath, null);
       interp.Parse();
       interp.Execute();
     }

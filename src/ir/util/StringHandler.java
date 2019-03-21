@@ -3,7 +3,6 @@ package ir.util;
 public class StringHandler {
 	
 	public static String unescape(String s) {
-		s = s.substring(1, s.length() - 1);
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < s.length(); ++i) {
 			if (s.charAt(i) != '\\') {

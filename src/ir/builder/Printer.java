@@ -63,6 +63,7 @@ public class Printer {
 	  binOpInterpMap.put(LE, "<=");
 	  binOpInterpMap.put(EQ, "==");
 	  binOpInterpMap.put(NE, "!=");
+	  binOpInterpMap.put(CONCAT, "+");
   }
   
 	private static Map<Binary.Op, String> binOpStrMap = new HashMap<>();
@@ -85,6 +86,7 @@ public class Printer {
 		binOpStrMap.put(LE, "le");
 		binOpStrMap.put(EQ, "eq");
 		binOpStrMap.put(NE, "ne");
+		binOpStrMap.put(CONCAT, "concat");
 	}
 	
 	private static Map<Unary.Op, String> uniOpInterpMap = new HashMap<>();
@@ -93,8 +95,14 @@ public class Printer {
 		uniOpInterpMap.put(BITNOT, "^");
 	}
 	
+	private static Map<Unary.Op, String> uniOpStrMap = new HashMap<>();
+	static {
+		uniOpStrMap.put(NEG, "neg");
+		uniOpStrMap.put(BITNOT, "bitnot");
+	}
+	
 	public void print(StringLiteral str) {
-		fout.println("<*> " + str.val);
+		fout.println("<*> " + str.id + " " + str.val);
 	}
 	
 	public void print(GlobalReg reg) {
@@ -165,8 +173,8 @@ public class Printer {
   }
 	
 	public void print(Unary quad) {
-		fout.println("unary " + uniOpInterpMap.get(quad.op) + " " +
-						quad.ans.getText() + " " + quad.src.getText());
+		fout.println(uniOpStrMap.get(quad.op) + " " +
+						quad.ans.getText() + " = " + uniOpInterpMap.get(quad.op) + " " + quad.src.getText());
 	}
 	
 	public void print(Comment quad) {

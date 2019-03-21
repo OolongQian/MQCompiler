@@ -480,7 +480,8 @@ public class Builder extends AstTraverseVisitor<Void> {
     }
     else {
       // emplace a null mark in empty pointer slot.
-      ctx.EmplaceInst(new Store(addr, MakeReg("null")));
+	    // TODO : self-find trouble
+//      ctx.EmplaceInst(new Store(addr, MakeReg("null")));
     }
 
     ctx.BindVarToAddr(node, addr);
@@ -651,9 +652,11 @@ public class Builder extends AstTraverseVisitor<Void> {
     	node.forControl.check.Accept(this);
     }
     else {
-    	node.forControl.check.Accept(this);
-    	IrValue brCond = GetArithResult(node.forControl.check);
-    	ctx.EmplaceInst(new Branch(brCond, step, after));
+    	if (node.forControl.check != null) {
+		    node.forControl.check.Accept(this);
+		    IrValue brCond = GetArithResult(node.forControl.check);
+		    ctx.EmplaceInst(new Branch(brCond, step, after));
+	    }
     }
     
     ctx.RecordLoop(check, after);
@@ -712,13 +715,12 @@ public class Builder extends AstTraverseVisitor<Void> {
   @Override
   public Void visit(PrefixExp node) {
     node.objInstance.Accept(this);
-
-    // it has addr because it is a lvalue.
-    Reg addr = node.objInstance.getIrAddr();
-    IrValue oldVal = GetArithResult(node.objInstance);
-
+	
+	  IrValue oldVal = GetArithResult(node.objInstance);
     switch (node.op) {
       case "++": case "--":
+		    // it has addr because it is a lvalue.
+		    Reg addr = node.objInstance.getIrAddr();
         // similar to Suffix
         Reg newVal = ctx.GetCurFunc().GetTmpReg();
         Op op = (node.op.equals("++")) ? ADD : SUB;
@@ -732,7 +734,6 @@ public class Builder extends AstTraverseVisitor<Void> {
         Reg newVal_ = ctx.GetCurFunc().GetTmpReg();
         Unary.Op op_ = (node.op.equals("~")) ? BITNOT : NEG;
         ctx.EmplaceInst(new Unary(newVal_, op_, oldVal));
-        ctx.EmplaceInst(new Store(addr, newVal_));
 
         node.setIrAddr(null);
         node.setIrValue(newVal_);
@@ -770,11 +771,13 @@ public class Builder extends AstTraverseVisitor<Void> {
 //	      if (!logicEval) {
 	      // NOTE : incorporate ! into logic expression is difficult, because we don't know whether it's && or ||.
 	      // NOTE : that's OK, maybe we could do it twice, but that will be tedious. Do it later on.
-	      node.objInstance.Accept(this);
+	      // FIXME : node.objInstance has been Accepted.
+//	      node.objInstance.Accept(this);
 	      IrValue boo = GetArithResult(node.objInstance);
-	      Reg negVal = ctx.GetCurFunc().GetTmpReg();
-	      ctx.EmplaceInst(new Unary(negVal, NEG, boo));
-	      node.setIrValue(negVal);
+	      Reg oppoVal = ctx.GetCurFunc().GetTmpReg();
+	      // this is a little bit tricky.
+	      ctx.EmplaceInst(new Binary(oppoVal, XOR, boo, new IntLiteral(1)));
+	      node.setIrValue(oppoVal);
 //	      }
 //	      else {
 //
@@ -976,12 +979,17 @@ public class Builder extends AstTraverseVisitor<Void> {
   public Void visit(ArithBinaryExp node) {
     node.lhs.Accept(this);
     node.rhs.Accept(this);
-
+		
     Reg ans = ctx.GetCurFunc().GetTmpReg();
     IrValue lVal = GetArithResult(node.lhs);
     IrValue rVal = GetArithResult(node.rhs);
-    Binary.Op op = binaryOpMap.get(node.op);
-
+    
+    Binary.Op op;
+    if (node.op.equals("+") && node.lhs.varTypeRef.isString())
+	    op = CONCAT;
+    else
+	    op = binaryOpMap.get(node.op);
+		
     ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
     node.setIrValue(ans);
     return null;

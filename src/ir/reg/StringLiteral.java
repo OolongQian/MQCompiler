@@ -15,19 +15,18 @@ package ir.reg;
  * Specifically, it is the address loading from which we could get our Pointer to the string content.
  * */
 public class StringLiteral extends Reg {
+  private static int cnt = 0;
   public String val;
-  private int memAddr;
+  public int id;
   
   public StringLiteral(String val) {
     super('*' + val);
     this.val = val;
+    this.id = cnt++;
   }
-  
-  public int GetMemAddr() {
-    return memAddr;
-  }
-  
-  public void SetMemAddr(int memAddr) {
-    this.memAddr = memAddr;
-  }
+	
+	@Override
+	public String getText() {
+		return '*' + Integer.toString(id);
+	}
 }

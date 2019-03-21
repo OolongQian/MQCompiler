@@ -75,7 +75,12 @@ public class AstBuilder extends MgBaseVisitor<Ast> {
 
     return classDec;
   }
-
+  
+  @Override
+  public Ast visitClassBodyDec(MgParser.ClassBodyDecContext ctx) {
+    return visit(ctx.getChild(0));
+  }
+  
   @Override
   public Ast visitConstructorDec(MgParser.ConstructorDecContext ctx) {
     ConstructDec constructDec = new ConstructDec();
