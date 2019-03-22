@@ -2,9 +2,9 @@ package ast.node.exp;
 
 import ast.node.Ast;
 import ast.typeref.VarTypeRef;
-import ir.reg.IrValue;
-import ir.reg.Reg;
-import ir.util.BasicBlock;
+import ir.structure.BasicBlock;
+import ir.structure.IrValue;
+import ir.structure.Reg;
 
 abstract public class Exp extends Ast {
 

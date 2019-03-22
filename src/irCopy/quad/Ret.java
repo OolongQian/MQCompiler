@@ -1,8 +1,7 @@
 package ir.quad;
 
-
-import ir.Printer;
-import ir.structure.IrValue;
+import ir.builder.Printer;
+import ir.reg.IrValue;
 
 public class Ret extends Quad {
   public IrValue val;

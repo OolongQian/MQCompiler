@@ -3,10 +3,10 @@ import antlr_tools.MgParser;
 import ast.builder.AstBuilder;
 import ast.builder.ParserErrorHandlerStrategy;
 import ast.node.prog.Prog;
-import ir.Interpreter.Interpreter;
-import ir.builder.Builder;
-import ir.builder.BuilderContext;
-import ir.builder.Printer;
+import ir.Builder;
+import ir.BuilderContext;
+import ir.Printer;
+import ir.interpreter.Interpreter;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -17,7 +17,7 @@ import semantic.TypeThreadVisitor;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
-import static ir.builder.Config.TEST;
+import static ir.Config.TEST;
 
 
 public class Main {
@@ -49,7 +49,7 @@ public class Main {
     formatCheckVisitor.FormatCheck(prog);
 
     String irFilePath = "ir.txt";
-    BuilderContext irCtx = new BuilderContext(formatCheckVisitor);
+    BuilderContext irCtx = new BuilderContext(formatCheckVisitor.functTable);
     Builder irBuilder = new Builder(irCtx);
     irBuilder.build(prog);
     Printer irPrinter = new Printer(irFilePath);
@@ -63,7 +63,7 @@ public class Main {
     }
 
 //    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(deprecate);
-//    String irStr = irPrintVisitor.IrPrint(deprecate.ir);
+//    String irStr = irPrintVisitor.IrPrint(deprecate.irCopy);
 //    System.out.println(irStr);
   }
 }

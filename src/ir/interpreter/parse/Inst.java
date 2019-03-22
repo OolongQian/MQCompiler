@@ -1,4 +1,4 @@
-package ir.Interpreter.parse;
+package ir.interpreter.parse;
 
 import java.util.HashMap;
 import java.util.LinkedList;

@@ -1,4 +1,4 @@
-package ir.Interpreter.execute;
+package ir.interpreter.execute;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,7 +8,7 @@ import java.util.Map;
  * */
 public class MemModel {
 	static int sp = 0;
-	static int hp = 409500;
+	static int hp = 4095000;
 	
 	Map<Integer, Byte> mem = new HashMap<>();
 	
@@ -20,7 +20,7 @@ public class MemModel {
 		int ret = 0;
 		for (int i = 0; i < 4; ++i) {
 			byte b = LoadMem(addr + i);
-			ret = ret | ((b & 0xFF) << 4 * i);
+			ret = ret | ((b & 0xFF) << 8 * i);
 		}
 		return ret;
 	}
@@ -31,7 +31,7 @@ public class MemModel {
 		// NOTE : identical to LoadInt, headAddr is lower address.
 		for (int i = 0; i < 4; ++i) {
 			// take the value of 4i bytes, counting from lower.
-			byte b = (byte)((val >> (4 * i)) & 0xFF);
+			byte b = (byte)((val >> (8 * i)) & 0xFF);
 			StoreMem(addr + i, b);
 		}
 	}

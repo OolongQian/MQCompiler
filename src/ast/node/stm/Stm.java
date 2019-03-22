@@ -1,7 +1,6 @@
 package ast.node.stm;
 
 import ast.node.Ast;
-import ir.util.BasicBlock;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 abstract public class Stm extends Ast {
@@ -14,10 +13,6 @@ abstract public class Stm extends Ast {
     endCol = ctx.stop.getStopIndex();
     beginRow = ctx.start.getLine();
     endRow = ctx.stop.getLine();
-  }
-
-  public BasicBlock GetLoopAfter() {
-    return null;
   }
 
   @Override

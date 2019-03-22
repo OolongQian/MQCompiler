@@ -1,8 +1,9 @@
 package ir.quad;
 
-import ir.Printer;
-import ir.structure.BasicBlock;
-import ir.structure.IrValue;
+import ir.builder.Printer;
+import ir.reg.IrValue;
+import ir.reg.Reg;
+import ir.util.BasicBlock;
 
 public class Branch extends Quad {
   public IrValue cond;

@@ -7,13 +7,13 @@ import ast.usage.AstBaseVisitor;
 
 import java.util.Hashtable;
 
-import static ir.builder.Config.INT_SIZE;
+import static ir.Config.INT_SIZE;
 
 /**
  * This class is really something.
  *
  * Every VarTypeRef has a spaceSize associated with it, so that
- * ir determines how many space should be allocated to it.
+ * irCopy determines how many space should be allocated to it.
  *
  * VarTypeRef actually contains all type information, which means
  * it has combination array-type front-end, and also has baseType
@@ -38,7 +38,7 @@ public class VarTypeRef extends TypeRef {
   public VarTypeRef innerType = null;
   public Exp dim = null;
 
-  // NOTE : typeSize calculate method used by ir to determine class member's offset.
+  // NOTE : typeSize calculate method used by irCopy to determine class member's offset.
   // NOTE : typeSize isn't multiplied by dim
   private int typeSpace = 0;
 

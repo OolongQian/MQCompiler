@@ -1,8 +1,8 @@
 package ir.quad;
 
-import ir.Printer;
-import ir.structure.IrValue;
-import ir.structure.Reg;
+import ir.builder.Printer;
+import ir.reg.IrValue;
+import ir.reg.Reg;
 
 /**
  * Malloc means heap allocate

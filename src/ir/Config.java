@@ -1,4 +1,4 @@
-package ir.builder;
+package ir;
 
 public class Config {
 	public static final int INT_SIZE = 4;

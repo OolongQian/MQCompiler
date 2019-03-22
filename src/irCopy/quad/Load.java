@@ -1,7 +1,7 @@
 package ir.quad;
 
-import ir.Printer;
-import ir.structure.Reg;
+import ir.builder.Printer;
+import ir.reg.Reg;
 
 public class Load extends Quad {
   public Reg val;
@@ -16,4 +16,5 @@ public class Load extends Quad {
   public void AcceptPrint(Printer printer) {
     printer.print(this);
   }
+
 }

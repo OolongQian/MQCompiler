@@ -1,16 +1,16 @@
-package ir.Interpreter;
+package ir.interpreter;
 
-import ir.Interpreter.execute.MemModel;
-import ir.Interpreter.execute.Reg;
-import ir.Interpreter.execute.RunCtx;
-import ir.Interpreter.parse.Funct;
-import ir.Interpreter.parse.Inst;
+import ir.interpreter.execute.MemModel;
+import ir.interpreter.execute.Reg;
+import ir.interpreter.execute.RunCtx;
+import ir.interpreter.parse.Funct;
+import ir.interpreter.parse.Inst;
 
 import java.io.*;
 import java.util.*;
 
-import static ir.builder.Config.LINENO;
-import static ir.builder.Config.LOG;
+import static ir.Config.LINENO;
+import static ir.Config.LOG;
 
 public class Interpreter {
 
@@ -54,6 +54,7 @@ public class Interpreter {
 	 * bind stringLiteral to addr.
 	 * */
 	private Map<Integer, String> stringPool = new HashMap<>();
+	private List<String> globalPool = new LinkedList<>();
 	
 	public Interpreter() { }
 	
@@ -147,8 +148,11 @@ public class Interpreter {
 					}
 					gStr += tmp.substring(0, tmp.indexOf('"'));
 				}
-				
 				stringPool.put(id, gStr);
+			}
+			else if (line.startsWith("<@>")) {
+				assert tokens.size() == 2;
+				globalPool.add(tokens.get(1));
 			}
 			else {
 				// this line is an instruction
@@ -271,9 +275,16 @@ public class Interpreter {
 	 * Init global is executing a pseudo init function.
 	 * The corresponding Reg is automatically assigned because
 	 * GetReg function returns global reg or run-time reg respectively.
+	 * s : @gName
 	 * */
 	private void InitGlobal() {
-		RunCtx gInitCtx = new RunCtx(functs.get("-globalInit"));
+		for (String s : globalPool) {
+			Reg gReg = new Reg(s);
+			gReg.SetAllocd();
+			gReg.SetValue(mem.AllocMem(4));
+			global.put(s, gReg);
+		}
+		RunCtx gInitCtx = new RunCtx(functs.get("_init_"));
 		while (!gInitCtx.terminate) {
 			ExecuteInst(gInitCtx);
 		}
@@ -397,6 +408,10 @@ public class Interpreter {
 								", name " + inst.dst);
 				break;
 				
+			/**
+			 * If the funct's return type is void, the reg value is null.
+			 * if ret isn't void, the return value shouldn't be null.
+			 * */
 			case "call":
 				// create function info
 				String funcName = inst.funcName;
@@ -431,10 +446,14 @@ public class Interpreter {
 						ExecuteInst(calleeCtx);
 					}
 					// get return value.
-					if (!ret.IsNull())
-						ret.SetValue(calleeCtx.GetRetVal().GetValue());
-					else
-						ret.SetValue(null);
+					// when ret.IsNull(), it means the function signature says its return value is null, no need to return.
+					if (!ret.IsNull()) {
+						if (calleeCtx.GetRetVal() == null) {
+							ret.SetValue(null);
+						} else {
+							ret.SetValue(calleeCtx.GetRetVal().GetValue());
+						}
+					}
 				}
 				break;
 			
@@ -543,6 +562,9 @@ public class Interpreter {
 		}
 	}
 	
+	/**
+	 * Return value is an integer, if a function has no return value, it returns null.
+	 * */
 	private Integer BuiltInFuncExec(String markName, List<Reg> args) {
 		// markName = ~name
 		String funct = markName.substring(1);

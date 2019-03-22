@@ -1,4 +1,4 @@
-package ir.Interpreter.execute;
+package ir.interpreter.execute;
 
 
 import java.util.regex.Matcher;

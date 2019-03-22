@@ -2,6 +2,7 @@ package ast.node.dec.variable;
 
 import ast.node.dec.Dec;
 import ast.node.dec.class_.ClassDec;
+import ast.node.dec.function.MethodDec;
 import ast.node.exp.Exp;
 import ast.typeref.VarTypeRef;
 import ast.usage.AstBaseVisitor;
@@ -16,7 +17,7 @@ public class VarDec extends Dec {
 
   // if this is a field.
   public ClassDec parentClass;
-
+  
   public VarDec() { }
 
   public VarDec(VarTypeRef varType, String varName) {

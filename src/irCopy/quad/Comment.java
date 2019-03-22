@@ -1,7 +1,6 @@
 package ir.quad;
 
-
-import ir.Printer;
+import ir.builder.Printer;
 
 public class Comment extends Quad {
 	public String content;

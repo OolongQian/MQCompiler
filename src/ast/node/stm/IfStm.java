@@ -2,7 +2,6 @@ package ast.node.stm;
 
 import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
-import ir.util.BasicBlock;
 
 /**
  * Condition and then can't be null.

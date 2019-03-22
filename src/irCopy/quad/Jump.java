@@ -1,7 +1,7 @@
 package ir.quad;
 
-import ir.Printer;
-import ir.structure.BasicBlock;
+import ir.builder.Printer;
+import ir.util.BasicBlock;
 
 public class Jump extends Quad {
   public BasicBlock target;

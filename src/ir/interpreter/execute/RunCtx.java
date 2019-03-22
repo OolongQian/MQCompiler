@@ -1,6 +1,6 @@
-package ir.Interpreter.execute;
+package ir.interpreter.execute;
 
-import ir.Interpreter.parse.Funct;
+import ir.interpreter.parse.Funct;
 
 import java.util.HashMap;
 import java.util.List;
@@ -88,8 +88,6 @@ public class RunCtx {
 	}
 	
 	public Reg GetRetVal() {
-		if (ret == null)
-			throw new RuntimeException("null return value");
 		return ret;
 	}
 	
