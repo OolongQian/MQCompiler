@@ -178,4 +178,8 @@ public class BuilderContext {
 		globals.values().forEach(printer::print);
 		functs.values().forEach(printer::print);
 	}
+	
+	public Map<String, Function> GetFuncts() {
+		return functs;
+	}
 }

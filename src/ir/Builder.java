@@ -90,7 +90,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * */
 	private void AddGlobalVar(VarDec node) {
 		Reg var = MakeGreg(node.varName);
-		// global variable don't need to be alloca, since they don't need to be ssa.
+		// global variable don't need to be alloca, since they don't need to be Ssa.
 //		ctx.EmplaceInst(new Alloca(var));
 		ctx.AddGlobalVar(node, var);
 		

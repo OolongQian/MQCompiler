@@ -1,16 +1,16 @@
 package ir.structure;
 
 import ir.Linkable;
+import ir.quad.Phi;
 import ir.quad.Quad;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class BasicBlock extends Linkable {
 	private String name;
 	private List<Quad> quads = new LinkedList<>();
-	private List<BasicBlock> predecessor = new LinkedList<>();
-	private List<BasicBlock> successor = new LinkedList<>();
+	public Set<BasicBlock> predecessor = new HashSet<>();
+	public Set<BasicBlock> successor = new HashSet<>();
 	public boolean complete = false;
 	public Function parentFunct;
 	
@@ -44,8 +44,16 @@ public class BasicBlock extends Linkable {
 		assert !complete;
 		quads.add(pos, quad);
 	}
+	public void PushfrontPhi(Phi quad) {
+		quads.add(0, quad);
+	}
 	
 	public List<Quad> TraverseQuad() {
 		return quads;
+	}
+	
+	@Override
+	public String toString() {
+		return name;
 	}
 }

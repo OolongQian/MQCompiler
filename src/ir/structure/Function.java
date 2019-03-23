@@ -84,6 +84,9 @@ public class Function {
 		return nb;
 	}
 	
+	/**
+	 * Edges will be added more than once, thus using Set to record edges.
+	 * */
 	public void ConstructCFG() {
 		BasicBlock cur = bbs.GetHead();
 		while (cur.next != null) {

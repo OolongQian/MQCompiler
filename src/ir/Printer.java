@@ -179,4 +179,16 @@ public class Printer {
 	public void print(Comment quad) {
 		fout.println("# " + quad.content);
 	}
+	
+	public void print(Phi quad) {
+		fout.print("phi " + quad.var.getText() + ":");
+		for (BasicBlock blk : quad.options.keySet()) {
+			fout.print(" [" + blk.getName() + " " + quad.options.get(blk).getText() + "]");
+		}
+		fout.println();
+	}
+	
+	public void print(Mov quad) {
+		fout.println("move " + quad.dst.getText() + " = " + quad.src.getText());
+	}
 }

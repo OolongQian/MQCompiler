@@ -44,6 +44,7 @@ public class List_ {
 		e.prev = mark;
 		e.next = mark.next;
 		mark.next = e;
+		if (mark == tail) tail = e;
 		size_++;
 	}
 	

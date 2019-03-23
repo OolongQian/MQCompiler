@@ -7,6 +7,7 @@ import ir.Builder;
 import ir.BuilderContext;
 import ir.Printer;
 import ir.interpreter.Interpreter;
+import opt.ssa.SSA;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -54,12 +55,19 @@ public class Main {
     irBuilder.build(prog);
     Printer irPrinter = new Printer(irFilePath);
     irCtx.Print(irPrinter);
-
+  
+    SSA ssaOptimizer = new SSA();
+    ssaOptimizer.ConstructSSA(irCtx);
+    
+    irPrinter.getFout().println();
+    
+    irCtx.Print(irPrinter);
+    
     if (!TEST) {
       Interpreter interp = new Interpreter();
       interp.Config(irFilePath, null);
-      interp.Parse();
-      interp.Execute();
+//      interp.Parse();
+//      interp.Execute();
     }
 
 //    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(deprecate);
