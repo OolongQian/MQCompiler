@@ -1,8 +1,15 @@
 package ir;
 
-import ast.typeref.VarTypeRef;
+import ast.node.dec.ClassDec;
+import ast.node.dec.VarDec;
+import ast.type.Type;
 import ir.structure.Constant;
 import ir.structure.Reg;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static ir.Config.INT_SIZE;
 
 public class Utility {
 	
@@ -17,8 +24,18 @@ public class Utility {
 		return new Constant(val);
 	}
 	
-	public static int CalTypeSize(VarTypeRef type) {
-		return type.GetTypeSpace();
+	public static Map<String, ClassDec> irClassTable = new HashMap<>();
+	public static int CalTypeSize(Type type) {
+		assert !type.isNull() && !type.isVoid();
+		
+		int typeSpace = 0;
+		if (type.isArray() || type.isInt() || type.isBool() || type.isString())
+			typeSpace = INT_SIZE;
+		else {
+			ClassDec class_ = irClassTable.get(type.GetBaseTypeName());
+			for (VarDec field : class_.fields) typeSpace += INT_SIZE;
+		}
+		return typeSpace;
 	}
 	
 	public static String unescape(String s) {

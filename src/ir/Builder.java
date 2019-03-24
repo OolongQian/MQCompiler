@@ -1,30 +1,16 @@
 package ir;
 
+import ast.node.Prog;
+import ast.node.dec.ClassDec;
 import ast.node.dec.Dec;
-import ast.node.dec.class_.ClassDec;
-import ast.node.dec.function.FunctDec;
-import ast.node.dec.function.MethodDec;
-import ast.node.dec.variable.GlobalVarDec;
-import ast.node.dec.variable.LocalVarDec;
-import ast.node.dec.variable.VarDec;
+import ast.node.dec.FunctDec;
+import ast.node.dec.VarDec;
 import ast.node.exp.*;
-import ast.node.exp.binary.ArithBinaryExp;
-import ast.node.exp.binary.LogicBinaryExp;
-import ast.node.exp.literal.BoolLiteralExp;
-import ast.node.exp.literal.IntLiteralExp;
-import ast.node.exp.literal.StringLiteralExp;
-import ast.node.exp.lvalue.ArrayAccessExp;
-import ast.node.exp.lvalue.FieldAccessExp;
-import ast.node.exp.lvalue.ThisExp;
-import ast.node.exp.lvalue.VarExp;
-import ast.node.exp.unary.PrefixExp;
-import ast.node.exp.unary.SuffixExp;
-import ast.node.prog.Prog;
 import ast.node.stm.*;
-import ast.typeref.VarTypeRef;
+import ast.type.Type;
+import ast.usage.AstBaseVisitor;
 import ir.quad.*;
 import ir.structure.*;
-import semantic.AstTraverseVisitor;
 
 import java.util.*;
 
@@ -33,6 +19,7 @@ import static ir.Utility.*;
 import static ir.quad.Binary.Op.*;
 import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
+import static semantic.Utility.AddPrefix;
 
 
 /**
@@ -44,7 +31,7 @@ import static ir.quad.Unary.Op.NEG;
  * NOTE : their namespace should be safe without collision inside a function, and maybe we don't
  * NOTE : expect to do optimization between functions.
  * */
-public class Builder extends AstTraverseVisitor<Void> {
+public class Builder extends AstBaseVisitor<Void> {
 
 	/**
 	 * For all building dependencies and results.
@@ -59,8 +46,16 @@ public class Builder extends AstTraverseVisitor<Void> {
 	
 	public void build(Prog prog) {
 		ast = prog;
+		MakeClassTable();
 		BuildIR();
 		ctx.ConstructCFG();
+	}
+	
+	private void MakeClassTable() {
+		for (Dec dec : ast.decs) {
+			if (dec instanceof ClassDec)
+				irClassTable.put(((ClassDec) dec).name, (ClassDec) dec);
+		}
 	}
 	
 	private void BuildIR() {
@@ -71,14 +66,14 @@ public class Builder extends AstTraverseVisitor<Void> {
 	public Void visit(Prog node) {
 		Function init = ctx.FuncGen("_init_");
 		ctx.SetCurFunc(init);
-		for (Dec child : node.children) {
-			if (child instanceof GlobalVarDec)
+		for (Dec child : node.decs) {
+			if (child instanceof VarDec && ((VarDec) child).isGlobal())
 				child.Accept(this);
 		}
 		ctx.GetCurBB().Complete();
 		
-		for (Dec child : node.children) {
-			if (!(child instanceof GlobalVarDec))
+		for (Dec child : node.decs) {
+			if (!(child instanceof VarDec))
 				child.Accept(this);
 		}
 		return null;
@@ -89,11 +84,8 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * Global variables have no naming collision.
 	 * */
 	private void AddGlobalVar(VarDec node) {
-		Reg var = MakeGreg(node.varName);
-		// global variable don't need to be alloca, since they don't need to be Ssa.
-//		ctx.EmplaceInst(new Alloca(var));
+		Reg var = MakeGreg(node.name);
 		ctx.AddGlobalVar(node, var);
-		
 		// initialization ir for global var are set in function _init_.
 		if (node.inital != null) {
 			node.inital.Accept(this);
@@ -103,8 +95,31 @@ public class Builder extends AstTraverseVisitor<Void> {
 	}
 	
 	@Override
-	public Void visit(GlobalVarDec node) {
-		node.varDecs.forEach(this::AddGlobalVar);
+	public Void visit(VarDec node) {
+		if (node.isField()) return null;
+		
+		if (node.isGlobal()) {
+			Reg var = MakeGreg(node.name);
+			ctx.AddGlobalVar(node, var);
+			
+			if (node.inital != null) {
+				node.inital.Accept(this);
+				IrValue initVal = GetArithResult(node.inital);
+				ctx.EmplaceInst(new Store(var, initVal));
+			}
+		}
+		// do nothing to field.
+		else {
+			node.name = ctx.RenameLocal(node.name);
+			Reg var = new Reg(node.name);
+			ctx.EmplaceInst(new Alloca(var));
+			if (node.inital != null && !node.inital.type.isNull()) {
+				node.inital.Accept(this);
+				IrValue initVal = GetArithResult(node.inital);
+				ctx.EmplaceInst(new Store(var, initVal));
+			}
+			ctx.BindVarToDec(node, var);
+		}
 		return null;
 	}
 	
@@ -115,39 +130,17 @@ public class Builder extends AstTraverseVisitor<Void> {
 	public Void visit(FunctDec node) {
 		// a new function is about to be generated, set the last BB of the last function to be completed.
 		if (!ctx.GetCurBB().complete) ctx.GetCurBB().Complete();
-		Function func = ctx.FuncGen(node.functName);
+		
+		String renaming = (node.isMethod()) ?
+						AddPrefix(node.GetParentClass(), node.name) : node.name;
+		Function func = ctx.FuncGen(renaming);
 		ctx.SetCurFunc(func);
 		
-		node.arguments.varDecs.forEach(x -> x.varName = ctx.RenameLocal(x.varName));
-		node.arguments.varDecs.forEach(x -> func.formalArgs.add(x.varName));
+		// do renaming directly on Ast.
+		node.args.forEach(x -> x.name = ctx.RenameLocal(x.name));
+		if (node.isMethod()) node.args.add(0, new VarDec("this"));
+		node.args.forEach(x -> func.formalArgs.add(x.name));
 		
-		for (int i = 0; i < func.formalArgs.size(); ++i) {
-			Reg var = new Reg(func.formalArgs.get(i));
-			Reg reg = ctx.GetTmpReg();
-			func.regArgs.add(reg);
-			ctx.EmplaceInst(new Alloca(var));
-			ctx.EmplaceInst(new Store(var, reg));
-			ctx.BindVarToDec(node.arguments.varDecs.get(i), var);
-		}
-		
-		for (Stm stm : node.functBody) {
-			stm.Accept(this);
-		}
-		return null;
-	}
-	
-	/**
-	 * NOTE : we do method renaming, to be -class#method
-	 * */
-	@Override
-	public Void visit(MethodDec node) {
-		String methodRenaming = AddPrefix(node.parentClass, node.functName);
-		Function func = ctx.FuncGen(methodRenaming);
-		ctx.SetCurFunc(func);
-		
-		node.arguments.varDecs.forEach(x -> x.varName = ctx.RenameLocal(x.varName));
-		node.arguments.varDecs.forEach(x -> func.formalArgs.add(x.varName));
-		func.formalArgs.add(0, "this");
 		
 		for (int i = 0; i < func.formalArgs.size(); ++i) {
 			Reg var = new Reg(func.formalArgs.get(i));
@@ -157,11 +150,10 @@ public class Builder extends AstTraverseVisitor<Void> {
 			ctx.EmplaceInst(new Store(var, reg));
 			if (func.formalArgs.get(i).equals("this"))
 				func.this_ = var;
-			else
-				ctx.BindVarToDec(node.arguments.varDecs.get(i), var);
+			ctx.BindVarToDec(node.args.get(i), var);
 		}
 		
-		for (Stm stm : node.functBody) {
+		for (Stm stm : node.body) {
 			stm.Accept(this);
 		}
 		return null;
@@ -173,34 +165,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * */
 	@Override
 	public Void visit(ClassDec node) {
-		node.method.forEach(x -> x.Accept(this));
-		return null;
-	}
-	
-	/**
-	 * For local variable.
-	 * Do nothing to class fields.
-	 * Do nothing to global variable.
-	 */
-	@Override
-	public Void visit(LocalVarDec node) {
-		node.varDecs.forEach(x -> x.Accept(this));
-		return null;
-	}
-	
-	@Override
-	public Void visit(VarDec node) {
-		node.varName = ctx.RenameLocal(node.varName);
-		Reg var = new Reg(node.varName);
-		ctx.EmplaceInst(new Alloca(var));
-		
-		if (node.inital != null && !node.inital.varTypeRef.isNull()) {
-			node.inital.Accept(this);
-			IrValue initVal = GetArithResult(node.inital);
-			ctx.EmplaceInst(new Store(var, initVal));
-		}
-		
-		ctx.BindVarToDec(node, var);
+		node.methods.forEach(x -> x.Accept(this));
 		return null;
 	}
 	
@@ -211,19 +176,19 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * */
 	@Override
 	public Void visit(VarExp node) {
-		VarDec varDec = node.varDec;
-		if (varDec.parentClass != null) {
+		VarDec varDec = node.resolve;
+		if (varDec.GetParentClass() != null) {
 			Reg this_ = ctx.GetThis();
 			Mumble("start a field eval");
 			// load this.
 			Reg headPtr = ctx.GetTmpReg();
 			ctx.EmplaceInst(new Load(headPtr, this_));
 			// find offset of field in class layout
-			ClassDec layout = varDec.parentClass;
+			ClassDec layout = varDec.GetParentClass();
 			// field name hasn't been renamed.
 			// it shouldn't be renamed.
-			String fieldName = node.varName;
-			Constant offset = new Constant(layout.classType.GetFieldOffset(fieldName));
+			String fieldName = node.name;
+			Constant offset = new Constant(layout.GetFieldOffset(fieldName));
 			Reg fieldPtr = ctx.GetTmpReg();
 			ctx.EmplaceInst(new Binary(fieldPtr, ADD, headPtr, offset));
 			node.setIrAddr(fieldPtr);
@@ -238,11 +203,11 @@ public class Builder extends AstTraverseVisitor<Void> {
 	
 	@Override
 	public Void visit(SuffixExp node) {
-		node.objInstance.Accept(this);
+		node.obj.Accept(this);
 		// NOTE : it is addr because node is a lvalue.
-		Reg var = node.objInstance.getIrAddr();
+		Reg var = node.obj.getIrAddr();
 		
-		IrValue oldVal = GetArithResult(node.objInstance);
+		IrValue oldVal = GetArithResult(node.obj);
 		Reg increVal = ctx.GetTmpReg();
 		
 		ctx.EmplaceInst(new Binary(increVal, ADD, oldVal, MakeInt(1)));
@@ -256,12 +221,12 @@ public class Builder extends AstTraverseVisitor<Void> {
 	
 	@Override
 	public Void visit(PrefixExp node) {
-		node.objInstance.Accept(this);
+		node.obj.Accept(this);
 		
-		IrValue oldVal = GetArithResult(node.objInstance);
+		IrValue oldVal = GetArithResult(node.obj);
 		switch (node.op) {
 			case "++": case "--":
-				Reg var = node.objInstance.getIrAddr();
+				Reg var = node.obj.getIrAddr();
 				// similar to Suffix
 				Reg newVal = ctx.GetTmpReg();
 				Binary.Op op = (node.op.equals("++")) ? ADD : SUB;
@@ -281,7 +246,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 				break;
 			case "!":
 				assert (node.ifTrue == null) == (node.ifFalse == null);
-				IrValue bool = GetArithResult(node.objInstance);
+				IrValue bool = GetArithResult(node.obj);
 				Reg oppoVal = ctx.GetTmpReg();
 				// this is a little bit tricky.
 				ctx.EmplaceInst(new Binary(oppoVal, XOR, bool, new Constant(1)));
@@ -305,7 +270,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 		IrValue rVal = GetArithResult(node.rhs);
 		
 		Binary.Op op;
-		if (node.op.equals("+") && node.lhs.varTypeRef.isString())
+		if (node.op.equals("+") && node.lhs.type.isString())
 			op = CONCAT;
 		else
 			op = binaryOpMap.get(node.op);
@@ -320,17 +285,17 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * */
 	@Override
 	public Void visit(CreationExp node) {
-		if (!node.varTypeRef.isArray()) {
-			Reg instPtr = MakeNewNonArray(node.varTypeRef);
+		if (!node.type.isArray()) {
+			Reg instPtr = MakeNewNonArray(node.type);
 			// this node's value is a register containing a pointer to the obj.
 			node.setIrValue(instPtr);
 		}
 		else {
 			// array creation need type and dimension info.
 			// use a queue to hold array dimension because first in first out.
-			node.varTypeRef.Accept(this);
+			node.type.Accept(this);
 			Queue<IrValue> dimInfo = new ArrayDeque<>();
-			GetArrayDimension(node.varTypeRef, dimInfo);
+			GetArrayDimension(node.type, dimInfo);
 			// note : In Java, we regard array as pointers, thus no explicit class info is required.
 			Reg arrPtr = MakeNewArray(dimInfo);
 			node.setIrValue(arrPtr);
@@ -341,7 +306,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 	/**
 	 * Sub-function used by visit(CreationExp node)
 	 * */
-	private void GetArrayDimension(VarTypeRef type, Queue<IrValue> dims)  {
+	private void GetArrayDimension(Type type, Queue<IrValue> dims)  {
 		// varTypeRef has been traversed.
 		if (type.innerType == null)
 			return;
@@ -352,13 +317,18 @@ public class Builder extends AstTraverseVisitor<Void> {
 		}
 	}
 	
-	private Reg MakeNewNonArray(VarTypeRef type) {
+	/**
+	 * makeNewNonArray can only be invoked by user-defined class.
+	 * */
+	private Reg MakeNewNonArray(Type type) {
 		// tmpVar is going to be returned to var, and be stored.
+		assert !type.isArray();
+		
 		Reg tmpVar = ctx.GetTmpReg();
 		Constant size_ = MakeInt(CalTypeSize(type));
 		ctx.EmplaceInst(new Malloc(tmpVar, size_));
 		
-		ClassDec userClass = type.baseType;
+		ClassDec userClass = irClassTable.get(type.GetBaseTypeName());
 		String ctor = AddPrefix(userClass, type.typeName);
 		if (ctx.functTable.containsKey(ctor)) {
 			List<IrValue> args = new LinkedList<>(); args.add(tmpVar);
@@ -446,15 +416,17 @@ public class Builder extends AstTraverseVisitor<Void> {
 	/************************* subscript / field ************************************/
 	@Override
 	public Void visit(FieldAccessExp node) {
-		node.objInstance.Accept(this);
+		node.obj.Accept(this);
 		
-		Reg instAddr = node.objInstance.getIrAddr();
+		Reg instAddr = node.obj.getIrAddr();
 		Reg elemAddr = ctx.GetTmpReg();
 		
 		// get offset
-		VarTypeRef instType = node.objInstance.varTypeRef;
+		Type instType = node.obj.type;
+		assert !instType.isArray();
 		String member = node.memberName;
-		IrValue offset = MakeInt(instType.GetFieldOffset(member));
+		ClassDec class_ = irClassTable.get(instType.GetBaseTypeName());
+		IrValue offset = MakeInt(class_.GetFieldOffset(member));
 		
 		ctx.EmplaceInst(new Binary(elemAddr, ADD, instAddr, offset));
 		
@@ -464,10 +436,10 @@ public class Builder extends AstTraverseVisitor<Void> {
 	
 	@Override
 	public Void visit(ArrayAccessExp node) {
-		node.arrInstance.Accept(this);
-		node.accessor.Accept(this);
+		node.arr.Accept(this);
+		node.subscript.Accept(this);
 		
-		IrValue baseAddr = GetArithResult(node.arrInstance);
+		IrValue baseAddr = GetArithResult(node.arr);
 		
 		// NOTE : These are simple tricks, later we do it.
 		// NOTE : if no offset, no need to get element.
@@ -481,7 +453,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 		// now we need a MUL quad for offset calculation
 		// shift index, because the first one is reserved to be array size.
 		IrValue lenSpare = MakeInt(4);
-		IrValue acsIndex = GetArithResult(node.accessor);
+		IrValue acsIndex = GetArithResult(node.subscript);
 		Reg offsetNoLen = ctx.GetTmpReg();
 		Reg offsetWithLen = ctx.GetTmpReg();
 		
@@ -496,11 +468,11 @@ public class Builder extends AstTraverseVisitor<Void> {
 	
 	@Override
 	public Void visit(AssignExp node) {
-		node.lhs.Accept(this);
-		node.rhs.Accept(this);
+		node.dst.Accept(this);
+		node.src.Accept(this);
 		
-		Reg dstPtr = node.lhs.getIrAddr();
-		IrValue srcVal = GetArithResult(node.rhs);
+		Reg dstPtr = node.dst.getIrAddr();
+		IrValue srcVal = GetArithResult(node.src);
 		
 		ctx.EmplaceInst(new Store(dstPtr, srcVal));
 		
@@ -515,23 +487,24 @@ public class Builder extends AstTraverseVisitor<Void> {
 	@Override
 	public Void visit(FunctCallExp node) {
 		List<IrValue> args = new LinkedList<>();
-		for (Exp arg : node.arguments.args) {
+		for (Exp arg : node.args) {
 			arg.Accept(this);
 			args.add(GetArithResult(arg));
 		}
 		
-		Reg retVal = (node.varTypeRef.isVoid()) ?
+		Reg retVal = (node.type.isVoid()) ?
 						MakeGreg("null") : ctx.GetTmpReg();
 		
 		// handle function name format -- built-in ? method ?
-		String mName = (node.isMethodCall()) ?
-						AddPrefix(((MethodCallExp) node).calledClass, node.functName) :
-						node.functName;
+//		String mName = (node.isCallMethod()) ?
+//						AddPrefix(((MethodCallExp) node).getClassResolve(), node.funcName) :
+//						node.functName;
+		String mName = node.funcTableKey;
 		String btinPref = "~";
-		String btmName = (node.functDec.builtIn) ? (btinPref + mName) : mName;
+		String btmName = (node.getFuncResolve().builtIn) ? (btinPref + mName) : mName;
 		
 		// handle method 'this' pointer problem.
-		if (!node.isMethodCall()) {
+		if (!node.isCallMethod()) {
 			ctx.EmplaceInst(new Call(btmName, retVal, args));
 		} else {
 			/**
@@ -556,26 +529,26 @@ public class Builder extends AstTraverseVisitor<Void> {
 	 * */
 	@Override
 	public Void visit(MethodCallExp node) {
-		node.objInstance.Accept(this);
+		node.obj.Accept(this);
 		// FIXME : here should be instValue, while instAddr is the address where the instance pointer is stored.
 		// FIXME : instAddr must be a Reg, because it holds an address.
 
 //    Reg instAddr = node.objInstance.getIrAddr();
-		Reg instAddr = (Reg) GetArithResult(node.objInstance);
+		Reg instAddr = (Reg) GetArithResult(node.obj);
 		
 		List<IrValue> args = new LinkedList<>();
 		args.add(instAddr);
-		for (Exp arg : node.arguments.args) {
+		for (Exp arg : node.args) {
 			arg.Accept(this);
 			args.add(GetArithResult(arg));
 		}
 		
-		Reg retVal = (node.varTypeRef.isVoid()) ?
+		Reg retVal = (node.type.isVoid()) ?
 						MakeGreg("null") : ctx.GetTmpReg();
 		
 		// add prefix ~ as marker for built-in function, this helps interpreter to parse.
-		String mName = AddPrefix(node.calledClass, node.functName);
-		String btmName = (node.functDec.builtIn) ? "~" + mName : mName;
+		String mName = node.funcTableKey;
+		String btmName = (node.getFuncResolve().builtIn) ? "~" + mName : mName;
 		
 		ctx.EmplaceInst(new Call(btmName, retVal, args));
 		node.setIrValue(retVal);
@@ -585,9 +558,9 @@ public class Builder extends AstTraverseVisitor<Void> {
 	@Override
 	public Void visit(ReturnStm node) {
 		IrValue retVal;
-		if (node.retVal != null) {
-			node.retVal.Accept(this);
-			retVal = GetArithResult(node.retVal);
+		if (node.ret != null) {
+			node.ret.Accept(this);
+			retVal = GetArithResult(node.ret);
 		} else {
 			retVal = MakeGreg("null");
 		}
@@ -705,8 +678,8 @@ public class Builder extends AstTraverseVisitor<Void> {
 		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "else") : merge;
 		
 		// condition may set us to curBB or mergeBB, we resume to genIR.
-		node.condition.Accept(this);
-		IrValue brCond = GetArithResult(node.condition);
+		node.cond.Accept(this);
+		IrValue brCond = GetArithResult(node.cond);
 		// cond links to then and ifFalse for CFG.
 		ctx.EmplaceInst(new Branch(brCond, then, ifFalse));
 		ctx.GetCurBB().Complete();
@@ -744,15 +717,15 @@ public class Builder extends AstTraverseVisitor<Void> {
 		ctx.GetCurBB().Complete();
 		
 		ctx.SetCurBB(cond);
-		node.condition.Accept(this);
-		IrValue brCond = GetArithResult(node.condition);
+		node.cond.Accept(this);
+		IrValue brCond = GetArithResult(node.cond);
 		// emplace branch
 		ctx.EmplaceInst(new Branch(brCond, step, after));
 		ctx.GetCurBB().Complete();
 		
 		// record loop info for break and continue
 		ctx.SetCurBB(step);
-		node.whileBody.Accept(this);
+		node.body.Accept(this);
 		ctx.EmplaceInst(new Jump(cond));
 		ctx.GetCurBB().Complete();
 		
@@ -764,14 +737,10 @@ public class Builder extends AstTraverseVisitor<Void> {
 	@Override
 	public Void visit(ForStm node) {
 		// forInit is executed before loop BB
-		if (!node.forControl.isInitNull()) {
-			if (node.forControl.initIsDec) {
-				// visit a for dec
-				node.forControl.initDec.Accept(this);
-			} else {
-				// visit a series of expr
-				node.forControl.initExps.forEach(x -> x.Accept(this));
-			}
+		if (node.initIsDec) {
+			if (node.initDec != null) node.initDec.forEach(x -> x.Accept(this));
+		} else {
+			if (node.initExps != null) node.initExps.forEach(x -> x.Accept(this));
 		}
 		ctx.GetCurBB().Complete();
 		
@@ -781,16 +750,16 @@ public class Builder extends AstTraverseVisitor<Void> {
 		ctx.RecordLoop(check, after);
 		
 		ctx.SetCurBB(check);
-		if (node.forControl.check != null) {
-			node.forControl.check.Accept(this);
-			IrValue brCond = GetArithResult(node.forControl.check);
+		if (node.check != null) {
+			node.check.Accept(this);
+			IrValue brCond = GetArithResult(node.check);
 			ctx.EmplaceInst(new Branch(brCond, step, after));
 		}
 		ctx.GetCurBB().Complete();
 		
 		ctx.SetCurBB(step);
-		node.forBody.Accept(this);
-		node.forControl.updateExps.forEach(x -> x.Accept(this));
+		node.body.Accept(this);
+		node.updateExps.forEach(x -> x.Accept(this));
 		ctx.EmplaceInst(new Jump(check));
 		ctx.GetCurBB().Complete();
 		
@@ -830,7 +799,7 @@ public class Builder extends AstTraverseVisitor<Void> {
 	public Void visit(StringLiteralExp node) {
 		// get the string address from which we could find the string head pointer.
 		// NOTE why here is strAddr, see above explanation.
-		String cleanStr = unescape(node.value);
+		String cleanStr = unescape(node.val);
 		Reg strAddr = ctx.TraceGlobalString(cleanStr);
 		node.setIrAddr(strAddr);
 		return null;

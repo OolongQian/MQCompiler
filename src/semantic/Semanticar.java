@@ -8,13 +8,11 @@ import ast.type.Type;
 import ast.usage.AstBaseVisitor;
 import semantic.symbol_table.SymbolTable;
 import java.util.Hashtable;
-
 import static ast.type.Type.CreateBaseType;
 import static ast.type.Type.Returnable;
 import static semantic.Utility.AddPrefix;
 
 public class Semanticar extends AstBaseVisitor<Void> {
-	
 	public Hashtable<String, ClassDec> classTable = new Hashtable<>();
 	/**
 	 * FunctTable contains functDecs with prefixed names.

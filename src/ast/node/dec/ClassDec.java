@@ -5,6 +5,8 @@ import ast.usage.AstBaseVisitor;
 import java.util.LinkedList;
 import java.util.List;
 
+import static ir.Config.INT_SIZE;
+
 public class ClassDec extends Dec {
 	public String name;
 	public List<VarDec> fields = new LinkedList<>();
@@ -36,6 +38,15 @@ public class ClassDec extends Dec {
 				return method;
 		}
 		return null;
+	}
+	
+	public int GetFieldOffset(String fieldName) {
+		int offset = 0;
+		for (int i = 0; i < fields.size(); ++i) {
+			if (fields.get(i).name.equals(fieldName)) break;
+			offset += INT_SIZE;
+		}
+		return offset;
 	}
 	
 	@Override

@@ -1,7 +1,7 @@
 package ir;
 
-import ast.node.dec.function.FunctDec;
-import ast.node.dec.variable.VarDec;
+import ast.node.dec.FunctDec;
+import ast.node.dec.VarDec;
 import ir.quad.Quad;
 import ir.structure.BasicBlock;
 import ir.structure.Function;
