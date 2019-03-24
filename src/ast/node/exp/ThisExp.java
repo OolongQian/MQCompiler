@@ -3,6 +3,9 @@ package ast.node.exp;
 import ast.node.dec.FunctDec;
 import ast.usage.AstBaseVisitor;
 
+/**
+ * This cannot be assigned.
+ * */
 public class ThisExp extends Exp {
 	private FunctDec thisMethod;
 	

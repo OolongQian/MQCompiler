@@ -63,6 +63,17 @@ public class Type extends Ast {
 			return Equal(rhs);
 		}
 	}
+	public boolean Comparable(Type rhs) {
+		if (isNull()) {
+			return !(rhs.isInt() || rhs.isBool() || rhs.isString());
+		} else if (rhs.isNull()) {
+			return !(isInt() || isBool() || isString());
+		} else if (isVoid() || rhs.isVoid()) {
+			return false;
+		} else {
+			return Equal(rhs);
+		}
+	}
 	public static boolean Returnable(Type lhs, Type rhs) {
 		if (lhs.isVoid()) {
 			return rhs == null;

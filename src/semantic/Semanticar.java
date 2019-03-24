@@ -374,7 +374,7 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		return null;
 	}
 	
-	// TODO : this...
+	// this has current class type, and it cannot be assigned.
 	@Override
 	public Void visit(ThisExp node) {
 		node.type = CreateBaseType(curClass.name);
@@ -524,7 +524,7 @@ public class Semanticar extends AstBaseVisitor<Void> {
 				node.type = CreateBaseType("bool");
 				break;
 			case "==": case "!=":
-				if (!lhs.Assignable(rhs))
+				if (!lhs.Comparable(rhs))
 					throw new RuntimeException("ArithBinaryExp type error...\n" + node.LocationToString());
 				node.type = CreateBaseType("bool");
 				break;
