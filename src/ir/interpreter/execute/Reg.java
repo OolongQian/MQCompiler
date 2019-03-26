@@ -1,8 +1,12 @@
 package ir.interpreter.execute;
 
 
+import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static ir.Config.DUMMY;
 
 /**
  * A run-time used data structure representing a def-use chain.

@@ -203,8 +203,7 @@ public class Builder extends MgBaseVisitor<Ast> {
 		if (ctx.forInit() != null) {
 			if (ctx.forInit().varDec() != null) {
 				cont.initIsDec = true;
-				VarDecList vDecs = (VarDecList) visit(ctx.forInit().varDec());
-				cont.initDec.addAll(vDecs.varDecs);
+				cont.initDec = (VarDecList) visit(ctx.forInit().varDec());
 			} else {
 				// then, for init must be expList.
 				cont.initIsDec = false;

@@ -1,6 +1,7 @@
 package ir.interpreter.execute;
 
 import ir.interpreter.parse.Funct;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.util.HashMap;
 import java.util.List;
@@ -94,5 +95,17 @@ public class RunCtx {
 	// terminate running, and return the previous Running context.
 	public RunCtx Return() {
 		return caller;
+	}
+	
+	public void PrintDefUse(MemModel mem) {
+		System.err.println("print def use");
+		for (String s : defuse.keySet()) {
+			if (s.startsWith("@") || s.startsWith("$")) {
+				Integer val = defuse.get(s).GetValue();
+				String valStr = (val == null) ? "null" : Integer.toString(mem.LoadInt(val));
+				System.err.print(s + " " + valStr + ", ");
+			}
+		}
+		System.err.println();
 	}
 }

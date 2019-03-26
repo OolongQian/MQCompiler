@@ -1,14 +1,14 @@
 package ast.node.stm;
 
 
-import ast.node.dec.VarDec;
+import ast.node.dec.VarDecList;
 import ast.node.exp.Exp;
 import ast.usage.AstBaseVisitor;
 
 import java.util.List;
 
 public class ForStm extends Stm {
-	public List<VarDec> initDec;
+	public VarDecList initDec;
 	public List<Exp> initExps;
 	public boolean initIsDec;
 	public Exp check;

@@ -94,6 +94,10 @@ public class MemModel {
 	}
 	
 	private void StoreMem(int addr, byte byte_) {
+		if (!mem.containsKey(addr)) {
+			int a = 1;
+		}
+		assert mem.containsKey(addr);
 		mem.put(addr, byte_);
 	}
 }

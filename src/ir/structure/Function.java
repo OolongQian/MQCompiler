@@ -46,12 +46,15 @@ public class Function {
 		curBB = entry;
 	}
 	
+	/**
+	 * Alloca must be put at entry.
+	 * */
 	public void EmplaceInst(Quad quad) {
 		assert !curBB.complete;
 		quad.blk = curBB;
-		
+
 		if (quad instanceof Alloca) {
-			curBB.Add(0, quad);
+			bbs.GetHead().AllocaFront((Alloca) quad);
 		}
 		else {
 			curBB.Add(quad);
@@ -66,7 +69,7 @@ public class Function {
 			curBB.complete = true;
 		}
 	}
-	
+
 	/**
 	 * Basic block management
 	 * */
@@ -90,7 +93,15 @@ public class Function {
 	public void ConstructCFG() {
 		BasicBlock cur = bbs.GetHead();
 		while (cur.next != null) {
-			cur.JumpTo((BasicBlock) cur.next);
+			// don't add default CFG edge if there's a branch or jump instruction that guards at the bottom.
+			boolean skipJump = false;
+			List<Quad> quads = cur.TraverseQuad();
+			if (!quads.isEmpty()) {
+				Quad last = quads.get(quads.size() - 1);
+				if (last instanceof Jump || last instanceof Branch)
+					skipJump = true;
+			}
+			if (!skipJump) cur.JumpTo((BasicBlock) cur.next);
 			cur = (BasicBlock) cur.next;
 		}
 		for (Quad jp : brjp) {

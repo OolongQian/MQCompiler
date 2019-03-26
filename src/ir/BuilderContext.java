@@ -177,9 +177,15 @@ public class BuilderContext {
 		stringPool.values().forEach(printer::print);
 		globals.values().forEach(printer::print);
 		functs.values().forEach(printer::print);
+		printer.getFout().println();
 	}
 	
 	public Map<String, Function> GetFuncts() {
 		return functs;
+	}
+	
+	/********************* pass stringPool to interpreter ***********/
+	public Map<String, StringLiteral> PassStringPoolForInterp() {
+		return stringPool;
 	}
 }

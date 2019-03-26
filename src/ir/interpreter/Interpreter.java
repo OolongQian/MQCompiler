@@ -5,19 +5,23 @@ import ir.interpreter.execute.Reg;
 import ir.interpreter.execute.RunCtx;
 import ir.interpreter.parse.Funct;
 import ir.interpreter.parse.Inst;
+import ir.structure.StringLiteral;
+import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
 
 import java.io.*;
 import java.util.*;
 
 import static ir.Config.LINENO;
 import static ir.Config.LOG;
+import static ir.Utility.unescape;
 
 public class Interpreter {
 
 	public static void main(String args[]) {
 		// use input file name as input stream
 		Interpreter interpreter = new Interpreter();
-		interpreter.Config(args[0], null);
+		interpreter.ConfigIO(args[0], null);
+		
 		interpreter.Parse();
 		interpreter.Execute();
 	}
@@ -61,7 +65,7 @@ public class Interpreter {
 	/**
 	 * Config input filename as inputstream
 	 * */
-	public void Config(String inputFilename, String logFilename) {
+	public void ConfigIO(String inputFilename, String logFilename) {
 		// input file
 		if (inputFilename != null) {
 			try {
@@ -91,7 +95,9 @@ public class Interpreter {
 		scanner = new Scanner(fin);
 		stdScanner = new Scanner(System.in);
 	}
-	
+	public void ConfigString(Map<String, StringLiteral> irStringRecord) {
+		irStringRecord.values().forEach(x -> stringPool.put(x.id, x.val));
+	}
 	/**
 	 * parse the IR code to construct a literal IR data structure.
 	 * */
@@ -175,7 +181,7 @@ public class Interpreter {
 				assert tokens.size() == 2;
 				inst.dst = tokens.get(1);
 				break;
-			
+				
 			case "malloc":
 				assert tokens.size() == 3;
 				inst.dst = tokens.get(1);
@@ -200,6 +206,7 @@ public class Interpreter {
 					inst.args.add(tokens.get(i));
 				}
 				break;
+				
 			case "return":
 				assert tokens.size() == 2;
 				inst.dst = tokens.get(1);   // value to be returned.
@@ -238,6 +245,12 @@ public class Interpreter {
 				inst.src2 = tokens.get(3);
 				break;
 			
+			case "move":
+				assert tokens.size() == 4;
+				inst.dst = tokens.get(1);
+				inst.src1 = tokens.get(3);
+				break;
+				
 			case "phi":
 				inst.dst = tokens.get(1);
 				for (int i = 2; i < tokens.size(); ++i) {
@@ -247,13 +260,14 @@ public class Interpreter {
 					inst.options.put(optionPair.get(0), optionPair.get(1));
 				}
 				break;
-			
+				
 			case "<BasicBlock>":
 				assert tokens.size() == 2;
 				// set dst to be BB's label
 				inst.dst = tokens.get(1);
 				break;
 			
+				
 			default:
 				throw new RuntimeException("undefined operator");
 		}
@@ -266,8 +280,8 @@ public class Interpreter {
 	private Map<String, Reg> global = new HashMap<>();
 	
 	public void Execute() {
-		InitGlobal();
 		InitString();
+		InitGlobal();
 		RunMain();
 	}
 	
@@ -332,6 +346,10 @@ public class Interpreter {
 		
 		Inst inst = ctx.func.insts.get(ctx.curInst++);
 		if(LINENO) System.err.println(inst.lineNo);
+		if (LOG) {
+			System.err.println(inst.lineNo);
+			ctx.PrintDefUse(mem);
+		}
 		
 		switch (inst.operator) {
 			case "alloca":
@@ -362,7 +380,7 @@ public class Interpreter {
 				// NOTE : actually, this is the only condition needed to take care of.
 				Reg storeAddr = GetReg(ctx, inst.dst);
 				Reg storeVal = GetReg(ctx, inst.src1);
-				mem.StoreInt(storeAddr.GetValue(), storeVal.GetValue());
+				if (!storeVal.IsNull()) mem.StoreInt(storeAddr.GetValue(), storeVal.GetValue());
 				if(LOG) logger.println("store content: " + Integer.toString(storeVal.GetValue()) +
 								" to " + Integer.toString(storeAddr.GetValue()));
 				if(LOG) System.err.println("store, " +
@@ -372,6 +390,15 @@ public class Interpreter {
 								", content " + storeVal.GetValue() +
 								", name " + inst.src1);
 				break;
+				
+			case "move":
+				Reg dstVar = GetReg(ctx, inst.dst);
+				Reg srcVal = GetReg(ctx, inst.src1);
+				if (!srcVal.IsNull())
+					dstVar.SetValue(srcVal.GetValue());
+				else dstVar.SetValue(null);
+				break;
+				
 			case "load":
 				
 				Reg loadContent = GetReg(ctx, inst.dst);
@@ -395,7 +422,7 @@ public class Interpreter {
 					// if load string
 					loaded = headAddr;
 				} else {
-					loaded = mem.LoadInt(headAddr);
+						loaded = mem.LoadInt(headAddr);
 				}
 				
 				loadContent.SetValue(loaded);
@@ -534,28 +561,39 @@ public class Interpreter {
 				break;
 			default:
 				Reg binAns = GetReg(ctx, inst.dst);
-				int binSrc1 = GetReg(ctx, inst.src1).GetValue();
-				int binSrc2 = GetReg(ctx, inst.src2).GetValue();
+				Integer binSrc1 = GetReg(ctx, inst.src1).GetValue();
+				Integer binSrc2 = GetReg(ctx, inst.src2).GetValue();
 				Integer ans = null;
-				switch (inst.operator) {
-					case "add": ans = binSrc1 + binSrc2; break;
-					case "sub": ans = binSrc1 - binSrc2; break;
-					case "mul": ans = binSrc1 * binSrc2; break;
-					case "div": ans = binSrc1 / binSrc2; break;
-					case "mod": ans = binSrc1 % binSrc2; break;
-					case "shl": ans = binSrc1 << binSrc2; break;
-					case "shr": ans = binSrc1 >> binSrc2; break;
-					case "and":
-					case "land": ans = binSrc1 & binSrc2; break;
-					case "xor": ans = binSrc1 ^ binSrc2; break;
-					case "or":
-					case "lor": ans = binSrc1 | binSrc2; break;
-					case "gt": ans = (binSrc1 > binSrc2) ? 1 : 0; break;
-					case "ge": ans = (binSrc1 >= binSrc2) ? 1 : 0; break;
-					case "lt": ans = (binSrc1 < binSrc2) ? 1 : 0; break;
-					case "le": ans = (binSrc1 <= binSrc2) ? 1 : 0; break;
-					case "eq": ans = (binSrc1 == binSrc2) ? 1 : 0; break;
-					case "ne": ans = (binSrc1 != binSrc2) ? 1 : 0; break;
+				if (binSrc1 != null && binSrc2 != null) {
+					switch (inst.operator) {
+						case "add": ans = binSrc1 + binSrc2; break;
+						case "sub": ans = binSrc1 - binSrc2; break;
+						case "mul": ans = binSrc1 * binSrc2; break;
+						case "div": ans = binSrc1 / binSrc2; break;
+						case "mod": ans = binSrc1 % binSrc2; break;
+						case "shl": ans = binSrc1 << binSrc2; break;
+						case "shr": ans = binSrc1 >> binSrc2; break;
+						case "and":
+						case "land": ans = binSrc1 & binSrc2; break;
+						case "xor": ans = binSrc1 ^ binSrc2; break;
+						case "or":
+						case "lor": ans = binSrc1 | binSrc2; break;
+						case "gt": ans = (binSrc1 > binSrc2) ? 1 : 0; break;
+						case "ge": ans = (binSrc1 >= binSrc2) ? 1 : 0; break;
+						case "lt": ans = (binSrc1 < binSrc2) ? 1 : 0; break;
+						case "le": ans = (binSrc1 <= binSrc2) ? 1 : 0; break;
+						case "eq": ans = (binSrc1.equals(binSrc2)) ? 1 : 0; break;
+						case "ne": ans = (!binSrc1.equals(binSrc2)) ? 1 : 0; break;
+					}
+				} else {
+					switch (inst.operator) {
+						case "eq":
+							ans = (binSrc1 == null) == (binSrc2 == null) ? 1 : 0;
+							break;
+						case "ne":
+							ans = (binSrc1 == null) == (binSrc2 == null) ? 0 : 1;
+							break;
+					}
 				}
 				assert ans != null;
 				binAns.SetValue(ans);
@@ -576,9 +614,9 @@ public class Interpreter {
 				int printAddr = args.get(0).GetValue();
 				String printStr = mem.LoadStr(printAddr);
 				if (funct.equals("print"))
-					stdout.print(printStr);
+					stdout.print(unescape(printStr));
 				else
-					stdout.println(printStr);
+					stdout.println(unescape(printStr));
 				return null;
 				
 			case "getString":

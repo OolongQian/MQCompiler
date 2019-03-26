@@ -1,6 +1,7 @@
 package ir.structure;
 
 import ir.Linkable;
+import ir.quad.Alloca;
 import ir.quad.Phi;
 import ir.quad.Quad;
 
@@ -44,6 +45,12 @@ public class BasicBlock extends Linkable {
 		assert !complete;
 		quads.add(pos, quad);
 	}
+	
+	public void AllocaFront(Alloca quad) {
+		assert name.equals("$entry0");
+		quads.add(0, quad);
+	}
+	
 	public void PushfrontPhi(Phi quad) {
 		quads.add(0, quad);
 	}

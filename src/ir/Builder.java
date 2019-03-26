@@ -1,19 +1,14 @@
 package ir;
 
 import ast.node.Prog;
-import ast.node.dec.ClassDec;
-import ast.node.dec.Dec;
-import ast.node.dec.FunctDec;
-import ast.node.dec.VarDec;
+import ast.node.dec.*;
 import ast.node.exp.*;
 import ast.node.stm.*;
 import ast.type.Type;
 import ast.usage.AstBaseVisitor;
 import ir.quad.*;
 import ir.structure.*;
-
 import java.util.*;
-
 import static ir.Config.INT_SIZE;
 import static ir.Utility.*;
 import static ir.quad.Binary.Op.*;
@@ -21,10 +16,8 @@ import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
 import static semantic.Utility.AddPrefix;
 
-
 /**
  * For building actions.
- *
  * NOTE : we use `name to mark the reserved internal local variable, such as the results of
  * NOTE : short-circuit evaluation, or the iterator inside new T[][]. Why we do this?
  * NOTE : because they need to be stored in mem.
@@ -67,31 +60,32 @@ public class Builder extends AstBaseVisitor<Void> {
 		Function init = ctx.FuncGen("_init_");
 		ctx.SetCurFunc(init);
 		for (Dec child : node.decs) {
-			if (child instanceof VarDec && ((VarDec) child).isGlobal())
-				child.Accept(this);
+			if (child instanceof VarDecList) {
+				for (VarDec dec : ((VarDecList) child).varDecs) {
+					assert dec.isGlobal();
+					dec.Accept(this);
+				}
+			}
 		}
 		ctx.GetCurBB().Complete();
 		
 		for (Dec child : node.decs) {
-			if (!(child instanceof VarDec))
+			if (!(child instanceof VarDecList))
 				child.Accept(this);
 		}
 		return null;
 	}
-	
+
 	/**
 	 * **************************************** Decs Defs ******************************************
 	 * Global variables have no naming collision.
+	 *
+	 * Note that declaration is wrapped by VarDecList
 	 * */
-	private void AddGlobalVar(VarDec node) {
-		Reg var = MakeGreg(node.name);
-		ctx.AddGlobalVar(node, var);
-		// initialization ir for global var are set in function _init_.
-		if (node.inital != null) {
-			node.inital.Accept(this);
-			IrValue initVal = GetArithResult(node.inital);
-			ctx.EmplaceInst(new Store(var, initVal));
-		}
+	@Override
+	public Void visit(VarDecList node) {
+		node.varDecs.forEach(x -> x.Accept(this));
+		return null;
 	}
 	
 	@Override
@@ -131,8 +125,9 @@ public class Builder extends AstBaseVisitor<Void> {
 		// a new function is about to be generated, set the last BB of the last function to be completed.
 		if (!ctx.GetCurBB().complete) ctx.GetCurBB().Complete();
 		
-		String renaming = (node.isMethod()) ?
-						AddPrefix(node.GetParentClass(), node.name) : node.name;
+		String renaming = node.funcTableKey;
+//		String renaming = (node.isMethod()) ?
+//						AddPrefix(node.GetParentClass(), node.name) : node.name;
 		Function func = ctx.FuncGen(renaming);
 		ctx.SetCurFunc(func);
 		
@@ -160,6 +155,17 @@ public class Builder extends AstBaseVisitor<Void> {
 	}
 	
 	/**
+	 * Avoid bug in ast reconstruction
+	 * */
+	@Override
+	public Void visit(LocalVarDecStm node) {
+		node.varDecs.forEach(x -> x.Accept(this));
+		return null;
+	}
+	
+	
+	
+	/**
 	 * Be careful about class member access.
 	 * Do nothing about field.
 	 * */
@@ -177,7 +183,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(VarExp node) {
 		VarDec varDec = node.resolve;
-		if (varDec.GetParentClass() != null) {
+		if (varDec.isField()) {
 			Reg this_ = ctx.GetThis();
 			Mumble("start a field eval");
 			// load this.
@@ -210,7 +216,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		IrValue oldVal = GetArithResult(node.obj);
 		Reg increVal = ctx.GetTmpReg();
 		
-		ctx.EmplaceInst(new Binary(increVal, ADD, oldVal, MakeInt(1)));
+		Binary.Op op = (node.op.equals("++")) ? ADD : SUB;
+		ctx.EmplaceInst(new Binary(increVal, op, oldVal, MakeInt(1)));
 		ctx.EmplaceInst(new Store(var, increVal));
 		
 		// set IrAddr to null just for clarity, showing that it cannot be queried, otherwise leads to assertion failure.
@@ -338,7 +345,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	}
 	
 	private Reg MakeNewArray(Queue<IrValue> dims) {
-		// recursion stopper.
+		// recursion stoper.
 		if (dims.isEmpty()) {
 			return MakeGreg("null");
 		}
@@ -381,9 +388,9 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Store(iter, initAddr));
 		ctx.GetCurBB().Complete();
 		
-		BasicBlock cond = ctx.NewBBAfter(ctx.GetCurBB(), "cond_n");
-		BasicBlock then = ctx.NewBBAfter(cond, "then_n");
-		BasicBlock after = ctx.NewBBAfter(then, "after_n");
+		BasicBlock cond = ctx.NewBBAfter(ctx.GetCurBB(), "arrCond_n");
+		BasicBlock then = ctx.NewBBAfter(cond, "arrThen_n");
+		BasicBlock after = ctx.NewBBAfter(then, "arrAfter_n");
 		
 		// when we haven't exceed the array to be constructed, continue to stay in then BB.
 		ctx.SetCurBB(cond);
@@ -418,7 +425,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(FieldAccessExp node) {
 		node.obj.Accept(this);
 		
-		Reg instAddr = node.obj.getIrAddr();
+		IrValue instAddr = GetArithResult(node.obj);
 		Reg elemAddr = ctx.GetTmpReg();
 		
 		// get offset
@@ -534,6 +541,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		// FIXME : instAddr must be a Reg, because it holds an address.
 
 //    Reg instAddr = node.objInstance.getIrAddr();
+		Exp tmp = node.obj;
 		Reg instAddr = (Reg) GetArithResult(node.obj);
 		
 		List<IrValue> args = new LinkedList<>();
@@ -673,9 +681,9 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(IfStm node) {
-		BasicBlock then = ctx.NewBBAfter(ctx.GetCurBB(), "then");
-		BasicBlock merge = ctx.NewBBAfter(then, "merge");
-		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "else") : merge;
+		BasicBlock then = ctx.NewBBAfter(ctx.GetCurBB(), "ifThen");
+		BasicBlock merge = ctx.NewBBAfter(then, "ifMerge");
+		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "ifElse") : merge;
 		
 		// condition may set us to curBB or mergeBB, we resume to genIR.
 		node.cond.Accept(this);
@@ -710,9 +718,9 @@ public class Builder extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(WhileStm node) {
 		
-		BasicBlock cond = ctx.NewBBAfter(ctx.GetCurBB(), "cond");
-		BasicBlock step = ctx.NewBBAfter(cond, "step");
-		BasicBlock after = ctx.NewBBAfter(step, "after");
+		BasicBlock cond = ctx.NewBBAfter(ctx.GetCurBB(), "whileCond");
+		BasicBlock step = ctx.NewBBAfter(cond, "whileStep");
+		BasicBlock after = ctx.NewBBAfter(step, "whileAfter");
 		ctx.RecordLoop(cond, after);
 		ctx.GetCurBB().Complete();
 		
@@ -738,15 +746,15 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(ForStm node) {
 		// forInit is executed before loop BB
 		if (node.initIsDec) {
-			if (node.initDec != null) node.initDec.forEach(x -> x.Accept(this));
+			if (node.initDec != null) node.initDec.Accept(this);
 		} else {
 			if (node.initExps != null) node.initExps.forEach(x -> x.Accept(this));
 		}
 		ctx.GetCurBB().Complete();
 		
-		BasicBlock check = ctx.NewBBAfter(ctx.GetCurBB(), "cond");
-		BasicBlock step = ctx.NewBBAfter(check, "step");
-		BasicBlock after = ctx.NewBBAfter(step, "after");
+		BasicBlock check = ctx.NewBBAfter(ctx.GetCurBB(), "forCond");
+		BasicBlock step = ctx.NewBBAfter(check, "forStep");
+		BasicBlock after = ctx.NewBBAfter(step, "forAfter");
 		ctx.RecordLoop(check, after);
 		
 		ctx.SetCurBB(check);
@@ -799,8 +807,8 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(StringLiteralExp node) {
 		// get the string address from which we could find the string head pointer.
 		// NOTE why here is strAddr, see above explanation.
-		String cleanStr = unescape(node.val);
-		Reg strAddr = ctx.TraceGlobalString(cleanStr);
+//		String cleanStr = unescape(node.val);
+		Reg strAddr = ctx.TraceGlobalString(node.val);
 		node.setIrAddr(strAddr);
 		return null;
 	}
@@ -854,5 +862,25 @@ public class Builder extends AstBaseVisitor<Void> {
 		binaryOpMap.put("<=", LE);
 		binaryOpMap.put("==", EQ);
 		binaryOpMap.put("!=", NE);
+	}
+	
+	/***************** explicit Traversal Utility **********************/
+	@Override
+	public Void visit(ExpStm node) {
+		node.exp.Accept(this);
+		return null;
+	}
+	
+	@Override
+	public Void visit(BlockStm node) {
+		node.stms.forEach(x -> x.Accept(this));
+		return null;
+	}
+	
+	@Override
+	public Void visit(Type node) {
+		if (node.dim != null) node.dim.Accept(this);
+		if (node.innerType != null) node.innerType.Accept(this);
+		return null;
 	}
 }

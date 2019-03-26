@@ -7,6 +7,11 @@ import ir.structure.Reg;
 import java.util.*;
 
 public class Info {
+	// vars are data structures in functional level, instead of basic block.
+	public static Set<Reg> vars = new HashSet<>();
+	public static Stack<Reg> versionStack = new Stack<>();
+	public static int versionCnt = 0;
+	private static String varName;
 	// node -> nodes that dominates it.
 	public Set<BasicBlock> inferiorTo = new HashSet<>();
 	// node -> nodes that are dominated by it.
@@ -16,16 +21,14 @@ public class Info {
 	public Set<BasicBlock> domTree = new HashSet<>();
 	public Set<BasicBlock> domFrontier = new HashSet<>();
 	public Map<Reg, Phi> phis = new HashMap<>();
-	public static Set<Reg> vars = new HashSet<>();
-	public static Stack<Reg> versionStack = new Stack<>();
-	private static int versionCnt = 0;
-	private static String varName;
 	
 	public static void ConfigNamingVar(Reg var) {
 		assert var.alloca;
+		versionStack.clear();
 		varName = var.name;
-		versionCnt = 0;
+		versionCnt = 0; // SSA version begins from 0. Add a temp version with index -1.
 	}
+	
 	public static Reg NewVersion() {
 		Reg newVer = new Reg(varName + '[' + versionCnt++ + ']');
 		newVer.alloca = true;

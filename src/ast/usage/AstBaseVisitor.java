@@ -5,6 +5,7 @@ import ast.node.Prog;
 import ast.node.dec.*;
 import ast.node.exp.*;
 import ast.node.stm.*;
+import ast.type.Type;
 
 public class AstBaseVisitor<T> implements AstVisitor<T> {
 	
@@ -201,4 +202,9 @@ public class AstBaseVisitor<T> implements AstVisitor<T> {
 	public T visit(LocalVarDecStm node) {
 		return null;
 	}
+  
+  @Override
+  public T visit(Type node) {
+    return null;
+  }
 }

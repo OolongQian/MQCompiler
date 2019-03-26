@@ -9,6 +9,7 @@ import java.util.List;
 
 public class FunctDec extends Dec {
 	public String name;
+	public String funcTableKey;
 	public Type retType;
 	public List<VarDec> args = new LinkedList<>();
 	public List<Stm> body = new LinkedList<>();

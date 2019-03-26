@@ -5,6 +5,7 @@ import ast.node.Prog;
 import ast.node.dec.*;
 import ast.node.exp.*;
 import ast.node.stm.*;
+import ast.type.Type;
 
 public interface AstVisitor<T> {
 
@@ -81,4 +82,6 @@ public interface AstVisitor<T> {
   T visit(MethodCallExp node);
   
   T visit(LocalVarDecStm node);
+  
+  T visit(Type node);
 }

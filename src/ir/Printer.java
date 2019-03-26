@@ -181,9 +181,9 @@ public class Printer {
 	}
 	
 	public void print(Phi quad) {
-		fout.print("phi " + quad.var.getText() + ":");
+		fout.print("phi " + quad.var.getText() + " ");
 		for (BasicBlock blk : quad.options.keySet()) {
-			fout.print(" [" + blk.getName() + " " + quad.options.get(blk).getText() + "]");
+			fout.print(blk.getName() + ":" + quad.options.get(blk).getText() + " ");
 		}
 		fout.println();
 	}

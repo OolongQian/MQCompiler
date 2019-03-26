@@ -3,13 +3,11 @@ package opt.ssa;
 import ir.BuilderContext;
 import ir.List_;
 import ir.quad.*;
-import ir.structure.BasicBlock;
-import ir.structure.Function;
-import ir.structure.IrValue;
-import ir.structure.Reg;
+import ir.structure.*;
 
 import java.util.*;
 
+import static ir.Config.DUMMY;
 import static ir.Config.SSALOG;
 import static opt.ssa.Info.*;
 
@@ -36,15 +34,25 @@ public class SSA {
 		this.cfg = funct.bbs;
 		this.functName = funct.name;
 		
+		// note that static data structure needs explicit reset.
 		this.infos.clear();
+		vars.clear();
+		
 		BasicBlock curB = cfg.GetHead();
 		while (curB != null) {
+			if (curB.getName().equals("&&rhs23")) {
+				int a = 1;
+			}
 			infos.put(curB, new Info());
 			curB = (BasicBlock) curB.next;
 		}
 	}
 	
 	
+	/**
+	 * Each basic block has a set of associated info.
+	 * vars is global information, which needs a static data structure in Info.
+	 * */
 	private HashMap<BasicBlock, Info> infos = new HashMap<>();
 	/**
 	 * ************************* DOMINANT TREE **********************************
@@ -154,8 +162,7 @@ public class SSA {
 	}
 	
 	/**
-	 * ************************* DOMINANT FRONTIER
-	 ***********************************/
+	 * ************************* DOMINANT FRONTIER ***********************************/
 	public void DominanceFrontier() {
 		infos.values().forEach(x -> x.domFrontier.clear());
 		BasicBlock curB = cfg.GetHead();
@@ -187,22 +194,25 @@ public class SSA {
 		while (curB != null) {
 			for (Quad quad : curB.TraverseQuad()) {
 				if (quad instanceof Alloca) {
-					vars.add(((Alloca) quad).var);
-					((Alloca) quad).var.alloca = true;
+					Reg var = ((Alloca) quad).var;
+					vars.add(var);
+					var.alloca = true;
+					var.defsBB.add(curB);
+					var.defsQuad.add(quad);
 				}
 				else if (quad instanceof Store) {
 					// def. check whether an allocated quad.
 					if (vars.contains(((Store) quad).dst)) {
 						Reg var = ((Store) quad).dst;
 						var.defsBB.add(curB);
-						var.defsQuad.add((Store) quad);
+						var.defsQuad.add(quad);
 					}
 				}
 				else if (quad instanceof Load) {
 					if (vars.contains(((Load) quad).addr)) {
 						Reg var = ((Load) quad).addr;
 						var.usesBB.add(curB);
-						var.usesQuad.add((Load) quad);
+						var.usesQuad.add(quad);
 					}
 				}
 			}
@@ -231,19 +241,17 @@ public class SSA {
 				// traverse current BB's dominant frontier, where its phi function should reside.
 				// FIXME : what about phi-function pruning ?
 				for (BasicBlock domFront : infos.get(defB).domFrontier) {
-					// put defB to phi-funct for BBs in its dominance frontier.
-					// if defB hasn't been there.
-					
-					// info has blocks, block has variables, var has options in phi.
+					// check phi-function in DF
 					Map<Reg, Phi> phis = infos.get(domFront).phis;
-					if (!phis.containsKey(var))
-						phis.put(var, new Phi(var));
-					
-					Phi phi = phis.get(var);
-					if (!phi.options.containsKey(defB)) {
-						// let var to be the placeholder, renaming afterwards.
-						phi.options.put(defB, var);
-						// since domFront has a new definition of var, push it into workList.
+					// if phi hasn't been added in dominance frontier.
+					// add phi, and add defs.
+					if (!phis.containsKey(var)) {
+						// add definitions.
+						Phi phi = new Phi(var);
+						phis.put(var, phi);
+						var.defsBB.add(domFront);
+						var.defsQuad.add(phi);
+						
 						if (!infos.get(domFront).vis) {
 							infos.get(domFront).vis = true;
 							workList.add(domFront);
@@ -260,15 +268,11 @@ public class SSA {
 			for (Phi phi : phis.values()) {
 				curB.PushfrontPhi(phi);
 				// each phi-node is a def of var.
-				phi.var.defsQuad.add(phi);
-				phi.var.defsBB.add(curB);
+//				phi.var.defsQuad.add(phi);
+//				phi.var.defsBB.add(curB);
 			}
 			curB = (BasicBlock) curB.next;
 		}
-		
-		System.err.println(functName);
-		print(infos, "phiOpts");
-		System.err.println();
 	}
 	
 	/**
@@ -278,22 +282,22 @@ public class SSA {
 	 * renaming purposes.
 	 * */
 	public void Renaming() {
-		// traverse over vars
 		for (Reg var : vars) {
 			versionStack.clear();
 			ConfigNamingVar(var);
 			versionStack.push(NewVersion());
-			// do a top-down traversal.
 			RenameVariable(var, cfg.GetHead());
+		}
+		
+		if (SSALOG) {
+			System.err.println(functName);
+			print(infos, "phiOpts");
+			System.err.println();
 		}
 	}
 	
-	/**
-	 * Do renaming and quads modification simultaneously.
-	 * */
 	private void RenameVariable(Reg var, BasicBlock blk) {
 		List<Quad> quads = blk.TraverseQuad();
-		
 		// for def-use in this basic block.
 		for (ListIterator<Quad> iter = quads.listIterator(); iter.hasNext(); ) {
 			Quad quad = iter.next();
@@ -320,11 +324,17 @@ public class SSA {
 				var.defsQuad.add(def);
 			}
 			else if (quad instanceof Phi && var.defsQuad.contains(quad)) {
+				// phi defines a new version
+				versionStack.push(NewVersion());
 				((Phi) quad).var = versionStack.peek();
 			}
-			else if (quad instanceof Alloca) {
+			else if (quad instanceof Alloca && var.defsQuad.contains(quad)) {
 				// remove Alloca quad
+				// if current basic block doesn't have any other def of this variable, insert a trivial dummy def.
 				iter.remove();
+				versionStack.push(NewVersion());
+				Mov def = new Mov(versionStack.peek(), new Constant(DUMMY));
+				iter.add(def);
 			}
 		}
 		
@@ -335,14 +345,21 @@ public class SSA {
 			if (phis.containsKey(var)) {
 				// if it has an entry from current blk.
 				Phi phi = phis.get(var);
-				if (phi.options.containsKey(blk)) {
+				if (!phi.options.containsKey(blk)) {
 					// replace the use of homogeneous 'Var' with current version.
 					phi.options.put(blk, versionStack.peek());
 				}
 			}
 		}
+		
+		infos.get(blk).domTree.forEach(idom -> RenameVariable(var, idom));
+		for (ListIterator<Quad> iter = quads.listIterator(); iter.hasNext(); ) {
+			Quad quad = iter.next();
+			if (var.defsQuad.contains(quad))
+				versionStack.pop();
+		}
 	}
-	
+
 	/**
 	 * Make sure that all allocated regs have been renamed.
 	 * */

@@ -87,7 +87,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		lengthMethod.name = "length";
 		lengthMethod.retType = CreateBaseType("int");
 		stringClass.methods.add(lengthMethod);
-		functTable.put(AddPrefix(stringClass, "length"), lengthMethod);
+		lengthMethod.funcTableKey = AddPrefix(stringClass, "length");
+		functTable.put(lengthMethod.funcTableKey, lengthMethod);
 		
 		FunctDec substringMethod = new FunctDec();
 		substringMethod.MarkBuiltIn();
@@ -97,7 +98,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		substringMethod.args.add(new VarDec(CreateBaseType("int"), "left"));
 		substringMethod.args.add(new VarDec(CreateBaseType("int"), "right"));
 		stringClass.methods.add(substringMethod);
-		functTable.put(AddPrefix(stringClass, "substring"), substringMethod);
+		substringMethod.funcTableKey = AddPrefix(stringClass, "substring");
+		functTable.put(substringMethod.funcTableKey, substringMethod);
 		
 		FunctDec parseIntMethod = new FunctDec();
 		parseIntMethod.MarkBuiltIn();
@@ -105,7 +107,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		parseIntMethod.name = "parseInt";
 		parseIntMethod.retType = CreateBaseType("int");
 		stringClass.methods.add(parseIntMethod);
-		functTable.put(AddPrefix(stringClass, "parseInt"), parseIntMethod);
+		parseIntMethod.funcTableKey = AddPrefix(stringClass, "parseInt");
+		functTable.put(parseIntMethod.funcTableKey, parseIntMethod);
 		
 		FunctDec ordMethod = new FunctDec();
 		ordMethod.MarkBuiltIn();
@@ -114,7 +117,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		ordMethod.retType = CreateBaseType("int");
 		ordMethod.args.add(new VarDec(CreateBaseType("int"), "pos"));
 		stringClass.methods.add(ordMethod);
-		functTable.put(AddPrefix(stringClass, "ord"), ordMethod);
+		ordMethod.funcTableKey = AddPrefix(stringClass, "ord");
+		functTable.put(ordMethod.funcTableKey, ordMethod);
 		
 		lengthMethod.SetParentClass(stringClass);
 		substringMethod.SetParentClass(stringClass);
@@ -137,7 +141,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		sizeMethod.name = "size";
 		sizeMethod.retType = CreateBaseType("int");
 		arrayClass.methods.add(sizeMethod);
-		functTable.put(AddPrefix(arrayClass, "size"), sizeMethod);
+		sizeMethod.funcTableKey = AddPrefix(arrayClass, "size");
+		functTable.put(sizeMethod.funcTableKey, sizeMethod);
 		
 		sizeMethod.SetParentClass(arrayClass);
 		return arrayClass;
@@ -239,6 +244,7 @@ public class Semanticar extends AstBaseVisitor<Void> {
 	public void Config(Prog prog) {
 		ast = prog;
 	}
+	
 	public void SemanticCheck() {
 		InitDefaultClass();
 		InitDefaultFunct();
@@ -275,11 +281,13 @@ public class Semanticar extends AstBaseVisitor<Void> {
 				ClassDec class_ = (ClassDec) dec;
 				for (FunctDec method : class_.methods) {
 					String key = AddPrefix(class_, method.name);
+					method.funcTableKey = key;
 					functTable.put(key, method);
 				}
 			}
 			else if (dec instanceof FunctDec) {
 				FunctDec funct = (FunctDec) dec;
+				funct.funcTableKey = funct.name;
 				functTable.put(funct.name, funct);
 			}
 		}
@@ -340,9 +348,10 @@ public class Semanticar extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(FunctDec node) {
-		String key = node.isMethod() ?
-						AddPrefix(node.GetParentClass(), node.name) :
-						node.name;
+		String key = node.funcTableKey;
+//		String key = node.isMethod() ?
+//						AddPrefix(node.GetParentClass(), node.name) :
+//						node.name;
 		
 		// prefix is necessary because class can shadow methods with the same name.
 		if (symbolTable.ExistCurScope(key))
@@ -415,7 +424,7 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		symbolTable.BeginScope();
 		
 		if (node.initIsDec) {
-			node.initDec.forEach(x -> x.Accept(this));
+			node.initDec.Accept(this);
 		}
 		else {
 			node.initExps.forEach(x -> x.Accept(this));
