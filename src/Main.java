@@ -46,7 +46,7 @@ public class Main {
     irBuilder.build(prog);
 
 	  Printer irPrinter = new Printer(irFilePath);
-	  irCtx.Print(irPrinter);
+//	  irCtx.Print(irPrinter);
 	  
 	  SSA ssaOptimizer = new SSA();
 	  ssaOptimizer.ConstructSSA(irCtx);

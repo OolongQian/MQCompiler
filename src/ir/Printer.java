@@ -177,7 +177,7 @@ public class Printer {
 	}
 	
 	public void print(Comment quad) {
-		fout.println("# " + quad.content);
+//		fout.println("# " + quad.content);
 	}
 	
 	public void print(Phi quad) {

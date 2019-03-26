@@ -6,5 +6,5 @@ public class Config {
 	public static final boolean LOG = false;
 	public static final boolean LINENO = false;
 	public static final boolean SSALOG = false;
-	public static final Integer DUMMY = null;
+	public static final int DUMMY = Integer.MAX_VALUE;
 }
