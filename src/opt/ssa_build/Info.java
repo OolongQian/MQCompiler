@@ -1,4 +1,4 @@
-package opt.ssa;
+package opt.ssa_build;
 
 import ir.quad.Phi;
 import ir.structure.BasicBlock;
@@ -8,6 +8,7 @@ import java.util.*;
 
 public class Info {
 	// vars are data structures in functional level, instead of basic block.
+	// variable info recorder for SSA construction.
 	public static Set<Reg> vars = new HashSet<>();
 	public static Stack<Reg> versionStack = new Stack<>();
 	public static int versionCnt = 0;
@@ -29,8 +30,9 @@ public class Info {
 		versionCnt = 0; // SSA version begins from 0. Add a temp version with index -1.
 	}
 	
+	// FIXME : remove ! later.
 	public static Reg NewVersion() {
-		Reg newVer = new Reg(varName + '[' + versionCnt++ + ']');
+		Reg newVer = new Reg('!' + varName + '[' + versionCnt++ + ']');
 		newVer.alloca = true;
 		newVer.renamed = true;
 		return newVer;

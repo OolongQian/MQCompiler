@@ -2,9 +2,11 @@ package ir.quad;
 
 import ir.Printer;
 import ir.structure.BasicBlock;
+import ir.structure.IrValue;
 import ir.structure.Reg;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,10 +17,22 @@ import java.util.Map;
  * */
 public class Phi extends Quad {
 	public Reg var;
-	public Map<BasicBlock, Reg> options = new HashMap<>();
+	public Map<BasicBlock, IrValue> options = new HashMap<>();
 	
 	public Phi(Reg var) {
 		this.var = var;
+	}
+	
+	@Override
+	public Reg GetDefReg() {
+		return var;
+	}
+	@Override
+	public void GetUseRegs(List<Reg> list_) {
+		for (IrValue val : options.values()) {
+			if (val instanceof Reg)
+				list_.add((Reg) val);
+		}
 	}
 	
 	@Override

@@ -1,18 +1,21 @@
-package opt.ssa;
+package opt.ssa_build;
 
 import ir.BuilderContext;
-import ir.List_;
 import ir.quad.*;
 import ir.structure.*;
+import opt.dead_elimination.DeadEliminator;
 
 import java.util.*;
 
 import static ir.Config.DUMMY;
 import static ir.Config.SSALOG;
-import static opt.ssa.Info.*;
+import static opt.ssa_build.Info.*;
 
 public class SSA {
-	
+
+	/**
+	 * Functions and interfaces need redesign.
+	 * */
 	public void ConstructSSA(BuilderContext ctx) {
 		for (Function funct : ctx.GetFuncts().values()) {
 			Config(funct);
@@ -24,36 +27,42 @@ public class SSA {
 			PhiPlacement();
 			Renaming();
 			CheckRename();
+			DeadEliminator eliminator = new DeadEliminator();
+			eliminator.Config(this);
+			eliminator.EliminateDeadCode();
 		}
 	}
 	
 	/************************ Config a CFG to optimize ************************/
-	private List_ cfg;
+	private BasicBlock cfgEntry;
 	private String functName; // for debug
 	public void Config(Function funct) {
-		this.cfg = funct.bbs;
+		this.cfgEntry = funct.bbs.GetHead();
 		this.functName = funct.name;
 		
 		// note that static data structure needs explicit reset.
-		this.infos.clear();
+//		this.infos.clear();
 		vars.clear();
 		
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		while (curB != null) {
-			if (curB.getName().equals("&&rhs23")) {
-				int a = 1;
-			}
 			infos.put(curB, new Info());
 			curB = (BasicBlock) curB.next;
 		}
 	}
-	
+	public BasicBlock GetCfgEntry() {
+		return cfgEntry;
+	}
 	
 	/**
 	 * Each basic block has a set of associated info.
 	 * vars is global information, which needs a static data structure in Info.
 	 * */
 	private HashMap<BasicBlock, Info> infos = new HashMap<>();
+	public HashMap<BasicBlock, Info> GetInfos() {
+		return infos;
+	}
+	
 	/**
 	 * ************************* DOMINANT TREE **********************************
 	 * Build dominant tree for a List_ of basic blocks.
@@ -65,7 +74,7 @@ public class SSA {
 		infos.values().forEach(x -> x.vis = false);
 		Set<BasicBlock> empty = new HashSet<>();
 		
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		while (curB != null) {
 			// clear each BB.
 			Set<BasicBlock> in = curB.predecessor;
@@ -75,7 +84,7 @@ public class SSA {
 			infos.values().forEach(x -> x.vis = false);
 			
 			// check connectivity.
-			DfsDT(cfg.GetHead());
+			DfsDT(cfgEntry);
 			// those cannot be reached BBs are dominated by curB.
 			for (BasicBlock blk : infos.keySet()) {
 				// make DT strictly dominant.
@@ -122,7 +131,7 @@ public class SSA {
 		infos.values().forEach(x -> x.iDom = null);
 		infos.values().forEach(x -> x.domTree.clear());
 		
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		while (curB != null) {
 			// pick one idom out of a list of dominance.
 			Set<BasicBlock> dominance = infos.get(curB).inferiorTo;
@@ -165,7 +174,7 @@ public class SSA {
 	 * ************************* DOMINANT FRONTIER ***********************************/
 	public void DominanceFrontier() {
 		infos.values().forEach(x -> x.domFrontier.clear());
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		
 		while (curB != null) {
 			for (BasicBlock fath : curB.predecessor) {
@@ -190,7 +199,7 @@ public class SSA {
 	 * Attach phi-function information on BasicBlock.
 	 * */
 	public void UseDefCollection() {
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		while (curB != null) {
 			for (Quad quad : curB.TraverseQuad()) {
 				if (quad instanceof Alloca) {
@@ -262,10 +271,12 @@ public class SSA {
 		}
 		
 		// insert phi-quad into the head of each basic block
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		while (curB != null) {
 			Map<Reg, Phi> phis = infos.get(curB).phis;
 			for (Phi phi : phis.values()) {
+				// FIXME : ugly
+				phi.blk = curB;
 				curB.PushfrontPhi(phi);
 				// each phi-node is a def of var.
 //				phi.var.defsQuad.add(phi);
@@ -286,7 +297,7 @@ public class SSA {
 			versionStack.clear();
 			ConfigNamingVar(var);
 			versionStack.push(NewVersion());
-			RenameVariable(var, cfg.GetHead());
+			RenameVariable(var, cfgEntry);
 		}
 		
 		if (SSALOG) {
@@ -296,6 +307,9 @@ public class SSA {
 		}
 	}
 	
+	/**
+	 * Record SSA info during variable renaming.
+	 * */
 	private void RenameVariable(Reg var, BasicBlock blk) {
 		List<Quad> quads = blk.TraverseQuad();
 		// for def-use in this basic block.
@@ -309,6 +323,8 @@ public class SSA {
 				var.usesQuad.remove(quad);
 				// update move in both data structures.
 				Mov use = new Mov(loaded, versionStack.peek());
+				// FIXME : ugly
+				use.blk = blk;
 				iter.add(use);
 				var.usesQuad.add(use);
 			}
@@ -320,6 +336,8 @@ public class SSA {
 				var.defsQuad.remove(quad);
 				// update
 				Mov def = new Mov(versionStack.peek(), storing);
+				// FIXME : ugly
+				def.blk = blk;
 				iter.add(def);
 				var.defsQuad.add(def);
 			}
@@ -334,6 +352,8 @@ public class SSA {
 				iter.remove();
 				versionStack.push(NewVersion());
 				Mov def = new Mov(versionStack.peek(), new Constant(DUMMY));
+				// FIXME : ugly
+				def.blk = blk;
 				iter.add(def);
 			}
 		}
@@ -364,7 +384,7 @@ public class SSA {
 	 * Make sure that all allocated regs have been renamed.
 	 * */
 	private void CheckRename() {
-		BasicBlock curB = cfg.GetHead();
+		BasicBlock curB = cfgEntry;
 		List<Quad> quads = curB.TraverseQuad();
 		for (Quad quad : quads) {
 			if (quad instanceof Store) {
@@ -378,7 +398,8 @@ public class SSA {
 			else if (quad instanceof Phi) {
 				Reg bug = ((Phi) quad).var;
 				assert bug.renamed && bug.alloca;
-				for (Reg bugs : ((Phi) quad).options.values()) {
+				for (IrValue bugsV : ((Phi) quad).options.values()) {
+					Reg bugs = (Reg) bugsV;
 					assert bugs.renamed && bugs.alloca;
 				}
 			}

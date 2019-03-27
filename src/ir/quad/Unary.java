@@ -4,6 +4,8 @@ import ir.Printer;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
+import java.util.List;
+
 public class Unary extends Quad {
   public enum Op {
     BITNOT, NEG
@@ -20,7 +22,17 @@ public class Unary extends Quad {
     this.op = op;
     this.src = src;
   }
-
+  
+  @Override
+  public Reg GetDefReg() {
+    return ans;
+  }
+  @Override
+  public void GetUseRegs(List<Reg> list_) {
+    if (src instanceof Reg)
+      list_.add((Reg) src);
+  }
+  
   @Override
   public void AcceptPrint(Printer printer) {
     printer.print(this);

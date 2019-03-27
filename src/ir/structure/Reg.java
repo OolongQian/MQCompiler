@@ -7,7 +7,6 @@ import java.util.Set;
 
 public class Reg extends IrValue {
 	public String name;
-	public Reg reachingDef;
 	public Set<BasicBlock> usesBB = new HashSet<>();
 	public Set<BasicBlock> defsBB = new HashSet<>();
 	public Set<Quad> usesQuad = new HashSet<>();

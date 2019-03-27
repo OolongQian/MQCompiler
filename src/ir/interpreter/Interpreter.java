@@ -422,7 +422,7 @@ public class Interpreter {
 					// if load string
 					loaded = headAddr;
 				} else {
-						loaded = mem.LoadInt(headAddr);
+					loaded = mem.LoadInt(headAddr);
 				}
 				
 				loadContent.SetValue(loaded);

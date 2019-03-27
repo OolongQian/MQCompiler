@@ -51,6 +51,9 @@ public class Reg {
 	}
 	
 	public Integer GetValue() {
+		if (!valSet) {
+			int a = 1;
+		}
 		assert valSet;
 		return val;
 	}

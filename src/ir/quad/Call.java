@@ -18,6 +18,19 @@ public class Call extends Quad {
 	}
 	
 	@Override
+	public Reg GetDefReg() {
+		return ret;
+	}
+	
+	@Override
+	public void GetUseRegs(List<Reg> list_) {
+		for (IrValue arg : args) {
+			if (arg instanceof Reg)
+				list_.add((Reg) arg);
+		}
+	}
+	
+	@Override
   public void AcceptPrint(Printer printer) {
     printer.print(this);
   }
