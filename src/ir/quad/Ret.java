@@ -2,6 +2,7 @@ package ir.quad;
 
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -18,6 +19,11 @@ public class Ret extends Quad {
 	public void GetUseRegs(List<Reg> list_) {
 		if (val instanceof Reg)
 			list_.add((Reg) val);
+	}
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+		assert val == v;
+		val = c;
 	}
 	
 	@Override

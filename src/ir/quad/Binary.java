@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -39,6 +40,20 @@ public class Binary extends Quad {
 	public void GetUseRegs(List<Reg> list_) {
   	if (src1 instanceof Reg) list_.add((Reg) src1);
 		if (src2 instanceof Reg) list_.add((Reg) src2);
+	}
+	
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+  	boolean replace = false;
+		if (src1 == v) {
+			src1 = c;
+			replace = true;
+		}
+		if (src2 == v) {
+			src2 = c;
+			replace = true;
+		}
+		assert replace;
 	}
 	
 	@Override

@@ -3,7 +3,10 @@ package opt.ssa_build;
 import ir.BuilderContext;
 import ir.quad.*;
 import ir.structure.*;
-import opt.dead_elimination.DeadEliminator;
+import opt.Defuse;
+import opt.DefuseInfo;
+import opt.optimizers.ConstPropagator;
+import opt.optimizers.DeadEliminator;
 
 import java.util.*;
 
@@ -17,6 +20,7 @@ public class SSA {
 	 * Functions and interfaces need redesign.
 	 * */
 	public void ConstructSSA(BuilderContext ctx) {
+		// construct dominance tree.
 		for (Function funct : ctx.GetFuncts().values()) {
 			Config(funct);
 			BuildDominance();
@@ -27,9 +31,15 @@ public class SSA {
 			PhiPlacement();
 			Renaming();
 			CheckRename();
+			
+			// construct def-use chain in current function.
+			Defuse.ClearDefuse();
+			Defuse.CollectFunctDefuse(funct);
 			DeadEliminator eliminator = new DeadEliminator();
-			eliminator.Config(this);
-			eliminator.EliminateDeadCode();
+			ConstPropagator constProper = new ConstPropagator();
+			// eliminator performs optim based on Defuse data.
+			eliminator.DeadCodeEliminate();
+			constProper.ConstPropagate();
 		}
 	}
 	
@@ -49,9 +59,6 @@ public class SSA {
 			infos.put(curB, new Info());
 			curB = (BasicBlock) curB.next;
 		}
-	}
-	public BasicBlock GetCfgEntry() {
-		return cfgEntry;
 	}
 	
 	/**

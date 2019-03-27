@@ -6,7 +6,6 @@ import ast.node.Prog;
 import ir.BuilderContext;
 import ir.Printer;
 import ir.interpreter.Interpreter;
-import opt.dead_elimination.DeadEliminator;
 import opt.ssa_build.SSA;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;

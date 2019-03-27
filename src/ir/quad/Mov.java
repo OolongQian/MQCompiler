@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -26,6 +27,11 @@ public class Mov extends Quad {
 	public void GetUseRegs(List<Reg> list_) {
 		if (src instanceof Reg)
 			list_.add((Reg) src);
+	}
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+		assert src == v;
+		src = c;
 	}
 	
 	@Override

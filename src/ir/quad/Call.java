@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -28,6 +29,18 @@ public class Call extends Quad {
 			if (arg instanceof Reg)
 				list_.add((Reg) arg);
 		}
+	}
+	
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+		boolean replace = false;
+		for (int i = 0; i < args.size(); ++i) {
+			if (args.get(i) == v) {
+				args.set(i, c);
+				replace = true;
+			}
+		}
+		assert replace;
 	}
 	
 	@Override

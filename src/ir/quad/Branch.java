@@ -2,6 +2,7 @@ package ir.quad;
 
 import ir.Printer;
 import ir.structure.BasicBlock;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -22,6 +23,12 @@ public class Branch extends Quad {
   public void GetUseRegs(List<Reg> list_) {
   	if (cond instanceof Reg)
   		list_.add((Reg) cond);
+  }
+  
+  @Override
+  public void ReplaceUse(Reg v, Constant c) {
+		assert cond == v;
+	  cond = c;
   }
   
   @Override

@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.Reg;
 
 import java.util.List;
@@ -22,6 +23,11 @@ public class Load extends Quad {
 	@Override
 	public void GetUseRegs(List<Reg> list_) {
 		list_.add(addr);
+	}
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+		assert addr == v;
+		throw new RuntimeException("I think programmer cannot load a constant address.");
 	}
 	
 	@Override

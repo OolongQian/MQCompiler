@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -27,9 +28,13 @@ public class Malloc extends Quad {
   	if (size_ instanceof Reg)
   		list_.add((Reg) size_);
   }
-  
-  
-  @Override
+	@Override
+	public void ReplaceUse(Reg v, Constant c) {
+		assert size_ == v;
+		size_ = c;
+	}
+	
+	@Override
   public void AcceptPrint(Printer printer) {
     printer.print(this);
   }

@@ -1,6 +1,8 @@
 package opt;
 
 import ir.quad.Quad;
+import ir.structure.BasicBlock;
+import ir.structure.Function;
 import ir.structure.Reg;
 
 import java.util.*;
@@ -8,39 +10,52 @@ import java.util.*;
 /**
  * This is a class recording SSA register info.
  * */
-public class Usedef {
-	public static HashMap<Reg, UsedefReg> ssaVars = new HashMap<>();
+public class Defuse {
+	public static HashMap<Reg, DefuseInfo> ssaVars = new HashMap<>();
 	
 	/*************************** info collect methods ***********************/
+	public static void CollectFunctDefuse(Function funct) {
+		BasicBlock curBB = funct.bbs.GetHead();
+		while (curBB != null) {
+			DefuseBlock(curBB);
+			curBB = (BasicBlock) curBB.next;
+		}
+		DefuseBlock(funct.bbs.GetHead());
+	}
+	private static void DefuseBlock(BasicBlock blk) {
+		List<Quad> quads = blk.TraverseQuad();
+		quads.forEach(Defuse::DefuseQuad);
+	}
+	/**
+	 * Used before another function's def-use collection.
+	 * */
+	public static void ClearDefuse() {
+		ssaVars.clear();
+	}
+	
 	/**
 	 * Collect all live SSA registers
 	 */
-	public static void DefUseRecord(Quad quad) {
+	private static void DefuseQuad(Quad quad) {
 		// record def
 		Reg defReg = quad.GetDefReg();
-		if (defReg != null && IsSSA(defReg)) {
+		if (defReg != null) {
 			
 			// phi node may have def after use.
 			if (!ssaVars.containsKey(defReg))
-				ssaVars.put(defReg, new UsedefReg());
+				ssaVars.put(defReg, new DefuseInfo());
 			
-			UsedefReg defInfo = ssaVars.get(defReg);
-			defInfo.defQuad = quad; // record def quad.
-			ssaVars.put(defReg, defInfo);
+			ssaVars.get(defReg).defQuad = quad;
 		}
 		
 		// update usage.
 		List<Reg> useRegs = new LinkedList<>();
 		quad.GetUseRegs(useRegs);
 		for (Reg reg : useRegs) {
-			if (IsSSA(reg)) {
-				
-				if (!ssaVars.containsKey(reg))
-					ssaVars.put(reg, new UsedefReg());
-				
-				UsedefReg useInfo = ssaVars.get(reg);
-				useInfo.useQuads.add(quad);
-			}
+			if (!ssaVars.containsKey(reg))
+				ssaVars.put(reg, new DefuseInfo());
+			
+			ssaVars.get(reg).useQuads.add(quad);
 		}
 	}
 	
@@ -59,20 +74,5 @@ public class Usedef {
 	public static Quad GetDefQuad(Reg reg) {
 		return ssaVars.get(reg).defQuad;
 	}
-	
-	
-	/***************************** utility methods ***********************************/
-	public static boolean IsSSA(Reg reg) {
-		return reg.name.startsWith("!");
-//		return true;
-	}
 }
 
-/**
- * used to store ssa register profile.
- * About def and use.
- * */
-class UsedefReg {
-	public Set<Quad> useQuads = new HashSet<>();
-	public Quad defQuad;
-}
