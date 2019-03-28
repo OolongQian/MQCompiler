@@ -12,16 +12,19 @@ import java.util.*;
  * */
 public class Defuse {
 	public static HashMap<Reg, DefuseInfo> ssaVars = new HashMap<>();
+	public static BasicBlock entry;
+	
 	
 	/*************************** info collect methods ***********************/
 	public static void CollectFunctDefuse(Function funct) {
-		BasicBlock curBB = funct.bbs.GetHead();
+		entry = funct.bbs.GetHead();
+		BasicBlock curBB = entry;
 		while (curBB != null) {
 			DefuseBlock(curBB);
 			curBB = (BasicBlock) curBB.next;
 		}
-		DefuseBlock(funct.bbs.GetHead());
 	}
+	
 	private static void DefuseBlock(BasicBlock blk) {
 		List<Quad> quads = blk.TraverseQuad();
 		quads.forEach(Defuse::DefuseQuad);

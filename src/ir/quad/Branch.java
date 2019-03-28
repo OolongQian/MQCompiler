@@ -26,11 +26,10 @@ public class Branch extends Quad {
   }
   
   @Override
-  public void ReplaceUse(Reg v, Constant c) {
+  public void ReplaceUse(Reg v, IrValue c) {
 		assert cond == v;
 	  cond = c;
   }
-  
   @Override
   public void AcceptPrint(Printer printer) {
     printer.print(this);

@@ -4,8 +4,10 @@ import ir.BuilderContext;
 import ir.quad.*;
 import ir.structure.*;
 import opt.Defuse;
-import opt.DefuseInfo;
+import opt.DominanceForest;
+import opt.optimizers.CommonExprDeleter;
 import opt.optimizers.ConstPropagator;
+import opt.optimizers.CopyPropagator;
 import opt.optimizers.DeadEliminator;
 
 import java.util.*;
@@ -32,14 +34,26 @@ public class SSA {
 			Renaming();
 			CheckRename();
 			
+			DominanceForest.BuildDominanceForest(infos);
+			
 			// construct def-use chain in current function.
-			Defuse.ClearDefuse();
-			Defuse.CollectFunctDefuse(funct);
-			DeadEliminator eliminator = new DeadEliminator();
-			ConstPropagator constProper = new ConstPropagator();
-			// eliminator performs optim based on Defuse data.
-			eliminator.DeadCodeEliminate();
-			constProper.ConstPropagate();
+			int cnt = 3;
+			while (cnt-- != 0) {
+				Defuse.ClearDefuse();
+				Defuse.CollectFunctDefuse(funct);
+				
+				// depends on Defuse
+				DeadEliminator eliminator = new DeadEliminator();
+				ConstPropagator constProper = new ConstPropagator();
+				CommonExprDeleter exprDeleter = new CommonExprDeleter();
+				CopyPropagator copyProper = new CopyPropagator();
+//			 eliminator performs optim based on Defuse data.
+				eliminator.DeadCodeEliminate();
+				constProper.ConstPropagate();
+				copyProper.PropagateCopy();
+				exprDeleter.WipeCommonExpr();
+			}
+			
 		}
 	}
 	
@@ -66,9 +80,6 @@ public class SSA {
 	 * vars is global information, which needs a static data structure in Info.
 	 * */
 	private HashMap<BasicBlock, Info> infos = new HashMap<>();
-	public HashMap<BasicBlock, Info> GetInfos() {
-		return infos;
-	}
 	
 	/**
 	 * ************************* DOMINANT TREE **********************************

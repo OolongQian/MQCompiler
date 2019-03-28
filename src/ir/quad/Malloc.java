@@ -29,7 +29,7 @@ public class Malloc extends Quad {
   		list_.add((Reg) size_);
   }
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
 		assert size_ == v;
 		size_ = c;
 	}

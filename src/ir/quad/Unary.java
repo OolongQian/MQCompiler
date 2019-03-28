@@ -34,7 +34,7 @@ public class Unary extends Quad {
       list_.add((Reg) src);
   }
   @Override
-  public void ReplaceUse(Reg v, Constant c) {
+  public void ReplaceUse(Reg v, IrValue c) {
   	assert src == v;
   	src = c;
   }

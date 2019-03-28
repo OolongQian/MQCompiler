@@ -21,7 +21,7 @@ public class Ret extends Quad {
 			list_.add((Reg) val);
 	}
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
 		assert val == v;
 		val = c;
 	}

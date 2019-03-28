@@ -5,7 +5,6 @@ import ir.quad.Call;
 import ir.quad.Quad;
 import ir.structure.Reg;
 import opt.Defuse;
-import opt.DefuseInfo;
 
 import java.util.*;
 
@@ -13,6 +12,8 @@ import static ir.Config.DEADLOG;
 
 /**
  * Dead code eliminator depends on the def-use info in Defuse.java class.
+ *
+ * It maintains def-use chain.
  * */
 public class DeadEliminator {
 	
@@ -61,7 +62,6 @@ public class DeadEliminator {
 					def.GetUseRegs(uses);
 					// these regs aren't used in this quad anymore, because this quad has been eliminated.
 					for (Reg use : uses) {
-					// FIXME : ugly, generalize it later
 						Defuse.GetUseQuads(use).remove(def);
 						if (!workList.contains(use))
 							workList.add(use);

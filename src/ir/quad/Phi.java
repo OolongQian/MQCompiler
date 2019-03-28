@@ -36,7 +36,7 @@ public class Phi extends Quad {
 		}
 	}
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
 		boolean replace = false;
 		for (BasicBlock key : options.keySet()) {
 			if (options.get(key) == v) {

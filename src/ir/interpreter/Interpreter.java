@@ -279,6 +279,9 @@ public class Interpreter {
 	
 	private Map<String, Reg> global = new HashMap<>();
 	
+	private Map<Reg, Reg> phiParalCache = new HashMap<>();
+	private boolean phiCached = false;
+	
 	public void Execute() {
 		InitString();
 		InitGlobal();
@@ -327,11 +330,7 @@ public class Interpreter {
 			ExecuteInst(mainCtx);
 		}
 		
-		try {
-			System.exit(mainCtx.GetRetVal().GetValue());
-		} catch (NullPointerException e) {
-			System.exit(0);
-		}
+		System.exit(mainCtx.GetRetVal().GetValue());
 	}
 	
 	/**
@@ -351,6 +350,14 @@ public class Interpreter {
 			ctx.PrintDefUse(mem);
 		}
 		
+		// if phi nodes have been evaluated already, assign cached phi nodes results in parallel.
+		if (!inst.operator.equals("phi") && phiCached) {
+			for (Reg phiReg : phiParalCache.keySet()) {
+				phiReg.SetValue(phiParalCache.get(phiReg).GetValue());
+			}
+			phiParalCache.clear();
+			phiCached = false;
+		}
 		switch (inst.operator) {
 			case "alloca":
 				// alloc in memModel, bind a new local reg to the addr.
@@ -522,12 +529,14 @@ public class Interpreter {
 				break;
 			
 			case "phi":
-				Reg phiChoice = GetReg(ctx, inst.dst);
+				Reg phiReg = GetReg(ctx, inst.dst);
 				Map<String, String> opts = inst.options;
-				Reg phiOption = GetReg(ctx, opts.get(ctx.GetJumpFrom()));
-				phiChoice.SetValue(phiOption.GetValue());
+				Reg phiChoice = GetReg(ctx, opts.get(ctx.GetJumpFrom()));
 				
-				if(LOG) System.err.println("phi, choose " + ctx.GetJumpFrom() + " val " + phiOption.GetValue() + " name " + opts.get(ctx.GetJumpFrom()));
+				phiCached = true;
+				phiParalCache.put(phiReg, phiChoice);
+				
+				if(LOG) System.err.println("phi, choose " + ctx.GetJumpFrom() + " val " + phiChoice.GetValue() + " name " + opts.get(ctx.GetJumpFrom()));
 				
 				break;
 			

@@ -31,10 +31,13 @@ public class Store extends Quad {
       list_.add((Reg) src);
   }
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
   	boolean replace = false;
   	if (dst == v) {
-  		throw new RuntimeException("I think programmer cannot store to a constant address.");
+  		if (c instanceof Constant)
+  		  throw new RuntimeException("I think programmer cannot store to a constant address.");
+  		dst = (Reg) c;
+  		replace = true;
 	  }
 	  if (src == v) {
   		replace = true;

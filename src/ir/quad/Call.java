@@ -32,7 +32,7 @@ public class Call extends Quad {
 	}
 	
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
 		boolean replace = false;
 		for (int i = 0; i < args.size(); ++i) {
 			if (args.get(i) == v) {

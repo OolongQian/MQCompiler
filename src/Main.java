@@ -60,13 +60,5 @@ public class Main {
 		  interp.Execute();
 	  }
 	  
-//
-//    irCtx.Print(irPrinter);
-//
-
-
-//    IRPrintVisitor irPrintVisitor = new IRPrintVisitor(deprecate);
-//    String irStr = irPrintVisitor.IrPrint(deprecate.irCopy);
-//    System.out.println(irStr);
   }
 }

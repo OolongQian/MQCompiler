@@ -43,7 +43,7 @@ public class Binary extends Quad {
 	}
 	
 	@Override
-	public void ReplaceUse(Reg v, Constant c) {
+	public void ReplaceUse(Reg v, IrValue c) {
   	boolean replace = false;
 		if (src1 == v) {
 			src1 = c;
