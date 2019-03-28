@@ -8,6 +8,7 @@ import ir.structure.Reg;
 import opt.Defuse;
 import java.util.*;
 
+/*************************** CFG structure unchanged **********************************/
 /**
  * This optimizer maintains def-use chain.
  * */

@@ -46,9 +46,7 @@ public class CopyPropagator {
 	}
 	*/
 	
-	/**
-	 * Don't propagate phi node.
-	 * */
+	/************************* Need concurrent phi evaluation, CFG unchange. ********************************/
 	public void PropagateCopy() {
 		Queue<Reg> workList = new ArrayDeque<>(Defuse.ssaVars.keySet());
 		
@@ -63,23 +61,19 @@ public class CopyPropagator {
 				for (Iterator<Quad> iter = useQuads.iterator(); iter.hasNext();) {
 					Quad useQ = iter.next();
 					// don't move phi node.
-					if (true || !(useQ instanceof Phi)) {
-						// replace propagated copy by srcVal.
-						useQ.ReplaceUse(var, srcVal);
-						// then useQ isn't a use of var.
-						iter.remove();
-						// useQ is a ise of srcVar
-						if (srcVal instanceof Reg)
-							Defuse.GetUseQuads((Reg) srcVal).add(useQ);
-					}
+					// replace propagated copy by srcVal.
+					useQ.ReplaceUse(var, srcVal);
+					// then useQ isn't a use of var.
+					iter.remove();
+					// useQ is a ise of srcVar
+					if (srcVal instanceof Reg)
+						Defuse.GetUseQuads((Reg) srcVal).add(useQ);
 				}
 				// remove dst from ssaVars if it is no longer used.
-				if (useQuads.isEmpty()) {
-					// remove definition quad.
-					defQuad.blk.TraverseQuad().remove(defQuad);
-					// remove var from ssaVars
-					Defuse.ssaVars.remove(((Mov) defQuad).dst);
-				}
+				// remove definition quad.
+				defQuad.blk.TraverseQuad().remove(defQuad);
+				// remove var from ssaVars
+				Defuse.ssaVars.remove(((Mov) defQuad).dst);
 			}
 		}
 	}

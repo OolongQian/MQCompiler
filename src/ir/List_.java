@@ -56,6 +56,25 @@ public class List_ {
 		return (BasicBlock) tail;
 	}
 	
+	public void Remove(Linkable junk) {
+		Linkable cur = head;
+		while (cur != null && cur != junk) {
+			cur = cur.next;
+		}
+		if (cur == null)
+			throw new RuntimeException();
+		
+		if (cur.prev != null)
+			cur.prev.next = cur.next;
+		if (cur.next != null)
+			cur.next.prev = cur.prev;
+		
+		if (cur == head) head = cur.next;
+		if (cur == tail) tail = cur.prev;
+		
+		--size_;
+	}
+	
 	private void Init(Linkable e) {
 		assert size_ == 0;
 		head = tail = e;

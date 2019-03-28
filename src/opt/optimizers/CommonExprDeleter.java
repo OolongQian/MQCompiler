@@ -18,6 +18,7 @@ import static ir.quad.Binary.Op.NE;
 import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
 
+/********************** Within a BB, locally. *************************/
 /**
  * This is a very simple local value numbering.
  * Because we are using SSA form, this could be easy.

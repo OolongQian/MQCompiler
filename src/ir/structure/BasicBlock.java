@@ -2,6 +2,7 @@ package ir.structure;
 
 import ir.Linkable;
 import ir.quad.Alloca;
+import ir.quad.Jump;
 import ir.quad.Phi;
 import ir.quad.Quad;
 
@@ -9,7 +10,7 @@ import java.util.*;
 
 public class BasicBlock extends Linkable {
 	private String name;
-	private List<Quad> quads = new LinkedList<>();
+	public List<Quad> quads = new LinkedList<>();
 	public Set<BasicBlock> predecessor = new HashSet<>();
 	public Set<BasicBlock> successor = new HashSet<>();
 	public boolean complete = false;
@@ -47,16 +48,30 @@ public class BasicBlock extends Linkable {
 	}
 	
 	public void AllocaFront(Alloca quad) {
-		assert name.equals("$entry0");
+		assert parentFunct.bbs.GetHead() == this;
 		quads.add(0, quad);
 	}
 	
+	// isn't restricted by complete.
 	public void PushfrontPhi(Phi quad) {
 		quads.add(0, quad);
 	}
 	
+	// isn't restricted by complete.
+	public void AddDefaultJump(Quad quad) {
+		quads.add(quad);
+	}
+	
+	public int GetQuadSize() {
+		return quads.size();
+	}
+	
 	public List<Quad> TraverseQuad() {
 		return quads;
+	}
+	
+	public Quad GetLastQuad() {
+		return quads.get(quads.size() - 1);
 	}
 	
 	@Override

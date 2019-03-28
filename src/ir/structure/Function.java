@@ -3,9 +3,12 @@ package ir.structure;
 import ir.List_;
 import ir.quad.*;
 
+import java.io.*;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+
+import static ir.Utility.MakeGreg;
 
 public class Function {
 	public String name;
@@ -101,7 +104,12 @@ public class Function {
 				if (last instanceof Jump || last instanceof Branch)
 					skipJump = true;
 			}
-			if (!skipJump) cur.JumpTo((BasicBlock) cur.next);
+			if (!skipJump) {
+				Jump fallThrough = new Jump((BasicBlock) cur.next);
+				fallThrough.blk = cur;
+				cur.AddDefaultJump(fallThrough);
+				cur.JumpTo((BasicBlock) cur.next);
+			}
 			cur = (BasicBlock) cur.next;
 		}
 		for (Quad jp : brjp) {
@@ -112,6 +120,21 @@ public class Function {
 				jp.blk.JumpTo(((Branch) jp).ifFalse);
 			} else {
 				throw new RuntimeException("unexpected brjp");
+			}
+		}
+		
+		cur = bbs.GetHead();
+		while (cur.next != null) cur = (BasicBlock) cur.next;
+		Ret ret = new Ret(MakeGreg("null"));
+		ret.blk = cur;
+		
+		if (cur.TraverseQuad().isEmpty()) {
+			cur.AddDefaultJump(ret);
+		}
+		else {
+			Quad quad = cur.GetLastQuad();
+			if (!(quad instanceof Jump) && !(quad instanceof Branch) && !(quad instanceof Ret)) {
+				cur.AddDefaultJump(ret);
 			}
 		}
 	}
@@ -155,4 +178,17 @@ public class Function {
 		return '$' + name + Integer.toString(index);
 	}
 	
+	/**
+	 * Use serial to implement deep copy.
+	 * */
+	public Function DeepClone() throws IOException,ClassNotFoundException{
+		// write into stream
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+		objectOutputStream.writeObject(this);
+		// get from stream
+		ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
+		ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+		return (Function) objectInputStream.readObject();
+	}
 }

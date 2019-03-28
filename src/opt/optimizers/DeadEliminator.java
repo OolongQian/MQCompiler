@@ -10,6 +10,7 @@ import java.util.*;
 
 import static ir.Config.DEADLOG;
 
+/******************************** CFG unchange ************************************/
 /**
  * Dead code eliminator depends on the def-use info in Defuse.java class.
  *

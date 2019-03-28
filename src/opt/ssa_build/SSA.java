@@ -5,10 +5,7 @@ import ir.quad.*;
 import ir.structure.*;
 import opt.Defuse;
 import opt.DominanceForest;
-import opt.optimizers.CommonExprDeleter;
-import opt.optimizers.ConstPropagator;
-import opt.optimizers.CopyPropagator;
-import opt.optimizers.DeadEliminator;
+import opt.optimizers.*;
 
 import java.util.*;
 
@@ -36,25 +33,24 @@ public class SSA {
 			
 			DominanceForest.BuildDominanceForest(infos);
 			
-			// construct def-use chain in current function.
-			int cnt = 3;
-			while (cnt-- != 0) {
-				Defuse.ClearDefuse();
-				Defuse.CollectFunctDefuse(funct);
-				
-				// depends on Defuse
-				DeadEliminator eliminator = new DeadEliminator();
-				ConstPropagator constProper = new ConstPropagator();
-				CommonExprDeleter exprDeleter = new CommonExprDeleter();
-				CopyPropagator copyProper = new CopyPropagator();
-//			 eliminator performs optim based on Defuse data.
-				eliminator.DeadCodeEliminate();
-				constProper.ConstPropagate();
-				copyProper.PropagateCopy();
-				exprDeleter.WipeCommonExpr();
-			}
+			DeadEliminator eliminator = new DeadEliminator();
+			ConstPropagator constProper = new ConstPropagator();
+			CommonExprDeleter exprDeleter = new CommonExprDeleter();
+			CopyPropagator copyProper = new CopyPropagator();
+//			ControlFlowCleaner controlCleaner = new ControlFlowCleaner();
 			
+			// construct def-use chain in current function.
+			Defuse.ClearDefuse();
+			Defuse.CollectFunctDefuse(funct);
+			
+			eliminator.DeadCodeEliminate();
+			constProper.ConstPropagate();
+			copyProper.PropagateCopy();
+			exprDeleter.WipeCommonExpr();
 		}
+		FunctionInliner inliner = new FunctionInliner();
+		inliner.CollectFunctInfo(ctx.GetFuncts());
+		ctx.GetFuncts().keySet().forEach(name -> inliner.InlineFunctCalls(ctx.GetFuncts().get(name)));
 	}
 	
 	/************************ Config a CFG to optimize ************************/
