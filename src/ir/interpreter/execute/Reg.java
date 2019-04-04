@@ -1,12 +1,10 @@
 package ir.interpreter.execute;
 
 
-import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ir.Config.DUMMY;
+import static ir.Config.NULL;
 
 /**
  * A run-time used data structure representing a def-use chain.
@@ -31,7 +29,7 @@ public class Reg {
 		}
 		// set fow null value.
 		else if (name.equals("@null")) {
-			SetValue(null);
+			SetValue(NULL);
 		}
 	}
 	
@@ -51,12 +49,11 @@ public class Reg {
 	}
 	
 	public Integer GetValue() {
+		if (!valSet) {
+			int a =1 ;
+		}
 		assert valSet;
 		return val;
-	}
-	
-	public boolean IsNull() {
-		return valSet && val == null;
 	}
 	
 	/**

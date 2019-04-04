@@ -2,7 +2,6 @@ package ir.quad;
 
 import ir.Printer;
 import ir.structure.BasicBlock;
-import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -30,9 +29,10 @@ public class Branch extends Quad {
 		assert cond == v;
 	  cond = c;
   }
-  @Override
-  public void AcceptPrint(Printer printer) {
-    printer.print(this);
-  }
-
+	
+	@Override
+	public void AcceptPrint(Printer printer) {
+		printer.print(this);
+	}
+	
 }

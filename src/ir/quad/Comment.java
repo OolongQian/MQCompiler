@@ -14,4 +14,5 @@ public class Comment extends Quad {
 	public void AcceptPrint(Printer printer) {
 		printer.print(this);
 	}
+	
 }

@@ -24,19 +24,6 @@ public class Utility {
 		return new Constant(val);
 	}
 	
-	public static Map<String, ClassDec> irClassTable = new HashMap<>();
-	public static int CalTypeSize(Type type) {
-		assert !type.isNull() && !type.isVoid();
-		
-		int typeSpace = 0;
-		if (type.isArray() || type.isInt() || type.isBool() || type.isString())
-			typeSpace = INT_SIZE;
-		else {
-			ClassDec class_ = irClassTable.get(type.GetBaseTypeName());
-			for (VarDec field : class_.fields) typeSpace += INT_SIZE;
-		}
-		return typeSpace;
-	}
 	
 	public static String unescape(String s) {
 		StringBuilder sb = new StringBuilder();

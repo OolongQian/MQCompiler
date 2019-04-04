@@ -7,7 +7,7 @@ import java.util.Map;
  * A run-time simulated memory.
  * */
 public class MemModel {
-	static int sp = 0;
+	static int sp = 4;
 	static int hp = 4095000;
 	
 	Map<Integer, Byte> mem = new HashMap<>();
@@ -68,7 +68,7 @@ public class MemModel {
 		sp += size_;
 		for (int i = headAddr; i < sp; ++i) {
 			assert !mem.containsKey(i);
-			mem.put(i, (byte) 0);
+			mem.put(i, (byte) -1);
 		}
 		assert sp <= hp;
 		return headAddr;
@@ -94,9 +94,6 @@ public class MemModel {
 	}
 	
 	private void StoreMem(int addr, byte byte_) {
-		if (!mem.containsKey(addr)) {
-			int a = 1;
-		}
 		assert mem.containsKey(addr);
 		mem.put(addr, byte_);
 	}

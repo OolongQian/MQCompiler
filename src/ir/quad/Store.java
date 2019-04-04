@@ -47,7 +47,8 @@ public class Store extends Quad {
 	}
 	
 	@Override
-  public void AcceptPrint(Printer printer) {
-    printer.print(this);
-  }
+	public void AcceptPrint(Printer printer) {
+		printer.print(this);
+	}
+	
 }

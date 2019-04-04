@@ -2,14 +2,12 @@ package ir.quad;
 
 import ir.Printer;
 import ir.structure.BasicBlock;
-import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
 import java.util.List;
 
 abstract public class Quad {
-	abstract public void AcceptPrint(Printer printer);
 	public BasicBlock blk;
 	
 	/**
@@ -25,4 +23,6 @@ abstract public class Quad {
 	 * Applied in ConstantPropagation and CopyPropagation.
 	 * */
 	public void ReplaceUse(Reg v, IrValue val) {}
+	
+	abstract public void AcceptPrint(Printer printer);
 }

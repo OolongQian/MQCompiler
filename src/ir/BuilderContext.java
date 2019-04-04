@@ -1,8 +1,9 @@
 package ir;
 
+import ast.node.dec.ClassDec;
 import ast.node.dec.FunctDec;
 import ast.node.dec.VarDec;
-import ir.quad.Quad;
+import ir.quad.*;
 import ir.structure.BasicBlock;
 import ir.structure.Function;
 import ir.structure.Reg;
@@ -11,44 +12,23 @@ import ir.structure.StringLiteral;
 import java.util.*;
 
 /**
- * We want to disentangle from AST, use String as key.
- *
- * Every variable, both global and local, must be renamed to be accepted into Ir builder.
- *
- * BuilderContext is an interface of resource storage, information collection,
- * a recorder of current code generation cursor, and wrapper of function.
+ * record ir building results and a bunch of utilities.
  * */
 public class BuilderContext {
 	
 	/**
-	 * IR's basic building blocks are functions.
-	 */
-	private Map<String, Function> functs = new HashMap<>();
+	 * ir is operated by this building context class, thus is a member of it.
+	 * */
+	public IrProg ir = new IrProg();
 	
 	/**
-	 * global information recording.
-	 *
-	 * Assign id for global strings. Strings are represented by stringLiteral,
-	 * which contains string and its id. It is encoded as *id.
-	 * Every string literal is a var, which means it is associated with a memory address.
-	 * Thus it inherits from class Reg.
+	 * Utilities to associate AST def to Reg of use.
 	 * */
-	private Map<String, StringLiteral> stringPool = new HashMap<>();
+	public Map<VarDec, Reg> varTracer = new HashMap<>();
 	/**
-	 * Use globals to record gvar, for output for interpreter.
+	 * Use type name to find class entity.
 	 * */
-	private Map<String, Reg> globals = new HashMap<>();
-	
-	/**
-	 * Utilities to associate AST def to use.
-	 * */
-	private Map<VarDec, Reg> varTracer = new HashMap<>();
-	public void BindVarToDec(VarDec var, Reg reg) {
-		varTracer.put(var, reg);
-	}
-	public Reg TraceVar(VarDec var) {
-		return varTracer.get(var);
-	}
+	public Map<String, ClassDec> irClassTable = new HashMap<>();
 	
 	/**
 	 * Inherited from AST, to determine whether constructor exists.
@@ -56,47 +36,49 @@ public class BuilderContext {
 	 * */
 	public Hashtable<String, FunctDec> functTable;
 	
+	public Function cFun;
+	
+	/************************* Function and Method **********************/
+	
 	/*************************** constructor **********************************/
 	public BuilderContext(Hashtable<String, FunctDec> functTable) {
 		this.functTable = functTable;
 	}
 	
-	/*************************** global static data **********************************/
-	public void AddGlobalVar(VarDec gDec, Reg gVar) {
-		BindVarToDec(gDec, gVar);
-		globals.put(gVar.name, gVar);
-	}
-	public StringLiteral TraceGlobalString(String str) {
-		if (!stringPool.containsKey(str))
-			stringPool.put(str, new StringLiteral(str));
-		return stringPool.get(str);
-	}
-	
-	/************************* Function and Method **********************/
-	/**
-	 * Set current code generation context. Like a cursor.
-	 * */
-	public Function cFun;
 	/**
 	 * Insert a function with given name into functs map.
+	 * return the function entity out.
 	 * */
 	public Function FuncGen(String name) {
 		Function func = new Function(name);
-		functs.put(name, func);
+		ir.functs.put(name, func);
 		return func;
 	}
 	public void SetCurFunc(Function func) {
 		cFun = func;
 	}
-
-	/**
-	 * Get the variable representing 'this' in current function.
-	 * assertion error if this function isn't method.
-	 * */
-	public Reg GetThis() {
-		assert cFun.this_ != null;
-		return cFun.this_;
+	
+	public void EmplaceInst(Quad quad) {
+//		assert !cFun.curBB.complete;
+		quad.blk = cFun.curBB;
+		
+		if (quad instanceof Alloca)
+			cFun.bbs.list.Head().quads.add(0, quad);
+		else
+			cFun.curBB.quads.add(quad);
+		
+//		if (quad instanceof Jump || quad instanceof Branch)
+//			cFun.brjp.add(quad);
+		
+		if (quad instanceof Ret) ;
+//			CompleteCurBB();
 	}
+	
+	public void CompleteCurBB() {
+//		assert !cFun.curBB.complete;
+		cFun.curBB.complete = true;
+	}
+
 	
 	/************************ Basic block, instruction, var naming ******************/
 	/**
@@ -104,43 +86,22 @@ public class BuilderContext {
 	 * */
 	public void SetCurBB(BasicBlock bb) {
 		assert bb.parentFunct == cFun;
-		cFun.SetCurBB(bb);
+		cFun.curBB = bb;
 	}
-	public BasicBlock GetCurBB() {
-		return cFun.GetCurBB();
-	}
-
+	
 	/**
 	 * Create a BB after specified BB.
 	 * It will be renamed to avoid naming issue.
 	 * */
 	public BasicBlock NewBBAfter(BasicBlock bb, String name) {
 		assert cFun == bb.parentFunct;
-		return cFun.NewBBAfter(bb, name);
+		String renameBB = cFun.GetBBName(name);
+		BasicBlock nb = new BasicBlock(renameBB, bb.parentFunct);
+		
+		cFun.bbs.list.InsertAfter(bb, nb);
+		return nb;
 	}
 	
-	/**
-	 * Instruction management methods.
-	 * attach current BB onto quad.
-	 * */
-	public void EmplaceInst(Quad quad) {
-		cFun.EmplaceInst(quad);
-	}
-	
-	/**
-	 * Register management methods.
-	 * */
-	public String RenameLocal(String name) {
-		return cFun.GetLocalName(name);
-	}
-	
-	public Reg GetTmpReg() {
-		return new Reg(cFun.GetTmpName());
-	}
-	
-	public Reg GetReserveReg(String name) {
-		return new Reg(cFun.GetReserveName(name));
-	}
 	
 	/******************** control flow's break and continue ******************/
 	/**
@@ -167,25 +128,19 @@ public class BuilderContext {
 		return breakStack.peek();
 	}
 	
-	/******************** CFG construction ******************/
-	public void ConstructCFG() {
-		functs.values().forEach(Function::ConstructCFG);
+	/*************************** global static data **********************************/
+	public void AddGlobalVar(VarDec gDec, Reg gVar) {
+		varTracer.put(gDec, gVar);
+		ir.globals.put(gVar.name, gVar);
+		assert cFun.name.equals("_init_");
+//		cFun.AddLocalVar(gVar);
 	}
 	
-	/******************** interface for printer ******************/
-	public void Print(Printer printer) {
-		stringPool.values().forEach(printer::print);
-		globals.values().forEach(printer::print);
-		functs.values().forEach(printer::print);
-		printer.getFout().println();
+	public StringLiteral TraceGlobalString(String str) {
+		if (!ir.stringPool.containsKey(str))
+			ir.stringPool.put(str, new StringLiteral(str));
+		return ir.stringPool.get(str);
 	}
 	
-	public Map<String, Function> GetFuncts() {
-		return functs;
-	}
-	
-	/********************* pass stringPool to interpreter ***********/
-	public Map<String, StringLiteral> PassStringPoolForInterp() {
-		return stringPool;
-	}
+
 }

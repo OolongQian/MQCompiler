@@ -6,7 +6,6 @@ import ir.interpreter.execute.RunCtx;
 import ir.interpreter.parse.Funct;
 import ir.interpreter.parse.Inst;
 import ir.structure.StringLiteral;
-import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
 
 import java.io.*;
 import java.util.*;
@@ -329,7 +328,6 @@ public class Interpreter {
 		while (!mainCtx.terminate) {
 			ExecuteInst(mainCtx);
 		}
-		
 		System.exit(mainCtx.GetRetVal().GetValue());
 	}
 	
@@ -387,7 +385,7 @@ public class Interpreter {
 				// NOTE : actually, this is the only condition needed to take care of.
 				Reg storeAddr = GetReg(ctx, inst.dst);
 				Reg storeVal = GetReg(ctx, inst.src1);
-				if (!storeVal.IsNull()) mem.StoreInt(storeAddr.GetValue(), storeVal.GetValue());
+				mem.StoreInt(storeAddr.GetValue(), storeVal.GetValue());
 				if(LOG) logger.println("store content: " + Integer.toString(storeVal.GetValue()) +
 								" to " + Integer.toString(storeAddr.GetValue()));
 				if(LOG) System.err.println("store, " +
@@ -401,9 +399,7 @@ public class Interpreter {
 			case "move":
 				Reg dstVar = GetReg(ctx, inst.dst);
 				Reg srcVal = GetReg(ctx, inst.src1);
-				if (!srcVal.IsNull())
-					dstVar.SetValue(srcVal.GetValue());
-				else dstVar.SetValue(null);
+				dstVar.SetValue(srcVal.GetValue());
 				break;
 				
 			case "load":
@@ -464,9 +460,8 @@ public class Interpreter {
 				if (IsBuiltIn(funcName)) {
 					// obtain the return value of the built-in function, and set return register's value.
 					Integer retVal = BuiltInFuncExec(funcName, args);
-					// set the return value if it isn't null.
-					if (!ret.IsNull())
-						ret.SetValue(retVal);
+					// set the return value if it isn't null. because a reg cannot be assigned twice
+					ret.SetValue(retVal);
 				}
 				else {
 					// create another thread
@@ -479,15 +474,10 @@ public class Interpreter {
 					while (!calleeCtx.terminate) {
 						ExecuteInst(calleeCtx);
 					}
-					// get return value.
-					// when ret.IsNull(), it means the function signature says its return value is null, no need to return.
-					if (!ret.IsNull()) {
-						if (calleeCtx.GetRetVal() == null) {
-							ret.SetValue(null);
-						} else {
-							ret.SetValue(calleeCtx.GetRetVal().GetValue());
-						}
-					}
+					// in class Funct, initially the ret reg is null, namely, nullptr.
+					// every function has to be terminated with an explicit ret quad, which set return value to Funct runtime context.
+					// otherwise, calleeCtx.GetRetVal will be nullptr, which throws out nullPointerException.
+					ret.SetValue(calleeCtx.GetRetVal().GetValue());
 				}
 				break;
 			

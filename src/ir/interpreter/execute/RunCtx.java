@@ -1,7 +1,6 @@
 package ir.interpreter.execute;
 
 import ir.interpreter.parse.Funct;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.util.HashMap;
 import java.util.List;

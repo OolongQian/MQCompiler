@@ -3,7 +3,6 @@ package ir.quad;
 import ir.Printer;
 import ir.structure.Reg;
 
-import java.util.LinkedList;
 import java.util.List;
 
 public class Alloca extends Quad {
@@ -25,6 +24,5 @@ public class Alloca extends Quad {
 	public void AcceptPrint(Printer printer) {
 		printer.print(this);
 	}
-	
 	
 }

@@ -2,7 +2,6 @@ package ir.quad;
 
 
 import ir.Printer;
-import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 
@@ -27,7 +26,8 @@ public class Ret extends Quad {
 	}
 	
 	@Override
-  public void AcceptPrint(Printer printer) {
-    printer.print(this);
-  }
+	public void AcceptPrint(Printer printer) {
+		printer.print(this);
+	}
+	
 }

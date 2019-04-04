@@ -1,5 +1,6 @@
 package ir;
 
+
 import ir.quad.*;
 import ir.structure.BasicBlock;
 import ir.structure.Function;
@@ -116,17 +117,18 @@ public class Printer {
 		}
 		fout.println();
 		
-		BasicBlock cur = funct.bbs.GetHead();
+		BasicBlock cur = funct.bbs.list.Head();
 		while (cur != null) {
 			print(cur);
-			cur = (BasicBlock) cur.next;
+			cur = cur.next;
 		}
 	}
 	
 	public void print(BasicBlock bb) {
-		assert bb.complete;
-		fout.println("<BasicBlock> " + bb.getName());
-		bb.TraverseQuad().forEach(x -> x.AcceptPrint(this));
+//		assert bb.complete;
+		fout.println("<BasicBlock> " + bb.name);
+		bb.quads.forEach(x -> x.AcceptPrint(this));
+		fout.println();
 	}
 	
 	public void print(Alloca quad) {
@@ -142,7 +144,7 @@ public class Printer {
 	
 	public void print(Branch quad) {
 		fout.println("branch " + quad.cond.getText() + " " +
-						quad.ifTrue.getName() + " " + quad.ifFalse.getName());
+						quad.ifTrue.name + " " + quad.ifFalse.name);
 	}
 	
 	public void print(Call quad) {
@@ -152,7 +154,7 @@ public class Printer {
 	}
 	
 	public void print(Jump quad) {
-		fout.println("jump " + quad.target.getName());
+		fout.println("jump " + quad.target.name);
 	}
 	
 	public void print(Load quad) {
@@ -183,7 +185,7 @@ public class Printer {
 	public void print(Phi quad) {
 		fout.print("phi " + quad.var.getText() + " ");
 		for (BasicBlock blk : quad.options.keySet()) {
-			fout.print(blk.getName() + ":" + quad.options.get(blk).getText() + " ");
+			fout.print(blk.name + ":" + quad.options.get(blk).getText() + " ");
 		}
 		fout.println();
 	}

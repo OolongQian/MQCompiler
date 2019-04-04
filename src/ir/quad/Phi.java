@@ -66,4 +66,5 @@ public class Phi extends Quad {
 	public void AcceptPrint(Printer printer) {
 		printer.print(this);
 	}
+	
 }
