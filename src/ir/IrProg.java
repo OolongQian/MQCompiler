@@ -1,6 +1,6 @@
 package ir;
 
-import ir.structure.Function;
+import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
 
@@ -14,7 +14,7 @@ public class IrProg {
 	/**
 	 * IR's basic building blocks are functions.
 	 */
-	public Map<String, Function> functs = new HashMap<>();
+	public Map<String, IrFunct> functs = new HashMap<>();
 	
 	/**
 	 * global information recording.
@@ -35,7 +35,7 @@ public class IrProg {
 	 * Construct control flow graph based on ir info. 
 	 * */
 	public void BuildCFG() {
-		functs.values().forEach(Function::BuildCFG);
+		functs.values().forEach(IrFunct::BuildCFG);
 	}
 	
 	

@@ -3,7 +3,7 @@ package ir;
 
 import ir.quad.*;
 import ir.structure.BasicBlock;
-import ir.structure.Function;
+import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
 
@@ -13,7 +13,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import static ir.Config.TEST;
+import static config.Config.TEST;
 import static ir.quad.Binary.Op.*;
 import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
@@ -92,7 +92,7 @@ public class Printer {
 	private static Map<Unary.Op, String> uniOpInterpMap = new HashMap<>();
 	static {
 		uniOpInterpMap.put(NEG, "-");
-		uniOpInterpMap.put(BITNOT, "^");
+		uniOpInterpMap.put(BITNOT, "~");
 	}
 	
 	private static Map<Unary.Op, String> uniOpStrMap = new HashMap<>();
@@ -109,8 +109,8 @@ public class Printer {
 		fout.println("<@> " + gReg.getText());
 	}
 	
-	public void print(Function funct) {
-		fout.print("<Function> " + funct.name + " ");
+	public void print(IrFunct funct) {
+		fout.print("<IrFunct> " + funct.name + " ");
 		
 		for (Reg reg : funct.regArgs) {
 			fout.print(reg.getText() + " ");

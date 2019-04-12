@@ -4,6 +4,8 @@ package ir.quad;
 import ir.Printer;
 import ir.structure.IrValue;
 import ir.structure.Reg;
+import nasm.AsmTranslateVisitor;
+import nasm.asm.Asm;
 
 import java.util.List;
 
@@ -30,4 +32,8 @@ public class Ret extends Quad {
 		printer.print(this);
 	}
 	
+	@Override
+	public void AcceptTranslator(AsmTranslateVisitor translator) {
+		translator.visit(this);
+	}
 }

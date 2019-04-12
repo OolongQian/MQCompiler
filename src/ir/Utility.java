@@ -1,15 +1,7 @@
 package ir;
 
-import ast.node.dec.ClassDec;
-import ast.node.dec.VarDec;
-import ast.type.Type;
 import ir.structure.Constant;
 import ir.structure.Reg;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static ir.Config.INT_SIZE;
 
 public class Utility {
 	

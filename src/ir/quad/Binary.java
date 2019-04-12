@@ -3,6 +3,7 @@ package ir.quad;
 import ir.Printer;
 import ir.structure.IrValue;
 import ir.structure.Reg;
+import nasm.AsmTranslateVisitor;
 
 import java.util.List;
 
@@ -41,9 +42,34 @@ public class Binary extends Quad {
 		if (src2 instanceof Reg) list_.add((Reg) src2);
 	}
 	
+	/**
+	 * Applied in ConstantPropagation and CopyPropagation.
+	 *
+	 * @param v
+	 * @param val
+	 */
+	@Override
+	public void ReplaceUse(Reg v, IrValue val) {
+		boolean replace = false;
+		if (src1 == v) {
+			src1 = val;
+			replace = true;
+		}
+		if (src2 == v) {
+			src2 = val;
+			replace = true;
+		}
+		assert replace;
+	}
+	
 	@Override
 	public void AcceptPrint(Printer printer) {
 		printer.print(this);
 	}
 	
+	
+	@Override
+	public void AcceptTranslator(AsmTranslateVisitor translator) {
+		translator.visit(this);
+	}
 }

@@ -6,8 +6,6 @@ public class ListBB {
 	private BasicBlock tail;
 	private int size;
 	
-	
-	
 	public BasicBlock Head() {
 		return head;
 	}

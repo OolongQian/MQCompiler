@@ -11,12 +11,12 @@ import ir.structure.*;
 
 import java.util.*;
 
+import static config.Config.INT_SIZE;
 import static ir.Utility.MakeGreg;
 import static ir.Utility.MakeInt;
 import static ir.quad.Binary.Op.*;
 import static ir.quad.Unary.Op.BITNOT;
 import static ir.quad.Unary.Op.NEG;
-import static ir.Config.INT_SIZE;
 import static semantic.Utility.AddPrefix;
 
 public class Builder extends AstBaseVisitor<Void> {
@@ -49,7 +49,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(Prog node) {
 		// init global variable in _init_ function.
-		Function init = ctx.FuncGen("_init_");
+		IrFunct init = ctx.FuncGen("_init_");
 		ctx.SetCurFunc(init);
 		for (Dec child : node.decs) {
 			if (child instanceof VarDecList) {
@@ -123,7 +123,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.cFun.EnsureFunctRet();
 		
 		String renaming = node.funcTableKey;
-		Function func = ctx.FuncGen(renaming);
+		IrFunct func = ctx.FuncGen(renaming);
 		ctx.SetCurFunc(func);
 		
 		// do renaming directly on Ast.
@@ -538,7 +538,6 @@ public class Builder extends AstBaseVisitor<Void> {
 		// FIXME : instAddr must be a Reg, because it holds an address.
 
 //    Reg instAddr = node.objInstance.getIrAddr();
-		Exp tmp = node.obj;
 		Reg instAddr = (Reg) GetArithResult(node.obj);
 		
 		List<IrValue> args = new LinkedList<>();

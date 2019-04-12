@@ -3,18 +3,19 @@ package opt;
 import ir.IrProg;
 import ir.quad.*;
 import ir.structure.*;
+import opt.optimizers.*;
 
 import java.util.*;
 
-import static ir.Config.NULL;
-import static ir.Config.SSALOG;
+import static config.Config.NULL;
+import static config.Config.SSALOG;
 
 // SSA transformation is done for one function at a time, let's make it compact.
-// transformation consists of a series of passes, we have to config the Function.
+// transformation consists of a series of passes, we have to config the IrFunct.
 public class SSA {
 	
 	public void BuildSSA(IrProg ir) {
-		for (Function funct : ir.functs.values()) {
+		for (IrFunct funct : ir.functs.values()) {
 			BuildConfig(funct);
 			BuildDominance();
 			BuildImmediateDominance();
@@ -25,14 +26,31 @@ public class SSA {
 		}
 	}
 
+	public void OptimSSA(IrProg ir) {
+		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
+		
+		for (int i = 0; i < 5; ++i) {
+			DeadEliminator dead = new DeadEliminator();
+			dead.DeadCodeEliminate();
+
+			ConstPropagator conster = new ConstPropagator();
+			conster.ConstPropagate();
+
+			CommonExprDeleter expr = new CommonExprDeleter();
+			expr.WipeCommonExpr();
+		}
+		
+		CopyPropagator copy = new CopyPropagator();
+		copy.PropagateCopy();
+	}
 	
-	/************************ Config a CFG to optimize ************************/
-	private Function cFun;
+	/************************ config.Config a CFG to optimize ************************/
+	private IrFunct cFun;
 	private HashMap<BasicBlock, GraphInfo> gInfos = new HashMap<>();
 	
 
 	
-	public void BuildConfig(Function funct) {
+	public void BuildConfig(IrFunct funct) {
 		this.cFun = funct;
 		
 		gInfos.clear();
@@ -371,13 +389,13 @@ public class SSA {
 	
 	/*********************** SSA destruction ********************************/
 	public void DestructSSA(IrProg ir) {
-		for (Function funct : ir.functs.values()) {
+		for (IrFunct funct : ir.functs.values()) {
 			DestructConfig(funct);
 			SplitAndCopy();
 		}
 	}
 	
-	private void DestructConfig(Function funct) {
+	private void DestructConfig(IrFunct funct) {
 		cFun = funct;
 	}
 	

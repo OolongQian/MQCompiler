@@ -9,7 +9,7 @@ import java.util.*;
 
 import static ir.Utility.MakeGreg;
 
-public class Function {
+public class IrFunct {
 	public String name;
 
 	public BBS bbs = new BBS();
@@ -31,24 +31,16 @@ public class Function {
 	 * */
 	public List<Reg> regArgs = new LinkedList<>();
 	
-	// record local variable. Make it easier for stack frame.
-	public List<Reg> lVars = new LinkedList<>();
-	
 	/**
 	 * If this function is a method, no AST nodes could save this register.
 	 * */
 	public Reg this_;
 	
-	public Function(String name) {
+	public IrFunct(String name) {
 		this.name = name;
 		BasicBlock entry = new BasicBlock(GetBBName("entry"), this);
 		bbs.list.PushBack(entry);
 		curBB = entry;
-	}
-	
-	// for later use, because code format isn't determinant.
-	public void AddLocalVar(Reg lVar) {
-		lVars.add(lVar);
 	}
 	
 	/**
@@ -73,7 +65,7 @@ public class Function {
 	
 	/******************** Utility *******************/
 	/**
-	 * Function is a namespace itself.
+	 * IrFunct is a namespace itself.
 	 *
 	 * Avoid naming collision for both temp and local registers.
 	 * */

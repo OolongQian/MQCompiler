@@ -4,6 +4,7 @@ import ir.Printer;
 import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
+import nasm.AsmTranslateVisitor;
 
 import java.util.List;
 
@@ -22,7 +23,10 @@ abstract public class Quad {
 	/**
 	 * Applied in ConstantPropagation and CopyPropagation.
 	 * */
-	public void ReplaceUse(Reg v, IrValue val) {}
+	abstract public void ReplaceUse(Reg v, IrValue val);
 	
 	abstract public void AcceptPrint(Printer printer);
+	
+	abstract public void AcceptTranslator (AsmTranslateVisitor translator);
+	
 }

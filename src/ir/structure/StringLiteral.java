@@ -6,6 +6,7 @@ package ir.structure;
 public class StringLiteral extends Reg {
 	private static int cnt = 0;
 	public String val;
+	// *0
 	public int id;
 	
 	public StringLiteral(String val) {

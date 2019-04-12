@@ -5,7 +5,7 @@ import ast.usage.AstBaseVisitor;
 import java.util.LinkedList;
 import java.util.List;
 
-import static ir.Config.INT_SIZE;
+import static config.Config.INT_SIZE;
 
 public class ClassDec extends Dec {
 	public String name;

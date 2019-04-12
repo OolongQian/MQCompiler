@@ -5,7 +5,7 @@ import ast.node.dec.FunctDec;
 import ast.node.dec.VarDec;
 import ir.quad.*;
 import ir.structure.BasicBlock;
-import ir.structure.Function;
+import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
 
@@ -36,9 +36,9 @@ public class BuilderContext {
 	 * */
 	public Hashtable<String, FunctDec> functTable;
 	
-	public Function cFun;
+	public IrFunct cFun;
 	
-	/************************* Function and Method **********************/
+	/************************* IrFunct and Method **********************/
 	
 	/*************************** constructor **********************************/
 	public BuilderContext(Hashtable<String, FunctDec> functTable) {
@@ -49,12 +49,12 @@ public class BuilderContext {
 	 * Insert a function with given name into functs map.
 	 * return the function entity out.
 	 * */
-	public Function FuncGen(String name) {
-		Function func = new Function(name);
+	public IrFunct FuncGen(String name) {
+		IrFunct func = new IrFunct(name);
 		ir.functs.put(name, func);
 		return func;
 	}
-	public void SetCurFunc(Function func) {
+	public void SetCurFunc(IrFunct func) {
 		cFun = func;
 	}
 	

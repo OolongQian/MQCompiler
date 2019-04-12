@@ -5,6 +5,8 @@ import ir.structure.BasicBlock;
 import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
+import nasm.AsmTranslateVisitor;
+import nasm.asm.Asm;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,4 +69,8 @@ public class Phi extends Quad {
 		printer.print(this);
 	}
 	
+	@Override
+	public void AcceptTranslator(AsmTranslateVisitor translator) {
+		assert false;
+	}
 }

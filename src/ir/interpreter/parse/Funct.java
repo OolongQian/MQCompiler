@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Funct {
 	/**
-	 * Function name
+	 * IrFunct name
 	 * */
 	public String name;
 	
@@ -20,7 +20,7 @@ public class Funct {
 	
 	/**
 	 * Formal parameters' literal names.
-	 * <Function> foo %0 %1
+	 * <IrFunct> foo %0 %1
 	 * */
 	public List<String> formalRegs = new LinkedList<>();
 	

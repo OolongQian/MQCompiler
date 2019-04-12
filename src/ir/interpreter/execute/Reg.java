@@ -4,7 +4,7 @@ package ir.interpreter.execute;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ir.Config.NULL;
+import static config.Config.NULL;
 
 /**
  * A run-time used data structure representing a def-use chain.
@@ -49,9 +49,6 @@ public class Reg {
 	}
 	
 	public Integer GetValue() {
-		if (!valSet) {
-			int a =1 ;
-		}
 		assert valSet;
 		return val;
 	}

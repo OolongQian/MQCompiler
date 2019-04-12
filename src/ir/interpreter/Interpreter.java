@@ -10,8 +10,8 @@ import ir.structure.StringLiteral;
 import java.io.*;
 import java.util.*;
 
-import static ir.Config.LINENO;
-import static ir.Config.LOG;
+import static config.Config.LINENO;
+import static config.Config.LOG;
 import static ir.Utility.unescape;
 
 public class Interpreter {
@@ -62,7 +62,7 @@ public class Interpreter {
 	public Interpreter() { }
 	
 	/**
-	 * Config input filename as inputstream
+	 * config.Config input filename as inputstream
 	 * */
 	public void ConfigIO(String inputFilename, String logFilename) {
 		// input file
@@ -111,7 +111,7 @@ public class Interpreter {
 			
 			tokens = SplitBySpaces(line);
 			
-			if (line.startsWith("<Function>")) {
+			if (line.startsWith("<IrFunct>")) {
 				String name = tokens.get(1);
 				Funct funct = new Funct(name);
 				
@@ -407,7 +407,7 @@ public class Interpreter {
 				Reg loadContent = GetReg(ctx, inst.dst);
 				Reg loadAddr = GetReg(ctx, inst.src1);
 				// FIXME : things become nasty when a string is to be loaded, because what we want to load is the string's address, while if
-				// FIXME : we get the string from the globalRegs, the address of the head of strings doesn't actually resides in memory. This
+				// FIXME : we get the string from the globalMems, the address of the head of strings doesn't actually resides in memory. This
 				// FIXME : shows my IR has structural problems, and how to fix it depends on how the assembly's realization.
 				// NOTE : always assume load 4 bytes, and cast it to int.
 				int headAddr = loadAddr.GetValue();
