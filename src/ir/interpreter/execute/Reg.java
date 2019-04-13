@@ -49,7 +49,7 @@ public class Reg {
 	}
 	
 	public Integer GetValue() {
-		assert valSet;
+//		assert valSet;
 		return val;
 	}
 	

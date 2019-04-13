@@ -7,6 +7,10 @@ import ir.structure.Reg;
 import ir.structure.StringLiteral;
 import nasm.reg.GlobalMem;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -35,6 +39,8 @@ public class AsmBuilder {
 		for (Reg g : ir.globals.values())
 			globalMems.put(g.name, new GlobalMem(GlobalRenamer(g.name)));
 		
+		// build nasm. All regs are virtual by now, except global, string, allocated.
+		// allocated has already been stackMem, but offset hasn't been set.
 		for (IrFunct irFunct : ir.functs.values()) {
 			AsmFunct asmfunct = new AsmFunct(irFunct.name, irFunct.regArgs);
 			asmFuncts.put(asmfunct.name, asmfunct);
@@ -44,21 +50,18 @@ public class AsmBuilder {
 				translator.ConfigAsmBB(asmCur);
 				translator.TranslateQuadList(cur.quads);
 			}
+			// move args to temp registers. put things to register allocation.
 			asmfunct.MovAllocateArgs();
-		}
-		AllocateNames2Stack();
-		for (AsmFunct funct : asmFuncts.values()) {
-//			funct.RewriteBackfill();
-			funct.AddPrologue();
+			
+			allocator.AllocateRegister(asmfunct);
+			asmfunct.Backfill();
+			asmfunct.AddPrologue();
 		}
 	}
 	
-	private void AllocateNames2Stack () {
-		asmFuncts.values().forEach(allocator::AllocateRegister);
-	}
-	
-	public void Print (AsmPrinter printer) {
+	public void Print (AsmPrinter printer) throws Exception {
 		printer.PrintExtern();
+		printer.pasteLibFunction();
 		printer.PrintHeaders(asmFuncts, globalMems);
 		printer.PrintSection(AsmPrinter.SECTION.TEXT);
 		for (AsmFunct asmFunct : asmFuncts.values()) {
@@ -68,4 +71,5 @@ public class AsmBuilder {
 		printer.PrintSection(AsmPrinter.SECTION.DATA);
 		printer.PrintStringLabels(strings);
 	}
+
 }

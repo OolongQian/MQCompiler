@@ -47,12 +47,12 @@ public class Main {
 		irProg.BuildCFG();
 		
 		SSA ssaBuilder = new SSA();
-//		ssaBuilder.BuildSSA(irProg);
-//		ssaBuilder.OptimSSA(irProg);
-//		ssaBuilder.DestructSSA(irProg);
-//	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
-//	  CopyPropagator copy = new CopyPropagator();
-//	  copy.PropagateCopy();
+		ssaBuilder.BuildSSA(irProg);
+		ssaBuilder.OptimSSA(irProg);
+		ssaBuilder.DestructSSA(irProg);
+	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
+	  CopyPropagator copy = new CopyPropagator();
+	  copy.PropagateCopy();
 		
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
@@ -108,7 +108,7 @@ public class Main {
 		  SSA ssaBuilder = new SSA();
 		  ssaBuilder.BuildSSA(irProg);
 		  ssaBuilder.OptimSSA(irProg);
-		  ssaBuilder.DestructSSA(irProg);
+//		  ssaBuilder.DestructSSA(irProg);
 //		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();

@@ -4,8 +4,7 @@ import ir.structure.StringLiteral;
 import nasm.asm.*;
 import nasm.reg.GlobalMem;
 
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.Map;
 import java.util.Set;
 
@@ -53,8 +52,17 @@ public class AsmPrinter {
 	
 	/************************* Extern print ******************************/
 	public void PrintExtern () {
-//		builtinRenamer.values().forEach(x -> fout.println("extern " + x));
-//		fout.println();
+		fout.println("extern strcmp");
+		fout.println("extern snprintf");
+		fout.println("extern __stack_chk_fail");
+		fout.println("extern strcpy");
+		fout.println("extern malloc");
+		fout.println("extern strlen");
+		fout.println("extern __isoc99_scanf");
+		fout.println("extern puts");
+		fout.println("extern strcmp");
+		fout.println("extern printf");
+		fout.println();
 	}
 	
 	/************************** Section print **********************/
@@ -123,6 +131,10 @@ public class AsmPrinter {
 		PrintLine("call", asm.functName);
 	}
 	
+	public void Print (Special asm) {
+		PrintLine(asm.gossip);
+	}
+	
 	/******************* Utility ***************************/
 	private void PrintLine(String inst, String... args) {
 		StringBuilder line = new StringBuilder(String.format("\t\t%-8s", inst));
@@ -133,4 +145,13 @@ public class AsmPrinter {
 		fout.println(line.toString());
 	}
 	
+	
+	public void pasteLibFunction() throws IOException {
+		File file = new File("lib/lib.asm");
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		String line;
+		while ((line = br.readLine()) != null) {
+			fout.println(line);
+		}
+	}
 }

@@ -23,6 +23,9 @@ public class AsmTranslateVisitor {
 	/** current AsmBB handler */
 	private AsmBB cur;
 	
+	// if allocated, make it stackMem.
+	private Set<String> allocated = new HashSet<>();
+	
 	// for global variable, @a -> _G_a.
 	// for stringLiteral, *1 -> _S_1.
 	private Map<String, GlobalMem> globals;
@@ -41,6 +44,7 @@ public class AsmTranslateVisitor {
 	/******************** translation starter and utility *********************/
 	/** need flexibility to get next quad or skip one quad. */
 	public void TranslateQuadList (List<Quad> quads) {
+		allocated.clear();
 		quads.forEach(x -> x.AcceptTranslator(this));
 	}
 	
@@ -227,7 +231,7 @@ public class AsmTranslateVisitor {
 	}
 	
 	public void visit (Alloca quad) {
-		cur.parentFunct.stackVars.put(quad.var.name, null);
+		allocated.add(quad.var.name);
 	}
 	
 	public void visit (Store quad) {
@@ -274,14 +278,13 @@ public class AsmTranslateVisitor {
 		if (((Reg) irReg).name.startsWith("@"))
 			return new GlobalMem(GlobalRenamer(((Reg) irReg).name));
 		
+		// since stackMem will be shadowed by offset, name doesn't matter.
+		if (allocated.contains(((Reg) irReg).name))
+			return new StackMem(((Reg) irReg).name);
+		
 		// then, for temp register and allocated register `logi. because incomplete ssa destruction.
 		// since virtual registers are about to be allocated, it doesn't matter.
-		if (((Reg) irReg).name.startsWith("!$"))
-			return new VirtualReg(irReg.getText());
-		
-		// since stackMem will be shadowed by offset, name doesn't matter.
-		assert cur.parentFunct.stackVars.containsKey(((Reg) irReg).name);
-		return new StackMem(((Reg) irReg).name);
+		return new VirtualReg(((Reg) irReg).name);
 	}
 	
 	public static AsmReg GetPReg (String phyName) {

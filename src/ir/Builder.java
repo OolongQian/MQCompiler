@@ -143,7 +143,6 @@ public class Builder extends AstBaseVisitor<Void> {
 			// FIXME : why we need to do this.
 			ctx.varTracer.put(node.args.get(i), var);
 		}
-		
 		for (Stm stm : node.body) {
 			stm.Accept(this);
 		}

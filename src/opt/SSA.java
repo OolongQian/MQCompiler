@@ -313,9 +313,7 @@ public class SSA {
 	}
 	
 	
-	/**
-	 * Record SSA info during variable renaming.
-	 * */
+	/** Record SSA info during variable renaming. */
 	private void RenameVariable(Reg var, BasicBlock blk) {
 		List<Quad> quads = blk.quads;
 		// for def-use in this basic block.
@@ -356,6 +354,7 @@ public class SSA {
 				// remove Alloca quad
 				// if current basic block doesn't have any other def of this variable, insert a trivial dummy def.
 				iter.remove();
+				// FIXME : don't add dummy entry def.
 				versionStack.push(NewVersion());
 				Mov def = new Mov(versionStack.peek(), new Constant(NULL));
 				// FIXME : ugly
