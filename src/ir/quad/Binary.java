@@ -14,8 +14,7 @@ public class Binary extends Quad {
     AND, XOR, OR,
     GT, GE, LT, LE,
 	  EQ, NE,
-    LAND, LOR, // logical AND & OR.
-    CONCAT
+    LAND, LOR // logical AND & OR.
   }
 
   // ans is val instead of addr.

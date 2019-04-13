@@ -44,7 +44,7 @@ public class SymbolTable<T> {
   private Binder<T> null_marker = null;
 
   /**
-   * Binary an element in table, and deal with the linked-everything.
+   * Oprt an element in table, and deal with the linked-everything.
    * */
   public void Put(String key, T value) {
 //    System.out.println("put " + key.toString() + "\n");
@@ -61,7 +61,7 @@ public class SymbolTable<T> {
   }
 
   /**
-   * Binary a null marker to the linked-list, the null markers don't enter the HashTable, but they themselves
+   * Oprt a null marker to the linked-list, the null markers don't enter the HashTable, but they themselves
    * for a linked-list so that a stack-like scope structure is formed.
    * */
   public void BeginScope() {

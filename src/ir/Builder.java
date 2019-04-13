@@ -272,13 +272,44 @@ public class Builder extends AstBaseVisitor<Void> {
 		IrValue lVal = GetArithResult(node.lhs);
 		IrValue rVal = GetArithResult(node.rhs);
 		
-		Binary.Op op;
-		if (node.op.equals("+") && node.lhs.type.isString())
-			op = CONCAT;
-		else
-			op = binaryOpMap.get(node.op);
 		
-		ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
+		if (node.lhs.type.isString()) {
+			List<IrValue> args = new LinkedList<>();
+			args.add(lVal); args.add(rVal);
+			Call stringBin = null;
+			switch (node.op) {
+				case "<":
+					stringBin = new Call("~-string#lt", ans, args);
+					break;
+				case "<=":
+					stringBin = new Call("~-string#le", ans, args);
+					break;
+				case ">":
+					stringBin = new Call("~-string#gt", ans, args);
+					break;
+				case ">=":
+					stringBin = new Call("~-string#ge", ans, args);
+					break;
+				case "==":
+					stringBin = new Call("~-string#eq", ans, args);
+					break;
+				case "!=":
+					stringBin = new Call("~-string#neq", ans, args);
+					break;
+				case "+":
+					stringBin = new Call("~-string#add", ans, args);
+					break;
+				default:
+					assert false;
+			}
+			ctx.EmplaceInst(stringBin);
+		}
+		else {
+			Binary.Op op;
+			op = binaryOpMap.get(node.op);
+			ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
+		}
+		
 		node.setIrValue(ans);
 		return null;
 	}
@@ -603,7 +634,8 @@ public class Builder extends AstBaseVisitor<Void> {
 			node.ifFalse = merge;
 			
 			// distribute jump target.
-			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, node.op + "rhs");
+			String opStr = (node.op.equals("&&")) ? "and_" : "or_";
+			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs");
 			PushDownTargetBB(node, rhsBB);
 			// child evaluation and record jump target&value pair.
 			ChildEvaluation(node.lhs);
@@ -622,7 +654,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		}
 		else {
 			// distribute jump target.
-			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, node.op + "rhs");
+			String opStr = (node.op.equals("&&")) ? "and_" : "or_";
+			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs");
 			PushDownTargetBB(node, rhsBB);
 			
 			// downstream evaluation, and record jump target&value pair.

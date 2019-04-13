@@ -44,17 +44,16 @@ public class AsmBuilder {
 				translator.ConfigAsmBB(asmCur);
 				translator.TranslateQuadList(cur.quads);
 			}
-			asmfunct.HandleArgs();
+			asmfunct.MovAllocateArgs();
 		}
-		AllocateRegister();
+		AllocateNames2Stack();
 		for (AsmFunct funct : asmFuncts.values()) {
-			funct.RewriteBackfill();
+//			funct.RewriteBackfill();
 			funct.AddPrologue();
-			funct.AddEpilogue();
 		}
 	}
 	
-	private void AllocateRegister () {
+	private void AllocateNames2Stack () {
 		asmFuncts.values().forEach(allocator::AllocateRegister);
 	}
 	

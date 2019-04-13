@@ -63,7 +63,6 @@ public class Printer {
 		binOpInterpMap.put(LE, "<=");
 		binOpInterpMap.put(EQ, "==");
 		binOpInterpMap.put(NE, "!=");
-		binOpInterpMap.put(CONCAT, "+");
 	}
 	
 	private static Map<Binary.Op, String> binOpStrMap = new HashMap<>();
@@ -86,7 +85,6 @@ public class Printer {
 		binOpStrMap.put(LE, "le");
 		binOpStrMap.put(EQ, "eq");
 		binOpStrMap.put(NE, "ne");
-		binOpStrMap.put(CONCAT, "concat");
 	}
 	
 	private static Map<Unary.Op, String> uniOpInterpMap = new HashMap<>();

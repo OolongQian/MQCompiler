@@ -5,6 +5,8 @@ import ir.interpreter.execute.Reg;
 import ir.interpreter.execute.RunCtx;
 import ir.interpreter.parse.Funct;
 import ir.interpreter.parse.Inst;
+import ir.structure.Constant;
+import ir.structure.IrValue;
 import ir.structure.StringLiteral;
 
 import java.io.*;
@@ -216,7 +218,7 @@ public class Interpreter {
 			case "and": case "xor": case "or":
 			case "land": case "lor":
 			case "gt": case "ge": case "lt": case "le": case "eq": case "ne":
-			case "concat":
+//			case "concat":
 				// sub %4 = %3 - 1
 				assert tokens.size() == 6;
 				inst.dst = tokens.get(1);
@@ -403,7 +405,6 @@ public class Interpreter {
 				break;
 				
 			case "load":
-				
 				Reg loadContent = GetReg(ctx, inst.dst);
 				Reg loadAddr = GetReg(ctx, inst.src1);
 				// FIXME : things become nasty when a string is to be loaded, because what we want to load is the string's address, while if
@@ -545,19 +546,19 @@ public class Interpreter {
 				if (LOG)
 					System.err.println(inst.operator + ", src " + uniSrc + ", ans " + uniAns.GetValue());
 				break;
-			case "concat":
-				int str1Addr = GetReg(ctx, inst.src1).GetValue();
-				int str2Addr = GetReg(ctx, inst.src2).GetValue();
-				String str1 = mem.LoadStr(str1Addr);
-				String str2 = mem.LoadStr(str2Addr);
-				String catStr = str1 + str2;
-				int catStrAddr = mem.MallocMem(catStr.length() + 4);
-				Reg catStrAns = GetReg(ctx, inst.dst);
-				catStrAns.SetAllocd();
-				catStrAns.SetValue(catStrAddr);
-				mem.StoreInt(catStrAddr, catStr.length());
-				mem.StoreStr(catStrAddr + 4, catStr);
-				break;
+//			case "concat":
+//				int str1Addr = GetReg(ctx, inst.src1).GetValue();
+//				int str2Addr = GetReg(ctx, inst.src2).GetValue();
+//				String str1 = mem.LoadStr(str1Addr);
+//				String str2 = mem.LoadStr(str2Addr);
+//				String catStr = str1 + str2;
+//				int catStrAddr = mem.MallocMem(catStr.length() + 4);
+//				Reg catStrAns = GetReg(ctx, inst.dst);
+//				catStrAns.SetAllocd();
+//				catStrAns.SetValue(catStrAddr);
+//				mem.StoreInt(catStrAddr, catStr.length());
+//				mem.StoreStr(catStrAddr + 4, catStr);
+//				break;
 			default:
 				Reg binAns = GetReg(ctx, inst.dst);
 				Integer binSrc1 = GetReg(ctx, inst.src1).GetValue();
@@ -608,7 +609,8 @@ public class Interpreter {
 		// simulate built-in functions
 		switch (funct) {
 			// stand alone built-in functions.
-			case "print": case "println":
+			case "print":
+			case "println":
 				assert args.size() == 1;
 				int printAddr = args.get(0).GetValue();
 				String printStr = mem.LoadStr(printAddr);
@@ -617,11 +619,11 @@ public class Interpreter {
 				else
 					stdout.println(unescape(printStr));
 				return null;
-				
+			
 			case "getString":
 				// read a line of string from stdin, malloc mem space, store it, and return headAddr.
 				assert args.size() == 0;
-				if(LOG) System.err.println("getString()...");
+				if (LOG) System.err.println("getString()...");
 				/**
 				 * stdScanner.nextLine() may read in '\n'.
 				 * */
@@ -634,7 +636,7 @@ public class Interpreter {
 			case "getInt":
 				// getInt and return.
 				assert args.size() == 0;
-				if(LOG) System.err.println("getInt()...");
+				if (LOG) System.err.println("getInt()...");
 				int getInt = stdScanner.nextInt();
 				// skip \n, not necessary.
 //				stdScanner.nextLine();
@@ -690,14 +692,53 @@ public class Interpreter {
 				int ordAscii = Integer.valueOf(ch);
 				return ordAscii;
 			
+			case "-string#add":
+				assert args.size() == 2;
+				int str1Addr = args.get(0).GetValue();
+				int str2Addr = args.get(1).GetValue();
+				String str1 = mem.LoadStr(str1Addr);
+				String str2 = mem.LoadStr(str2Addr);
+				String catStr = str1 + str2;
+				int catStrAddr = mem.MallocMem(catStr.length() + 4);
+				mem.StoreInt(catStrAddr, catStr.length());
+				mem.StoreStr(catStrAddr + 4, catStr);
+				return catStrAddr;
+			
 			case "--array#size":
 				assert args.size() == 1;
 				int arrAddr = args.get(0).GetValue();
 				// load arrayLen from headAddr
 				int arrSize = mem.LoadInt(arrAddr);
 				return arrSize;
+			
+//			assert args.size() == 2;
+//			int strcmpAddr1 = args.get(0).GetValue();
+//			int strcmpAddr2 = args.get(1).GetValue();
+//			String strcmp1 = mem.LoadStr(strcmpAddr1);
+//			String strcmp2 = mem.LoadStr(strcmpAddr2);
+//
+//			mem.StoreInt(catStrAddr, catStr.length());
+//			mem.StoreStr(catStrAddr + 4, catStr);
+//			return catStrAddr;
+//			return (strcmp1 < strcmp2) ? 1 : 0;
+			
+			case "-string#lt":
+			case "-string#gt":
+			case "-string#le":
+			case "-string#ge":
+			case "-string#eq":
+			case "-string#ne":
+				assert args.size() == 2;
+				int strcmpAddr1 = args.get(0).GetValue();
+				int strcmpAddr2 = args.get(1).GetValue();
+				String strcmp1 = mem.LoadStr(strcmpAddr1);
+				String strcmp2 = mem.LoadStr(strcmpAddr2);
+				System.err.println("compare string not implemented");
+				break;
+				
+			default:
+				assert false;
 		}
-		
 		return null;
 	}
 	

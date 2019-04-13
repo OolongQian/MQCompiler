@@ -2,6 +2,7 @@ package nasm.asm;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
+import nasm.reg.AsmReg;
 
 public class Jmp extends Asm {
 	
@@ -10,12 +11,19 @@ public class Jmp extends Asm {
 		JG, // jump if greater than.
 		JE, JL, JZ, JNE, JGE, JLE,
 	}
-	
+
 	public JmpOption jpOp;
 	public String label;
 	
-	public Jmp(AsmBB blk) {
-		super(blk);
+	public Jmp(AsmBB blk, JmpOption jpOp, String label) {
+		super(null, null, blk);
+		this.jpOp = jpOp;
+		this.label = label;
+	}
+	
+	public Jmp(AsmBB blk, String label) {
+		super(null, null, blk);
+		this.label = label;
 	}
 	
 	@Override

@@ -5,7 +5,6 @@ import ir.Printer;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
-import nasm.asm.Asm;
 
 public class Comment extends Quad {
 	public String content;

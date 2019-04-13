@@ -10,8 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static ir.Utility.unescape;
-import static nasm.AsmTranslateVisitor.StringRenamer;
-import static nasm.AsmTranslateVisitor.builtin2Extern;
+import static nasm.AsmTranslateVisitor.StringLiteralRenamer;
 
 public class AsmPrinter {
 
@@ -40,18 +39,22 @@ public class AsmPrinter {
 			String literal = unescape(str.val);
 			// eliminate "" in head and tail.
 			literal = literal.substring(1, literal.length() - 1);
+			// print label id. as its label. _S_0:
+			fout.println(StringLiteralRenamer(str.name) + ":");
+			// print string constant's length 8 bytes in advance.
+			PrintLine("dq", Integer.toString(literal.length()));
 			for (int i = 0; i < literal.length(); ++i)
 				db.append(String.format("%02XH, ", (int) literal.charAt(i)));
 			db.append("00H");
-			fout.println(StringRenamer(str.name) + ":");
+			// string label name should be renamed.
 			PrintLine("db", db.toString());
 		}
 	}
 	
 	/************************* Extern print ******************************/
 	public void PrintExtern () {
-		builtin2Extern.values().forEach(x -> fout.println("extern " + x));
-		fout.println();
+//		builtinRenamer.values().forEach(x -> fout.println("extern " + x));
+//		fout.println();
 	}
 	
 	/************************** Section print **********************/
@@ -81,10 +84,15 @@ public class AsmPrinter {
 	}
 	
 	public void Print (Mov asm) {
-		PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
+		if (asm.extend) {
+			assert asm.dst.GetText().equals("rax");
+			PrintLine("mov", "rax", "al");
+		}
+		else
+			PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
 	}
 	
-	public void Print (Binary asm) {
+	public void Print (Oprt asm) {
 		if (asm.dst != null)
 			PrintLine(asm.op.name(), asm.dst.GetText(), asm.src.GetText());
 		else

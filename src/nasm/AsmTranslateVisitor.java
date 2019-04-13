@@ -1,17 +1,19 @@
 package nasm;
 
 
-import ir.quad.Branch;
-import ir.quad.Quad;
-import ir.structure.BasicBlock;
-import ir.structure.Constant;
-import ir.structure.IrValue;
+import ir.quad.*;
+import ir.structure.*;
 import nasm.asm.*;
+import nasm.asm.Call;
+import nasm.asm.Mov;
+import nasm.asm.Ret;
 import nasm.reg.*;
 
 import java.util.*;
 
-import static ir.quad.Binary.Op.*;
+import static ir.quad.Binary.Op.DIV;
+import static ir.quad.Binary.Op.SHL;
+import static nasm.asm.Oprt.Op.*;
 
 /**
  * Note : all registers are separate in current implementation.
@@ -38,26 +40,9 @@ public class AsmTranslateVisitor {
 
 	/******************** translation starter and utility *********************/
 	/** need flexibility to get next quad or skip one quad. */
-	private int qCnt = 0;
-	private List<Quad> quads;
 	public void TranslateQuadList (List<Quad> quads) {
-		this.quads = quads;
-		for (qCnt = 0; qCnt < this.quads.size(); ++qCnt)
-			this.quads.get(qCnt).AcceptTranslator(this);
+		quads.forEach(x -> x.AcceptTranslator(this));
 	}
-	
-	/** Return the next quad w.r.t current quad.
-	 * return null if no extra quad left. */
-	private Quad GetNextQuad () {
-		if (qCnt + 1 >= this.quads.size())
-			return null;
-		return this.quads.get(qCnt + 1);
-	}
-	private void SkipOneQuad () {
-		assert qCnt < this.quads.size();
-		++qCnt;
-	}
-	
 	
 	/******************** calling convention *************************/
 	public static List<String> callArgRegs = new LinkedList<>();
@@ -69,261 +54,238 @@ public class AsmTranslateVisitor {
 		callArgRegs.add("r8");
 		callArgRegs.add("r9");
 	}
-	// TODO : Fix this map.
-	public static Map<String, String> builtin2Extern = new HashMap<>();
-	{
-		builtin2Extern.put("~print", "printf");
-		builtin2Extern.put("~println", "put");
-	}
-	private String TranslateExtern (String functName) {
-		if (functName.startsWith("~")) {
-			assert builtin2Extern.containsKey(functName);
-			return builtin2Extern.get(functName);
-		}
-		else
-			return functName;
-	}
-	
-	public void visit (ir.quad.Call quad) {
-		// follow the calling convention to put the args into suitable registers.
-		int i;
-		for (i = 0; i < 6 && i < quad.args.size(); ++i) {
-			Mov movArg = new Mov (cur);
-			movArg.dst = new PhysicalReg(callArgRegs.get(i));
-			movArg.src = GetAsmReg(quad.args.get(i));
-			cur.asms.add(movArg);
-		}
-		// if there are leftover args, push them onto stack from right to left.
-		// also, record the stack argument offset.
-		int stackArgsOffset = 0;
-		// must subtract rsp before push stack args.
-		int subRspPos = cur.asms.size();
-		for (int j = quad.args.size() - 1; i < quad.args.size(); ++i, --j) {
-			Push pushArg = new Push (cur);
-			pushArg.src = GetAsmReg(quad.args.get(j));
-			cur.asms.add(pushArg);
-			// each push goes in 8 bytes.
-			stackArgsOffset += 8;
-		}
-		// add another 8 stackArgOffset
-		if (stackArgsOffset % 16 != 0) {
-			Binary subRsp = new Binary (cur);
-			subRsp.op = Binary.Op.SUB;
-			subRsp.dst = new PhysicalReg("rsp");
-			subRsp.src = new Imm(8);
-			cur.asms.add(subRspPos, subRsp);
-			stackArgsOffset += 8;
-		}
-		Call call = new Call(cur);
-		call.functName = TranslateExtern(quad.funcName);
-		cur.asms.add(call);
-		
-		// subtract esp by stackArgsOffset to reset stack pointer.
-		Binary reset = new Binary (cur);
-		reset.op = Binary.Op.ADD;
-		reset.dst = new PhysicalReg("rsp");
-		reset.src = new Imm(stackArgsOffset);
-		cur.asms.add(reset);
-		
-		// mov rax result back into the return register.
-		if (!quad.ret.name.equals("@null")) {
-			Mov retAns = new Mov (cur);
-			retAns.dst = GetAsmReg(quad.ret);
-			retAns.src = new PhysicalReg("rax");
-			cur.asms.add(retAns);
-		}
-	}
 	
 	/******************* concrete visit actions ***********************/
 	private void visit (ir.quad.Quad quad) {
 		quad.AcceptTranslator(this);
 	}
 	
-	/** For simple move */
+	/** move can be mem to mem */
 	public void visit (ir.quad.Mov quad) {
-		Mov mov = new Mov (cur);
-		mov.dst = GetAsmReg(quad.dst);
-		mov.src = GetAsmReg(quad.src);
+		Mov mov = new Mov (GetAsmReg(quad.dst), GetAsmReg(quad.src), cur);
 		cur.asms.add(mov);
 	}
-	
-	// FIXME : consider MUL and DIV are special case.
-	private static Map<ir.quad.Binary.Op, nasm.asm.Binary.Op> irAsmOp = new HashMap<>();
-	static {
-		irAsmOp.put(ADD, Binary.Op.ADD);
-		irAsmOp.put(SUB, Binary.Op.SUB);
-		irAsmOp.put(MUL, Binary.Op.IMUL);
-		irAsmOp.put(DIV, Binary.Op.DIV);
-	}
-	
-	/** For arithmetic */
+
+	// FIXME : bin cannot mem to mem.
 	public void visit (ir.quad.Binary quad) {
 		switch (quad.op) {
-			case DIV:
-				// Divide rax by src, and put the ratio into rax, and the remainder into rdx.
-				// move dividend to rax
-				Mov dividend2rax = new Mov (cur);
-				dividend2rax.dst = new PhysicalReg("rax");
-				dividend2rax.src = GetAsmReg(quad.src1);
-				cur.asms.add(dividend2rax);
-				// divide rax by src2.
-				Binary div = new Binary (cur);
-				div.op = Binary.Op.DIV;
-				div.src = GetAsmReg(quad.src2);
-				cur.asms.add(div);
-				// put result back to reg.
-				Mov quo2ans = new Mov (cur);
-				quo2ans.dst = GetAsmReg(quad.ans);
-				quo2ans.src = new PhysicalReg("rax");
-				cur.asms.add(quo2ans);
+			case DIV: case MOD:
+				TransDivMod(quad);
 				break;
-			case MUL:
-				// Multiply rax by src, and put the ratio into rax, and the remainder into rdx.
-				// move dividend to rax
-				Mov mul2rax = new Mov (cur);
-				mul2rax.dst = new PhysicalReg("rax");
-				mul2rax.src = GetAsmReg(quad.src1);
-				cur.asms.add(mul2rax);
-				// divide rax by src2.
-				Binary mul = new Binary (cur);
-				mul.op = Binary.Op.IMUL;
-				mul.src = GetAsmReg(quad.src2);
-				cur.asms.add(mul);
-				// put result back to reg.
-				Mov prod2ans = new Mov (cur);
-				prod2ans.dst = GetAsmReg(quad.ans);
-				prod2ans.src = new PhysicalReg("rax");
-				cur.asms.add(prod2ans);
-			case GT: case GE: case LT: case LE: case EQ: case NE:
-				Quad next = GetNextQuad();
-				if (next != null && next instanceof Branch) {
-					TranslateCmpBr(quad, (Branch) next);
-					// NOTE : don't visit load again.
-					SkipOneQuad();
-				}
-				break;
-			default:
-				// move src1 to dst.
-				Mov mov = new Mov (cur);
-				mov.dst = GetAsmReg(quad.ans);
-				mov.src = GetAsmReg(quad.src1);
-				// add src2 to dst (src1).
-				Binary bin = new Binary(cur);
-				bin.op = irAsmOp.get(quad.op);
-				bin.dst = GetAsmReg(quad.ans);
-				bin.src = GetAsmReg(quad.src2);
 				
-				cur.asms.add(mov);
-				cur.asms.add(bin);
+			case SHL: case SHR:
+				TransShift(quad);
+				break;
+				
+				
+			case EQ: case NE:
+			case GT: case LT:
+			case GE: case LE:
+				TransCmp (quad);
+				break;
+				
+			default:
+				Oprt.Op arithOp = null;
+				switch (quad.op) {
+					case ADD: arithOp = ADD; break;
+					case SUB: arithOp = SUB; break;
+					case MUL: arithOp = IMUL; break;
+					case AND: arithOp = AND; break;
+					case OR: arithOp = OR; break;
+					case XOR: arithOp = XOR; break;
+					default:
+						System.err.println("binary quad has unhandled operation type");
+						assert false;
+				}
+				cur.asms.add(new Mov (GetAsmReg(quad.ans), GetAsmReg(quad.src1), cur));
+				cur.asms.add(new Oprt(GetAsmReg(quad.ans), GetAsmReg(quad.src2), cur, arithOp));
+				break;
 		}
-		
 	}
 	
-	public void visit (ir.quad.Unary quad) {
+	private void TransDivMod (Binary quad) {
+		// rax is dividend,
+		cur.asms.add(new Mov(GetPReg("rax"), GetAsmReg(quad.src1), cur));
+		// rdx is cleared by cqo.
+//		cur.asms.add(new Special("cqo", cur));
+		cur.asms.add(new Mov (GetPReg("rdx"), new Imm(0), cur));
+		// issue idiv divider, to conduct idiv.
+		cur.asms.add(new Oprt(null, GetAsmReg(quad.src2), cur, Oprt.Op.IDIV));
+		// quotient is stored in rax, remainder is in rdx
+		cur.asms.add(new Mov(GetAsmReg(quad.ans),
+						(quad.op == DIV) ? GetPReg("rax") : GetPReg("rdx"),
+						cur));
+	}
 	
-	}
-	public void visit (ir.quad.Branch quad) {
-		assert false;
-	}
-	public void visit (ir.quad.Jump quad) {
-		Jmp jmp = new Jmp(cur);
-		jmp.jpOp = Jmp.JmpOption.JMP;
-		jmp.label = BasicBlockRenamer(quad.target);
-		cur.asms.add(jmp);
-	}
-
-	// TODO : translator needs more information here.
-	// TODO : function epilogue needs implementing.
-	public void visit (ir.quad.Ret quad) {
-		if (quad.val != null) {
-			Mov mov = new Mov (cur);
-			mov.dst = new PhysicalReg("rax");
-			mov.src = GetAsmReg(quad.val);
-			cur.asms.add(mov);
+	private void TransShift (Binary quad) {
+		// *** : shift value must be in rcx's cl or constant.
+		// move src1 to dst
+		cur.asms.add(new Mov (GetAsmReg(quad.ans), GetAsmReg(quad.src1), cur));
+		// shift ans
+		Oprt.Op shiftOp = (quad.op == SHL) ? SAR : Oprt.Op.SHL;
+		if (quad.src2 instanceof Constant)
+			// shift ans directly by constant
+			cur.asms.add(new Oprt(GetAsmReg(quad.ans), GetAsmReg(quad.src2), cur, shiftOp));
+		else {
+			// shift ans by put shift amount into rcx.
+			cur.asms.add(new Mov (GetPReg("rcx"), GetAsmReg(quad.src2), cur));
+			cur.asms.add(new Oprt(GetAsmReg(quad.ans), GetPReg("cl"), cur, shiftOp));
 		}
 	}
 	
-	/** For load and store */
-	// FIXME : loaded mem needs more data dimension and information.
-	// NOTE : globals could only appear here, in the source.
-	// NOTE : we may do copy propagation after this.
-	public void visit (ir.quad.Load quad) {
-		Mov load = new Mov (cur);
-		load.dst = GetAsmReg(quad.val);
-		if (quad.addr.name.startsWith("@")) {
-			// use name prefix to recognize global memory register name
-			assert globals.containsKey(quad.addr.name);
-			load.src = globals.get(quad.addr.name);
+	// FIXME : may cannot cmp mem to mem
+	private void TransCmp (Binary quad) {
+		cur.asms.add(new Cmp (GetAsmReg(quad.src1), GetAsmReg(quad.src2), cur));
+		String set = "";
+		switch (quad.op) {
+			case EQ: set = "sete"; break;
+			case NE: set = "setne"; break;
+			case LT: set = "setl"; break;
+			case GT: set = "setg"; break;
+			case LE: set = "setle"; break;
+			case GE: set = "setge"; break;
+			default: assert false;
 		}
-		else if (quad.addr.name.startsWith("*")) {
-			load.src = new GlobalMem(StringRenamer(quad.addr.name));
-			((GlobalMem) load.src).isString = true;
-			globals.put(quad.addr.name, (GlobalMem) load.src);
-		}
-		else
-			load.src = new StackMem(quad.addr.name);
-		cur.asms.add(load);
+		// FIXME : here don't have to be al, but we require currently.
+		// set conditional flag.
+		Special setFlag = new Special(set + " al", cur);
+		setFlag.defs.add(new PhysicalReg("rax"));
+		cur.asms.add(setFlag);
+		// extend rax
+		Mov ext = new Mov(GetPReg("rax"), GetPReg("rax"), cur);
+		ext.extend = true;
+		cur.asms.add(ext);
 	}
 	
-	public void visit (ir.quad.Store quad) {
-		// store irValue to target mem address.
-		Mov store = new Mov (cur);
-		if (quad.dst.name.startsWith("@")) {
-			// use name prefix to recognize global memory register name
-			assert globals.containsKey(quad.dst.name);
-			store.dst = globals.get(quad.dst.name);
-		}
-		else
-			store.dst = new StackMem(quad.dst.name);
-
-		store.src = GetAsmReg(quad.src);
-		cur.asms.add(store);
-	}
-	
-	public void visit (ir.quad.Alloca quad) {
-	
-	}
-	public void visit (ir.quad.Malloc quad) {
-	
-	}
-	public void visit (ir.quad.Comment quad) {
-	
-	}
-	
-	/** For translating branch */
-	private void TranslateCmpBr (ir.quad.Binary irCmp, ir.quad.Branch br) {
-		Cmp cmp = new Cmp (cur);
-		cmp.dst = GetAsmReg(irCmp.src1);
-		cmp.src = GetAsmReg(irCmp.src2);
-		cur.asms.add(cmp);
-		
-		Jmp jmp = new Jmp (cur);
-		jmp.label = BasicBlockRenamer(br.ifTrue);
-		switch (irCmp.op) {
-			case GT: jmp.jpOp = Jmp.JmpOption.JG; break;
-			case GE: jmp.jpOp = Jmp.JmpOption.JGE; break;
-			case LT: jmp.jpOp = Jmp.JmpOption.JL; break;
-			case LE: jmp.jpOp = Jmp.JmpOption.JLE; break;
-			case EQ: jmp.jpOp = Jmp.JmpOption.JE; break;
-			case NE: jmp.jpOp = Jmp.JmpOption.JNE; break;
+	public void visit (Unary quad) {
+		Oprt.Op uniOp = null;
+		switch (quad.op) {
+			case NEG: uniOp = NEG; break;
+			case BITNOT: uniOp = BIT_NOT; break;
 			default:
 				assert false;
 		}
-		cur.asms.add(jmp);
+		cur.asms.add(new Mov (GetAsmReg(quad.ans), GetAsmReg(quad.src), cur));
+		cur.asms.add(new Oprt(GetAsmReg(quad.ans), cur, uniOp));
+	}
+
+	// FIXME : we haven't cared about caller-save and callee-save registers.
+	public void visit (ir.quad.Call quad) {
+		// follow the calling convention to put the args into suitable registers.
+		int i;
+		for (i = 0; i < 6 && i < quad.args.size(); ++i)
+			cur.asms.add(new Mov (GetPReg(callArgRegs.get(i)), GetAsmReg(quad.args.get(i)), cur));
+		// if there are leftover args, push them onto stack from right to left.
+		// also, record the stack argument offset.
+		int stackArgsOffset = 0;
+		// must subtract rsp before push stack args.
+		int subRspPos = cur.asms.size();
+		for (int j = quad.args.size() - 1; i < quad.args.size(); ++i, --j) {
+			cur.asms.add(new Push (GetAsmReg(quad.args.get(i)), cur));
+			// each push goes in 8 bytes
+			stackArgsOffset += 8;
+		}
+		// add another 8 stackArgOffset for alignment. Assume we already make 16 alignment in prologue.
+		// NOTE : we have to subtract rsp before pushing, otherwise the callee cannot get args on stack.
+		if (stackArgsOffset % 16 != 0) {
+			cur.asms.add(subRspPos, new Oprt (GetPReg("rsp"), new Imm(8), cur, SUB));
+			stackArgsOffset += 8;
+		} else {
+			// NOTE : for clarity.
+			cur.asms.add(subRspPos, new Oprt (GetPReg("rsp"), new Imm(0), cur, SUB));
+		}
+		// if is built-in function, do translation.
+		String asmFunctName = (quad.funcName.startsWith("~")) ? BuiltinRenamer(quad.funcName) : quad.funcName;
+		cur.asms.add(new nasm.asm.Call(cur, asmFunctName));
+		// add rsp for reset.
+		cur.asms.add(new Oprt (GetPReg("rsp"), new Imm(stackArgsOffset), cur, ADD));
 		
-		Jmp brFalse = new Jmp (cur);
-		brFalse.label = BasicBlockRenamer(br.ifFalse);
-		brFalse.jpOp = Jmp.JmpOption.JMP;
-		cur.asms.add(brFalse);
+		// move rax result back into the return register.
+		if (!quad.ret.name.equals("@null"))
+			cur.asms.add(new Mov (GetAsmReg(quad.ret), GetPReg("rax"), cur));
 	}
 	
+	// FIXME : cmp cannot for mem to mem.
+	public void visit (Branch quad) {
+		// test cond's truth value
+		cur.asms.add(new Cmp(GetAsmReg(quad.cond), new Imm(0), cur));
+		// jump if cond isn't 0.
+		cur.asms.add(new Jmp(cur, Jmp.JmpOption.JNE, BasicBlockRenamer(quad.ifTrue)));
+		// else jump to ifFalse.
+		cur.asms.add(new Jmp(cur, Jmp.JmpOption.JMP, BasicBlockRenamer(quad.ifFalse)));
+	}
+	
+	public void visit (Jump quad) {
+		cur.asms.add(new Jmp(cur, Jmp.JmpOption.JMP, BasicBlockRenamer(quad.target)));
+	}
+	
+	// FIXME : need to care about null ret value problem.
+	public void visit (ir.quad.Ret quad) {
+		if (quad.val != null)
+			cur.asms.add(new Mov (GetPReg("rax"), GetAsmReg(quad.val), cur));
+		AddEpilogue();
+	}
+	
+	public void visit (Alloca quad) {
+		cur.parentFunct.stackVars.put(quad.var.name, null);
+	}
+	
+	public void visit (Store quad) {
+		cur.asms.add(new Mov (new StackMem(quad.dst.name), GetAsmReg(quad.src), cur));
+	}
+	
+	public void visit (Load quad) {
+		cur.asms.add(new Mov (GetAsmReg(quad.val), GetAsmReg(quad.addr), cur));
+	}
+	
+	public void visit (Malloc quad) {
+		cur.asms.add(new Mov (GetPReg("rdi"), GetAsmReg(quad.size_), cur));
+		cur.asms.add(new Call(cur, "malloc"));
+		cur.asms.add(new Mov (GetAsmReg(quad.memAddr), GetPReg("rax"), cur));
+	}
+	
+	public void visit (Comment quad) {
+		System.err.println(quad.content);
+	}
+	
+	/** Quads that shouldn't appear have already assertion failure in their accept method. */
+	
 	/*************** Utility ****************/
-	// TODO : StringLiteral hasn't been considered.
-	private AsmReg GetAsmReg (IrValue irReg) {
+	public void AddEpilogue () {
+		// assign rsp's value back to rbp.
+		cur.asms.add(new Mov (GetPReg("rsp"), GetPReg("rbp"), cur));
+		// pop previous rbp (on stack) to rbp register.
+		cur.asms.add(new Pop(GetPReg("rbp"), cur));
+		// ret
+		cur.asms.add(new Ret(cur));
+	}
+	
+	/** a comprehensive translator from ir-reg/constant/stringLiteral to the corresponding data structure in nasm,
+	 * renaming is also implemented. */
+	public AsmReg GetAsmReg (IrValue irReg) {
 		if (irReg instanceof Constant)
-			return new Imm(Integer.parseInt(irReg.getText()));
-		else
+			return new Imm(((Constant) irReg).GetConstant());
+		if (irReg instanceof StringLiteral) {
+			GlobalMem str = new GlobalMem(StringLiteralRenamer(((StringLiteral) irReg).name));
+			str.isString = true;
+			return str;
+		}
+		assert irReg instanceof Reg;
+		if (((Reg) irReg).name.startsWith("@"))
+			return new GlobalMem(GlobalRenamer(((Reg) irReg).name));
+		
+		// then, for temp register and allocated register `logi. because incomplete ssa destruction.
+		// since virtual registers are about to be allocated, it doesn't matter.
+		if (((Reg) irReg).name.startsWith("!$"))
 			return new VirtualReg(irReg.getText());
+		
+		// since stackMem will be shadowed by offset, name doesn't matter.
+		assert cur.parentFunct.stackVars.containsKey(((Reg) irReg).name);
+		return new StackMem(((Reg) irReg).name);
+	}
+	
+	public static AsmReg GetPReg (String phyName) {
+		return new PhysicalReg(phyName);
 	}
 	
 	int cnt = 0;
@@ -332,7 +294,7 @@ public class AsmTranslateVisitor {
 	}
 	
 	// turn *0 into __0
-	public static String StringRenamer (String strId) {
+	public static String StringLiteralRenamer (String strId) {
 		return "_S_" + strId.substring(1);
 	}
 	
@@ -345,5 +307,30 @@ public class AsmTranslateVisitor {
 	// change @a to _G_a.
 	public static String GlobalRenamer (String gName) {
 		return String.format("_G_%s", gName.substring(1));
+	}
+	
+	private static Map<String, String> builtin2Extern = new HashMap<>();
+	{
+		builtin2Extern.put("~print", "printf");
+		builtin2Extern.put("~println", "put");
+		builtin2Extern.put("~getString", "getString");
+		builtin2Extern.put("~getInt", "getInt");
+		builtin2Extern.put("~toString", "toString");
+		builtin2Extern.put("~-string#length", "_stringLength");
+		builtin2Extern.put("~-string#substring", "_stringSubstring");
+		builtin2Extern.put("~-string#parseInt", "_stringParseInt");
+		builtin2Extern.put("~-string#ord", "_stringOrd");
+		builtin2Extern.put("~-string#add", "_stringAdd");
+		builtin2Extern.put("~--array#size", "_arraySize");
+		builtin2Extern.put("~-string#lt", "_stringEq");
+		builtin2Extern.put("~-string#gt", "_stringNeq");
+		builtin2Extern.put("~-string#le", "_stringLt");
+		builtin2Extern.put("~-string#ge", "_stringGt");
+		builtin2Extern.put("~-string#eq", "_stringLe");
+		builtin2Extern.put("~-string#ne", "_stringGe");
+	}
+	public static String BuiltinRenamer (String fName) {
+		assert builtin2Extern.containsKey(fName);
+		return builtin2Extern.get(fName);
 	}
 }

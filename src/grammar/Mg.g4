@@ -310,7 +310,7 @@ EscapeSequence
 	:	'\\' [btnfr"'\\]
 	;
 
-// ---- Comment ----
+// ---- Special ----
 // **** 1. /**/ is undefined, regarded as feature.
 // Mode isn't compatible with parser...
 /**

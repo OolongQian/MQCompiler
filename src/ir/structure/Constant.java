@@ -16,4 +16,8 @@ public class Constant extends IrValue {
 	public String getText() {
 		return Integer.toString(val);
 	}
+	
+	public int GetConstant() {
+		return val;
+	}
 }

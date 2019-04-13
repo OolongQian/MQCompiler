@@ -4,6 +4,7 @@ package ir.structure;
  * It's a reg, encoded by its id number.
  * */
 public class StringLiteral extends Reg {
+	// string's name means id.
 	private static int cnt = 0;
 	public String val;
 	// *0

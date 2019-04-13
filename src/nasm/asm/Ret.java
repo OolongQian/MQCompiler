@@ -2,11 +2,12 @@ package nasm.asm;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
+import nasm.reg.AsmReg;
 
 public class Ret extends Asm {
 	
 	public Ret(AsmBB blk) {
-		super(blk);
+		super(null, null, blk);
 	}
 	
 	@Override

@@ -2,11 +2,12 @@ package nasm.asm;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
+import nasm.reg.AsmReg;
 
 public class Push extends Asm {
 	
-	public Push(AsmBB blk) {
-		super(blk);
+	public Push(AsmReg src, AsmBB blk) {
+		super(null, src, blk);
 	}
 	
 	@Override

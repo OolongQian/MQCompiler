@@ -98,7 +98,7 @@ public class CommonExprDeleter {
 		binOpStrMap.put(LE, "le");
 		binOpStrMap.put(EQ, "eq");
 		binOpStrMap.put(NE, "ne");
-		binOpStrMap.put(CONCAT, "concat");
+//		binOpStrMap.put(CONCAT, "concat");
 	}
 	
 	private static Map<Unary.Op, String> uniOpStrMap = new HashMap<>();

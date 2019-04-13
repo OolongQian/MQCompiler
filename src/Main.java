@@ -47,9 +47,9 @@ public class Main {
 		irProg.BuildCFG();
 		
 		SSA ssaBuilder = new SSA();
-		ssaBuilder.BuildSSA(irProg);
-		ssaBuilder.OptimSSA(irProg);
-		ssaBuilder.DestructSSA(irProg);
+//		ssaBuilder.BuildSSA(irProg);
+//		ssaBuilder.OptimSSA(irProg);
+//		ssaBuilder.DestructSSA(irProg);
 //	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
 //	  CopyPropagator copy = new CopyPropagator();
 //	  copy.PropagateCopy();
@@ -58,11 +58,11 @@ public class Main {
 		irProg.Print(irPrinter);
 		
 		
-//		AsmBuilder asmer = new AsmBuilder();
-//		asmer.TranslateIr(irProg);
-//		AsmPrinter asmPrinter = new AsmPrinter();
-//		asmPrinter.ConfigOutput(nasm_dir);
-//		asmer.Print(asmPrinter);
+		AsmBuilder asmer = new AsmBuilder();
+		asmer.TranslateIr(irProg);
+		AsmPrinter asmPrinter = new AsmPrinter();
+		asmPrinter.ConfigOutput(nasm_dir);
+		asmer.Print(asmPrinter);
 	}
 	
 	
