@@ -1,17 +1,15 @@
 package nasm;
 
 import ir.structure.StringLiteral;
-import nasm.inst.*;
+import nasm.asm.*;
 import nasm.reg.GlobalMem;
-import nasm.reg.Reg;
-import nasm.reg.StackMem;
 
 import java.io.*;
 import java.util.Map;
 import java.util.Set;
 
 import static ir.Utility.unescape;
-import static nasm.Utils.StringLiteralRenamer;
+import static nasm.AsmTranslateVisitor.StringLiteralRenamer;
 
 public class AsmPrinter {
 
@@ -52,15 +50,6 @@ public class AsmPrinter {
 		}
 	}
 	
-	public void PrintGVar (Map<String, GlobalMem> globals) {
-		for (GlobalMem g : globals.values()) {
-			if (!g.isString) {
-				fout.println(g.hintName + ":");
-				PrintLine("resq", "1");
-			}
-		}
-	}
-	
 	/************************* Extern print ******************************/
 	public void PrintExtern () {
 		fout.println("extern strcmp");
@@ -78,7 +67,7 @@ public class AsmPrinter {
 	
 	/************************** Section print **********************/
 	public enum SECTION {
-		TEXT, DATA, bss
+		TEXT, DATA
 	}
 	public void PrintSection (SECTION sec) {
 		fout.println("SECTION ." + sec.name());
@@ -94,30 +83,28 @@ public class AsmPrinter {
 	public void Print (AsmBB asmbb) {
 		// comment basic block name.
 		fout.println(asmbb.hintName + ":");
-		asmbb.insts.forEach(this::Print);
+		asmbb.asms.forEach(this::Print);
 		fout.println();
 	}
 	
-	public void Print (Inst inst) {
-		inst.AcceptPrint(this);
+	public void Print (Asm asm) {
+		asm.AcceptPrint(this);
 	}
 	
 	public void Print (Mov asm) {
 		if (asm.extend) {
 			assert asm.dst.GetText().equals("rax");
-			PrintLine("movzx", "rax", "al");
+			PrintLine("mov", "rax", "al");
 		}
 		else
 			PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
 	}
 	
 	public void Print (Oprt asm) {
-		if (asm.dst == null)
-			PrintLine(asm.op.name(), asm.src.GetText());
-		else if (asm.src == null)
-			PrintLine(asm.op.name(), asm.dst.GetText());
-		else
+		if (asm.dst != null)
 			PrintLine(asm.op.name(), asm.dst.GetText(), asm.src.GetText());
+		else
+			PrintLine(asm.op.name(), asm.src.GetText());
 	}
 	
 	public void Print (Jmp asm) {
@@ -144,28 +131,8 @@ public class AsmPrinter {
 		PrintLine("call", asm.functName);
 	}
 	
-	// can load from regs or globals
-	public void Print (Load asm) {
-		if (asm.src instanceof Reg)
-			PrintLine("mov", asm.dst.GetText(), String.format("[%s]", asm.src.GetText()));
-		else
-			PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
-	}
-	
-	// can store into usual reg or globals.
-	public void Print (Store asm) {
-		if (asm.dst instanceof Reg)
-			PrintLine("mov", String.format("qword [%s]", asm.dst.GetText()), asm.src.GetText());
-		else
-			PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
-	}
-	
-	public void Print (Lea asm) {
-		PrintLine("lea", asm.dst.GetText(), ((StackMem) asm.src).GetLeaText());
-	}
-	
-	public void Print (Msg asm) {
-		fout.print("MSG\t " + asm.msg);
+	public void Print (Special asm) {
+		PrintLine(asm.gossip);
 	}
 	
 	/******************* Utility ***************************/

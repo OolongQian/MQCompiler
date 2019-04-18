@@ -3,8 +3,6 @@ package ir.interpreter.execute;
 import java.util.HashMap;
 import java.util.Map;
 
-import static config.Config.INT_SIZE;
-
 /**
  * A run-time simulated memory.
  * */
@@ -45,7 +43,7 @@ public class MemModel {
 		int strLen = LoadInt(addr);
 		byte[] bytes = new byte[strLen];
 		for (int i = 0; i < strLen; ++i) {
-			bytes[i] = LoadMem(addr + INT_SIZE + i);
+			bytes[i] = LoadMem(addr + 4 + i);
 		}
 		return new String(bytes);
 	}

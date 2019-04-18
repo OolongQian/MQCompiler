@@ -1,9 +1,12 @@
 package nasm.reg;
 
-public class PhysicalReg extends AsmReg {
+/**
+ * Virtual registers are for def-use.
+ * */
+public class VirtualReg extends AsmReg {
 	public String hintName;
 	
-	public PhysicalReg(String hintName) {
+	public VirtualReg(String hintName) {
 		this.hintName = hintName;
 	}
 	

@@ -5,6 +5,7 @@ import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
+import nasm.asm.Asm;
 
 import java.util.List;
 
