@@ -1,10 +1,10 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
 import nasm.reg.AsmReg;
 
-public class Mov extends Asm {
+public class Mov extends Inst {
 	
 	// movzx rax al.
 	public boolean extend = false;

@@ -1,6 +1,6 @@
 package nasm.reg;
 
-/** GlobalMem consists of global asm register and string literal.
+/** GlobalMem consists of global inst register and string literal.
  * hintName starts with __ to indicate it's a string literal. */
 public class GlobalMem extends AsmReg {
 	// for string, hintName is _S_id.
@@ -15,7 +15,11 @@ public class GlobalMem extends AsmReg {
 	
 	@Override
 	public String GetText() {
-		if (isString) return hintName;
-		else return String.format("qword [rel %s]", hintName);
+		// print string label to indicate address.
+		if (isString)
+			return hintName;
+		// global var has to be referenced.
+		else
+			return String.format("qword [rel %s]", hintName);
 	}
 }

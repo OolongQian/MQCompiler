@@ -12,6 +12,7 @@ import ir.structure.StringLiteral;
 import java.io.*;
 import java.util.*;
 
+import static config.Config.INT_SIZE;
 import static config.Config.LINENO;
 import static config.Config.LOG;
 import static ir.Utility.unescape;
@@ -299,7 +300,7 @@ public class Interpreter {
 		for (String s : globalPool) {
 			Reg gReg = new Reg(s);
 			gReg.SetAllocd();
-			gReg.SetValue(mem.AllocMem(4));
+			gReg.SetValue(mem.AllocMem(INT_SIZE));
 			global.put(s, gReg);
 		}
 		RunCtx gInitCtx = new RunCtx(functs.get("_init_"));
@@ -316,9 +317,9 @@ public class Interpreter {
 			String s = stringPool.get(id);
 			Reg strReg = new Reg("*" + Integer.toString(id));
 			strReg.SetAllocd();
-			int strAddr = mem.MallocMem(s.length() + 4);
+			int strAddr = mem.MallocMem(s.length() + INT_SIZE);
 			mem.StoreInt(strAddr, s.length());
-			mem.StoreStr(strAddr + 4, s);
+			mem.StoreStr(strAddr + INT_SIZE, s);
 			
 			strReg.SetValue(strAddr);
 			global.put(strReg.name, strReg);
@@ -364,10 +365,10 @@ public class Interpreter {
 				String name = inst.dst;
 				Reg local = GetReg(ctx, name);
 				if (local.alloc_d) break;
-				int addr = mem.AllocMem(4);
+				int addr = mem.AllocMem(INT_SIZE);
 				local.SetValue(addr);
 				local.SetAllocd();
-				if(LOG) System.err.println("alloc, space 4, addr " + addr + ", name " + name);
+				if(LOG) System.err.println("alloc, space 8, addr " + addr + ", name " + name);
 				break;
 			
 			case "malloc":
@@ -391,7 +392,7 @@ public class Interpreter {
 				if(LOG) logger.println("store content: " + Integer.toString(storeVal.GetValue()) +
 								" to " + Integer.toString(storeAddr.GetValue()));
 				if(LOG) System.err.println("store, " +
-								"space 4" +
+								"space 8" +
 								", addr " + storeAddr.GetValue() +
 								", name " + inst.dst +
 								", content " + storeVal.GetValue() +
@@ -410,13 +411,13 @@ public class Interpreter {
 				// FIXME : things become nasty when a string is to be loaded, because what we want to load is the string's address, while if
 				// FIXME : we get the string from the globalMems, the address of the head of strings doesn't actually resides in memory. This
 				// FIXME : shows my IR has structural problems, and how to fix it depends on how the assembly's realization.
-				// NOTE : always assume load 4 bytes, and cast it to int.
+				// NOTE : always assume load 8 bytes, and cast it to int.
 				int headAddr = loadAddr.GetValue();
 				int loaded;
 				
 				if(LOG) logger.println("load content: " + loadContent.name);
 				if(LOG) System.err.println("load, " +
-								"space 4" +
+								"space 8" +
 								", addr " + headAddr +
 								", name " + inst.src1 +
 								", content...missing " +
@@ -432,7 +433,7 @@ public class Interpreter {
 				loadContent.SetValue(loaded);
 				if(LOG) logger.println("load content: " + Integer.toString(loadContent.GetValue()));
 				if(LOG) System.err.println("load, " +
-								"space 4" +
+								"space 8" +
 								", addr " + headAddr +
 								", name " + inst.src1 +
 								", content " + loaded +
@@ -552,12 +553,12 @@ public class Interpreter {
 //				String str1 = mem.LoadStr(str1Addr);
 //				String str2 = mem.LoadStr(str2Addr);
 //				String catStr = str1 + str2;
-//				int catStrAddr = mem.MallocMem(catStr.length() + 4);
+//				int catStrAddr = mem.MallocMem(catStr.length() + 8);
 //				Reg catStrAns = GetReg(ctx, inst.dst);
 //				catStrAns.SetAllocd();
 //				catStrAns.SetValue(catStrAddr);
 //				mem.StoreInt(catStrAddr, catStr.length());
-//				mem.StoreStr(catStrAddr + 4, catStr);
+//				mem.StoreStr(catStrAddr + 8, catStr);
 //				break;
 			default:
 				Reg binAns = GetReg(ctx, inst.dst);
@@ -628,9 +629,9 @@ public class Interpreter {
 				 * stdScanner.nextLine() may read in '\n'.
 				 * */
 				String getStr = stdScanner.next();
-				int getStrAddr = mem.MallocMem(getStr.length() + 4);
+				int getStrAddr = mem.MallocMem(getStr.length() + INT_SIZE);
 				mem.StoreInt(getStrAddr, getStr.length());
-				mem.StoreStr(getStrAddr + 4, getStr);
+				mem.StoreStr(getStrAddr + INT_SIZE, getStr);
 				return getStrAddr;
 			
 			case "getInt":
@@ -647,9 +648,9 @@ public class Interpreter {
 				// parse an integer to string, and store it in heap, return headAddr.
 				int srcVal = args.get(0).GetValue();
 				String toStr = Integer.toString(srcVal);
-				int toStrAddr = mem.MallocMem(toStr.length() + 4);
+				int toStrAddr = mem.MallocMem(toStr.length() + INT_SIZE);
 				mem.StoreInt(toStrAddr, toStr.length());
-				mem.StoreStr(toStrAddr + 4, toStr);
+				mem.StoreStr(toStrAddr + INT_SIZE, toStr);
 				return toStrAddr;
 			
 			// method for built-in types.
@@ -670,9 +671,9 @@ public class Interpreter {
 				int right = args.get(2).GetValue();
 				String originStr = mem.LoadStr(originStrAddr);
 				String substrStr = originStr.substring(left, right);
-				int substrAddr = mem.MallocMem(substrStr.length() + 4);
+				int substrAddr = mem.MallocMem(substrStr.length() + INT_SIZE);
 				mem.StoreInt(substrAddr, substrStr.length());
-				mem.StoreStr(substrAddr + 4, substrStr);
+				mem.StoreStr(substrAddr + INT_SIZE, substrStr);
 				return substrAddr;
 			
 			case "-string#parseInt":
@@ -688,7 +689,7 @@ public class Interpreter {
 				int ordAddr = args.get(0).GetValue();
 				int ordIndex = args.get(1).GetValue();
 				// go over string length, and ord chars
-				char ch = (char) (byte) mem.LoadMem(ordAddr + 4 + ordIndex);
+				char ch = (char) (byte) mem.LoadMem(ordAddr + INT_SIZE + ordIndex);
 				int ordAscii = Integer.valueOf(ch);
 				return ordAscii;
 			
@@ -699,9 +700,9 @@ public class Interpreter {
 				String str1 = mem.LoadStr(str1Addr);
 				String str2 = mem.LoadStr(str2Addr);
 				String catStr = str1 + str2;
-				int catStrAddr = mem.MallocMem(catStr.length() + 4);
+				int catStrAddr = mem.MallocMem(catStr.length() + INT_SIZE);
 				mem.StoreInt(catStrAddr, catStr.length());
-				mem.StoreStr(catStrAddr + 4, catStr);
+				mem.StoreStr(catStrAddr + INT_SIZE, catStr);
 				return catStrAddr;
 			
 			case "--array#size":
@@ -718,7 +719,7 @@ public class Interpreter {
 //			String strcmp2 = mem.LoadStr(strcmpAddr2);
 //
 //			mem.StoreInt(catStrAddr, catStr.length());
-//			mem.StoreStr(catStrAddr + 4, catStr);
+//			mem.StoreStr(catStrAddr + 8, catStr);
 //			return catStrAddr;
 //			return (strcmp1 < strcmp2) ? 1 : 0;
 			

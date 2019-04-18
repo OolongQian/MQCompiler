@@ -1,10 +1,13 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
-import nasm.reg.AsmReg;
+import nasm.reg.Reg;
 
-public class Call extends Asm {
+import java.util.LinkedList;
+import java.util.List;
+
+public class Call extends Inst {
 	public String functName;
 	
 	public Call(AsmBB blk, String functName) {
@@ -16,4 +19,5 @@ public class Call extends Asm {
 	public void AcceptPrint(AsmPrinter printer) {
 		printer.Print(this);
 	}
+	
 }

@@ -1,10 +1,10 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
 import nasm.reg.AsmReg;
 
-public class Oprt extends Asm {
+public class Oprt extends Inst {
 	
 	public enum Op {
 		ADD, SUB,

@@ -1,13 +1,12 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
-import nasm.reg.AsmReg;
 
-public class Push extends Asm {
+public class Ret extends Inst {
 	
-	public Push(AsmReg src, AsmBB blk) {
-		super(null, src, blk);
+	public Ret(AsmBB blk) {
+		super(null, null, blk);
 	}
 	
 	@Override

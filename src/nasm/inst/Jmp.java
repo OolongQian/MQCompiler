@@ -1,10 +1,9 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
-import nasm.reg.AsmReg;
 
-public class Jmp extends Asm {
+public class Jmp extends Inst {
 	
 	public enum JmpOption {
 		JMP, // unconditional.
@@ -18,11 +17,6 @@ public class Jmp extends Asm {
 	public Jmp(AsmBB blk, JmpOption jpOp, String label) {
 		super(null, null, blk);
 		this.jpOp = jpOp;
-		this.label = label;
-	}
-	
-	public Jmp(AsmBB blk, String label) {
-		super(null, null, blk);
 		this.label = label;
 	}
 	

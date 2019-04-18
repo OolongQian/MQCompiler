@@ -5,32 +5,29 @@ import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
+import nasm.inst.Call;
 import nasm.reg.GlobalMem;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import static nasm.Utils.BasicBlockRenamer;
+import static nasm.Utils.GlobalRenamer;
 
-import static nasm.AsmTranslateVisitor.BasicBlockRenamer;
-import static nasm.AsmTranslateVisitor.GlobalRenamer;
-
-/**
- * Translate IR to NASM assembly with infinite registers.
- * */
+/** Translate IR to NASM assembly with infinite registers.
+ * This AsmBuilder will contain comments, delete them later. */
 public class AsmBuilder {
 	public Map<String, AsmFunct> asmFuncts = new HashMap<>();
+	
 	// GlobalMem consists of globals and string literals.
 	// map @a to _G_a.
 	public Map<String, GlobalMem> globalMems = new HashMap<>();
+	
 	public Set<StringLiteral> strings = new HashSet<>();
 	
 	public AsmTranslateVisitor translator = new AsmTranslateVisitor();
 	public AsmRegAllocator allocator = new AsmRegAllocator();
+	
 	
 	public void TranslateIr(IrProg ir) {
 		// config
@@ -42,34 +39,49 @@ public class AsmBuilder {
 		// build nasm. All regs are virtual by now, except global, string, allocated.
 		// allocated has already been stackMem, but offset hasn't been set.
 		for (IrFunct irFunct : ir.functs.values()) {
+			
+			// create and config asmfunct
 			AsmFunct asmfunct = new AsmFunct(irFunct.name, irFunct.regArgs);
 			asmFuncts.put(asmfunct.name, asmfunct);
+			translator.ConfigAsmFunct(asmfunct);
+			
+			// create and translate each basic block.
 			for (BasicBlock cur = irFunct.bbs.list.Head(); cur != null; cur = cur.next) {
 				AsmBB asmCur = new AsmBB(BasicBlockRenamer(cur), asmfunct);
 				asmfunct.bbs.add(asmCur);
 				translator.ConfigAsmBB(asmCur);
 				translator.TranslateQuadList(cur.quads);
 			}
-			// move args to temp registers. put things to register allocation.
-			asmfunct.MovAllocateArgs();
 			
+			// maintain cfg.
+			asmfunct.InitCFG(irFunct.bbs.cfg);
+			
+			// do technical function routine.
+			
+			// if asmFunct is main, call _init_ first.
+			if (asmfunct.name.equals("main"))
+				asmfunct.bbs.get(0).insts.add(0, new Call(asmfunct.bbs.get(0), "_init_"));
+
+			translator.ArgsVirtualize();
 			allocator.AllocateRegister(asmfunct);
-			asmfunct.Backfill();
-			asmfunct.AddPrologue();
+//			translator.Backfill();
+			translator.AddPrologue();
+			
+//			asmFuncts.values().forEach(Utils::DelMsg);
 		}
 	}
 	
 	public void Print (AsmPrinter printer) throws Exception {
 		printer.PrintExtern();
-		printer.pasteLibFunction();
 		printer.PrintHeaders(asmFuncts, globalMems);
 		printer.PrintSection(AsmPrinter.SECTION.TEXT);
 		for (AsmFunct asmFunct : asmFuncts.values()) {
-			if (asmFunct.name.equals("_init_")) continue;
 			printer.Print(asmFunct);
 		}
 		printer.PrintSection(AsmPrinter.SECTION.DATA);
 		printer.PrintStringLabels(strings);
+		printer.PrintSection(AsmPrinter.SECTION.bss);
+		printer.PrintGVar(globalMems);
+		printer.pasteLibFunction();
 	}
-
 }

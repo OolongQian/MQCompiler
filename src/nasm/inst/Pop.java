@@ -1,13 +1,13 @@
-package nasm.asm;
+package nasm.inst;
 
 import nasm.AsmBB;
 import nasm.AsmPrinter;
 import nasm.reg.AsmReg;
 
-public class Cmp extends Asm {
-	/** dst is src1, src is src2 */
-	public Cmp(AsmReg dst, AsmReg src, AsmBB blk) {
-		super(dst, src, blk);
+public class Pop extends Inst {
+	
+	public Pop(AsmReg dst, AsmBB blk) {
+		super(dst, null, blk);
 	}
 	
 	@Override
