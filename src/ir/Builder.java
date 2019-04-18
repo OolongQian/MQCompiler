@@ -384,7 +384,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Binary(exDim, ADD, dim, MakeInt(1)));
 		// multiply INT_SIZE to get the actual offset, use << for efficiency.
 		Reg exDimByte = ctx.cFun.GetTmpReg();
-		ctx.EmplaceInst(new Binary(exDimByte, SHL, exDim, MakeInt(2)));
+		ctx.EmplaceInst(new Binary(exDimByte, SHL, exDim, MakeInt(3)));
 		// malloc mem space, let arrAddr take on the address.
 		ctx.EmplaceInst(new Malloc(arrTmp, exDimByte));
 		// record array dimension after recording, right at the head of malloc_ed mem.
@@ -482,11 +482,11 @@ public class Builder extends AstBaseVisitor<Void> {
 		// FIXME : when we use java convention, all array type element is a pointer or built-in type.
 //		VarTypeRef arrElemType = node.arrInstance.varTypeRef.innerType;
 //		IrValue elemSize = MakeInt(arrElemType.GetTypeSpace());
-		IrValue elemSize = MakeInt(4);
+		IrValue elemSize = MakeInt(8);
 		
 		// now we need a MUL quad for offset calculation
 		// shift index, because the first one is reserved to be array size.
-		IrValue lenSpare = MakeInt(4);
+		IrValue lenSpare = MakeInt(8);
 		IrValue acsIndex = GetArithResult(node.subscript);
 		Reg offsetNoLen = ctx.cFun.GetTmpReg();
 		Reg offsetWithLen = ctx.cFun.GetTmpReg();

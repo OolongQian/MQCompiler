@@ -6,7 +6,6 @@ import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
-import nasm.asm.Asm;
 
 import java.util.HashMap;
 import java.util.List;

@@ -11,7 +11,6 @@ import nasm.AsmBuilder;
 import nasm.AsmPrinter;
 import opt.SSA;
 import opt.optimizers.CopyPropagator;
-import opt.optimizers.DeadEliminator;
 import opt.optimizers.Defuse;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -75,7 +74,7 @@ public class Main {
 	
   public static void main(String[] args) throws Exception {
 	  if (!TEST) {
-		  IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm.txt");
+		  IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm.asm");
 		  IrInterp("Mx_ir.txt");
 	  }
 	  else {

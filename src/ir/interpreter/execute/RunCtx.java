@@ -28,7 +28,7 @@ public class RunCtx {
 	public Reg ret = null;
 	
 	/**
-	 * record all live register values.
+	 * record all allocate register values.
 	 * */
 	public Map<String, Reg> defuse = new HashMap<>();
 	
