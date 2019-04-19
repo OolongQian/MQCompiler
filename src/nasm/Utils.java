@@ -94,6 +94,8 @@ public class Utils {
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
 		else if (inst instanceof Store) {
+			// store actually uses both dst and src.
+			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
 		else if (inst instanceof Ret) { }
@@ -130,7 +132,8 @@ public class Utils {
 			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
 		}
 		else if (inst instanceof Store) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+			// store doesn't actually define anything new.
+//			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
 		}
 		else if (inst instanceof Ret) { }
 		else {

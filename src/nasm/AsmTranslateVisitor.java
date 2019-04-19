@@ -148,14 +148,11 @@ public class AsmTranslateVisitor {
 			src1 = tmp1;
 		}
 		AsmReg src2 = GetAsmReg(quad.src2);
-		if (!(src2 instanceof Reg)) {
-			Reg tmp2 = GetTmpReg();
-			cur.insts.add(new Mov (tmp2, src2, cur));
-			src2 = tmp2;
-		}
+		// NOTE : src2 can be immediate.
 		
-		Cmp cmp = new Cmp(src1, src2, cur);
-		cmp.flagReg = GetTmpReg();
+		// FIXME : set cmp.flagReg rax temporarily.
+		Cmp cmp = new Cmp(src1, src2, quad.op, cur);
+		cmp.flagReg = (Reg) GetPReg(rax);
 		cur.insts.add(cmp);
 		// move compared flag reg to ans. Maybe coalesce.
 		cur.insts.add (new Mov (GetAsmReg(quad.ans), cmp.flagReg, cur));

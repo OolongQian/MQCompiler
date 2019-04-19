@@ -1,7 +1,9 @@
 package nasm.reg;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import static nasm.reg.PhysicalReg.PhyRegType.*;
 
@@ -18,6 +20,10 @@ public class PhysicalReg {
 		dummy // only for debug purposes.
 	}
 	
+	public static Map<PhyRegType, String> wide2lower = new HashMap<>();
+	static {
+		wide2lower.put(rax, "al");
+	}
 	// registers used for allocation, exclude rsp and rbp.
 	public static List<PhyRegType> okColors = new LinkedList<>();
 	static {

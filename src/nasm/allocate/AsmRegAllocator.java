@@ -51,12 +51,12 @@ public class AsmRegAllocator {
 		BuildInterference();
 			if (DEBUGPRINT_INTERFERE)
 				ctx.PrintGraph(curf);
-			try {
-				if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
-					ctx.Graphviz(curf);
-			} catch (FileNotFoundException e) {
-				throw new RuntimeException();
-			}
+//			try {
+//				if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
+//					ctx.Graphviz(curf);
+//			} catch (FileNotFoundException e) {
+//				throw new RuntimeException();
+//			}
 		MakeWorklists();
 		
 		do {
@@ -73,6 +73,13 @@ public class AsmRegAllocator {
 						 !ctx.worklistMoves.isEmpty() ||
 						 !ctx.freezeWorklist.isEmpty() ||
 						 !ctx.spillWorklist.isEmpty());
+		
+		try {
+			if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
+				ctx.Graphviz(curf);
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException();
+		}
 		
 		AssignColors();
 		
@@ -164,6 +171,8 @@ public class AsmRegAllocator {
 		assert iter.hasNext();
 		// pick a virtual register from simplify worklist.
 		String vreg = iter.next();
+		
+		
 		iter.remove();
 		// push it to stack.
 		ctx.selectStack.push(vreg);
@@ -191,6 +200,11 @@ public class AsmRegAllocator {
 			u = y; v = x;
 		} else {
 			u = x; v = y;
+		}
+		
+		
+		if (u.equals("!$i(0)[3]") || v.equals("!$i(0)[3]")) {
+			int a = 1;
 		}
 
 		if (u.equals(v)) {
@@ -318,9 +332,13 @@ public class AsmRegAllocator {
 			String n = ctx.selectStack.pop();
 			Set<PhysicalReg.PhyRegType> okColors = new HashSet<>(PhysicalReg.okColors);
 			// exclude adjacent colors in interference graph.
+			Set<String> debug = ctx.itfg.GetAdjList(n);
+			Map<String, PhysicalReg.PhyRegType> colored = ctx.colors;
+			
 			for (String w : ctx.itfg.GetAdjList(n)) {
+				String alias = GetAlias(w);
 				if (ctx.coloredNodes.contains(GetAlias(w)) || ctx.precolored.containsKey(GetAlias(w)))
-					okColors.remove(ctx.colors.get(w));
+					okColors.remove(ctx.colors.get(GetAlias(w)));
 			}
 			
 			if (okColors.isEmpty())
@@ -331,8 +349,11 @@ public class AsmRegAllocator {
 			}
 		}
 		
-		for (String coale : ctx.coalescedNodes)
+		for (String coale : ctx.coalescedNodes) {
+			String alias = GetAlias(coale);
+			PhysicalReg.PhyRegType color = ctx.colors.get(alias);
 			ctx.colors.put(coale, ctx.colors.get(GetAlias(coale)));
+		}
 	}
 	
 	private void RewriteProgram() {

@@ -3,6 +3,7 @@ package nasm;
 import ir.structure.StringLiteral;
 import nasm.inst.*;
 import nasm.reg.GlobalMem;
+import nasm.reg.PhysicalReg;
 import nasm.reg.Reg;
 import nasm.reg.StackMem;
 
@@ -138,6 +139,13 @@ public class AsmPrinter {
 	
 	public void Print (Cmp asm) {
 		PrintLine("cmp", asm.dst.GetText(), asm.src.GetText());
+		// if jump directly, no need to do this routine.
+		if (!asm.jmp) {
+			String lowerReg = PhysicalReg.wide2lower.get(asm.flagReg.color.phyReg);
+			String phyReg = asm.flagReg.color.phyReg.name();
+			PrintLine(asm.Cmp2Set(), lowerReg);
+			PrintLine("movzx", phyReg, lowerReg);
+		}
 	}
 	
 	public void Print (Call asm) {

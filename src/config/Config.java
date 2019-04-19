@@ -9,8 +9,8 @@ public class Config {
 	public static final boolean DEADLOG = false;
 	
 	public static final boolean ALLOCAREGS = true;
-	public static final boolean CALLERSAVE = false;
-	public static final boolean CALLEESAVE = false;
+	public static final boolean CALLERSAVE = true;
+	public static final boolean CALLEESAVE = true;
 	public static final boolean COMMENTNASM = false;
 	
 	public static final boolean DEBUGPRINT_LIVENESS = true;
