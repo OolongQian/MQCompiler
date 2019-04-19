@@ -6,12 +6,35 @@ import java.util.List;
 import static nasm.reg.PhysicalReg.PhyRegType.*;
 
 
+// physical rergisters not only have type,  but also have hintNames.
+// hintName is for description and lower bits or other register width.
 public class PhysicalReg {
+	
+	public static int REGNUM = 14;
 	
 	public enum PhyRegType {
 		rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi,
 		r8, r9, r10, r11, r12, r13, r14, r15,
 		dummy // only for debug purposes.
+	}
+	
+	// registers used for allocation, exclude rsp and rbp.
+	public static List<PhyRegType> okColors = new LinkedList<>();
+	static {
+		okColors.add(rax);
+		okColors.add(rcx);
+		okColors.add(rdx);
+		okColors.add(rbx);
+		okColors.add(rsi);
+		okColors.add(rdi);
+		okColors.add(r8);
+		okColors.add(r9);
+		okColors.add(r10);
+		okColors.add(r11);
+		okColors.add(r12);
+		okColors.add(r13);
+		okColors.add(r14);
+		okColors.add(r15);
 	}
 	
 	public static List<PhyRegType> regArgsPass = new LinkedList<>();
@@ -26,7 +49,7 @@ public class PhysicalReg {
 	
 	public static List<PhyRegType> callerSave = new LinkedList<>();
 	static {
-		callerSave.add(rax);
+//		callerSave.add(rax);
 		callerSave.add(rcx);
 		callerSave.add(rdx);
 		callerSave.add(r8);

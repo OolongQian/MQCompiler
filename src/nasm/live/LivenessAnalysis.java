@@ -8,19 +8,29 @@ import nasm.reg.Reg;
 
 import java.util.*;
 
+import static config.Config.DEBUGPRINT_LIVENESS;
+import static nasm.Utils.GetDefs;
+import static nasm.Utils.GetUses;
+
 public class LivenessAnalysis {
 	
+	// this data structure logically belongs to allocation context.
 	// map all asmBB in the program to its liveOut variable set.
 	// basic blocks for all functs are here.
-	public Map<AsmBB, Set<String>> liveOuts = new HashMap<>();
+	public Map<AsmBB, Set<String>> liveOuts;
 	
 	// see p329 EaC for detail.
 	private Map<AsmBB, Set<String>> ueVars = new HashMap<>();
 	private Map<AsmBB, Set<String>> varKills = new HashMap<>();
 	
+	public void ConfigLiveOut(Map<AsmBB, Set<String>> liveOutsCtx) {
+		this.liveOuts = liveOutsCtx;
+	}
 	public void LivenessAnalyze(AsmFunct asmFunct) {
-		asmFunct.bbs.forEach(this::CollectInfo);
+			if (DEBUGPRINT_LIVENESS)
+				cacheFunct = asmFunct;
 		
+		asmFunct.bbs.forEach(this::CollectInfo);
 		asmFunct.bbs.forEach(x -> liveOuts.put(x, new HashSet<>()));
 		// for fixed-point algorithm
 		boolean changed = true;
@@ -58,91 +68,31 @@ public class LivenessAnalysis {
 		Set<String> liveOut = liveOuts.get(asmBB);
 		
 		int oldSize = liveOut.size();
+		
 		for (AsmBB scs : cfg.successors.get(asmBB)) {
 			// liveout if used afterwards.
 			liveOut.addAll(ueVars.get(scs));
-			// liveout if liveout afterwards but not due to redefine. 
+			// liveout if liveout afterwards but not due to redefine.
 			for (String s : liveOuts.get(scs)) {
 				if (!varKills.get(scs).contains(s))
 					liveOut.add(s);
 			}
 		}
+
 		// if size increment, liveout set changes.
 		return liveOut.size() != oldSize;
 	}
 	
-	public List<Reg> GetUses (Inst inst) {
-		List<Reg> uses = new LinkedList<>();
-		
-		if (inst instanceof Call) { }
-		else if (inst instanceof Cmp) {
-			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+
+	private AsmFunct cacheFunct;
+	public void PrintLiveness() {
+		System.out.println(String.format("%s liveness : ", cacheFunct.name));
+		for (AsmBB asmBB : liveOuts.keySet()) {
+			System.out.print(String.format("%s : ", asmBB.hintName));
+			for (String s : liveOuts.get(asmBB))
+				System.out.print(String.format(" %s", s));
+			System.out.println();
 		}
-		else if (inst instanceof Jmp) { }
-		else if (inst instanceof Lea) {
-			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Mov) {
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Oprt) {
-			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Msg) { }
-		else if (inst instanceof Pop) { }
-		else if (inst instanceof Push) {
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Load) {
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Store) {
-			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
-		}
-		else if (inst instanceof Ret) { }
-		else {
-			assert false;
-		}
-		
-		return uses;
-	}
-	
-	public List<Reg> GetDefs (Inst inst) {
-		List<Reg> defs = new LinkedList<>();
-		
-		if (inst instanceof Call) { }
-		else if (inst instanceof Cmp) {
-			if (((Cmp) inst).flagReg instanceof Reg) defs.add(((Cmp) inst).flagReg);
-		}
-		else if (inst instanceof Jmp) { }
-		else if (inst instanceof Lea) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Mov) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Oprt) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Msg) { }
-		else if (inst instanceof Pop) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Push) { }
-		else if (inst instanceof Load) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Store) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
-		}
-		else if (inst instanceof Ret) { }
-		else {
-			assert false;
-		}
-		
-		return defs;
+		System.out.println();
 	}
 }

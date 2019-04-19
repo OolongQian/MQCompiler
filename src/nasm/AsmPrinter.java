@@ -15,7 +15,7 @@ import static nasm.Utils.StringLiteralRenamer;
 
 public class AsmPrinter {
 
-	private PrintStream fout = System.out;
+	protected PrintStream fout = System.out;
 	
 	/************************** Config ************************/
 	public void ConfigOutput (String filename) throws Exception {
@@ -169,7 +169,7 @@ public class AsmPrinter {
 	}
 	
 	/******************* Utility ***************************/
-	private void PrintLine(String inst, String... args) {
+	protected void PrintLine(String inst, String... args) {
 		StringBuilder line = new StringBuilder(String.format("\t\t%-8s", inst));
 		for (int i = 0; i < args.length; ++i) {
 			if (i != 0) line.append(", ");

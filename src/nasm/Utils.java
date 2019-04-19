@@ -1,9 +1,12 @@
 package nasm;
 
 import ir.structure.BasicBlock;
-import nasm.inst.Msg;
+import nasm.inst.*;
+import nasm.reg.Reg;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class Utils {
@@ -61,4 +64,178 @@ public class Utils {
 		assert builtin2Extern.containsKey(fName);
 		return builtin2Extern.get(fName);
 	}
+	
+	public static List<Reg> GetUses (Inst inst) {
+		List<Reg> uses = new LinkedList<>();
+		
+		if (inst instanceof Call) { }
+		else if (inst instanceof Cmp) {
+			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Jmp) { }
+		else if (inst instanceof Lea) {
+			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Mov) {
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Oprt) {
+			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Msg) { }
+		else if (inst instanceof Pop) { }
+		else if (inst instanceof Push) {
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Load) {
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Store) {
+			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
+		}
+		else if (inst instanceof Ret) { }
+		else {
+			assert false;
+		}
+		
+		return uses;
+	}
+	
+	public static List<Reg> GetDefs (Inst inst) {
+		List<Reg> defs = new LinkedList<>();
+		
+		if (inst instanceof Call) { }
+		else if (inst instanceof Cmp) {
+			if (((Cmp) inst).flagReg instanceof Reg) defs.add(((Cmp) inst).flagReg);
+		}
+		else if (inst instanceof Jmp) { }
+		else if (inst instanceof Lea) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Mov) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Oprt) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Msg) { }
+		else if (inst instanceof Pop) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Push) { }
+		else if (inst instanceof Load) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Store) {
+			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+		}
+		else if (inst instanceof Ret) { }
+		else {
+			assert false;
+		}
+		
+		return defs;
+	}
+	
+	public static void ReplaceUses (Inst inst, String old, String new_) {
+		boolean changed = false;
+		
+		if (inst instanceof Call) { }
+		else if (inst instanceof Cmp) {
+			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
+				assert !((Reg) inst.dst).isColored();
+				((Reg) inst.dst).hintName = new_;
+				changed = true;
+			}
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Jmp) { }
+		else if (inst instanceof Lea) {
+			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
+				assert !((Reg) inst.dst).isColored();
+				((Reg) inst.dst).hintName = new_;
+				changed = true;
+			}
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Mov) {
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Oprt) {
+			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
+				assert !((Reg) inst.dst).isColored();
+				((Reg) inst.dst).hintName = new_;
+				changed = true;
+			}
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Msg) { }
+		else if (inst instanceof Pop) { }
+		else if (inst instanceof Push) {
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Load) {
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Store) {
+			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
+				assert !((Reg) inst.src).isColored();
+				((Reg) inst.src).hintName = new_;
+				changed = true;
+			}
+		}
+		else if (inst instanceof Ret) { }
+		else {
+			assert false;
+		}
+		assert changed;
+	}
+	
+	// get all vregs used in the nasm instruction.
+	public static List<Reg> GetVregs (Inst inst) {
+		List<Reg> tmp = GetUses(inst);
+		tmp.addAll(GetDefs(inst));
+		return tmp;
+	}
+	
+	public static String GraphvizRegRenamer(String regName) {
+		regName = regName.replace("!", "");
+		regName = regName.replace("@", "");
+		regName = regName.replace("`", "");
+		regName = regName.replace("%", "");
+		regName = regName.replace("$", "");
+		regName = regName.replace("(", "");
+		regName = regName.replace(")", "");
+		regName = regName.replace("[", "");
+		regName = regName.replace("]", "");
+		return regName;
+	}
 }
+

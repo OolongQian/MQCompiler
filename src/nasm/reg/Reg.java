@@ -1,5 +1,7 @@
 package nasm.reg;
 
+import static config.Config.DEBUGPRINT_VIRTUAL;
+
 /** Virtual registers are for def-use. */
 public class Reg extends AsmReg {
 	
@@ -18,7 +20,7 @@ public class Reg extends AsmReg {
 		this.color = color;
 	}
 
-	public boolean isAllocd() {
+	public boolean isColored() {
 		return color != null;
 	}
 	
@@ -28,7 +30,9 @@ public class Reg extends AsmReg {
 	
 	@Override
 	public String GetText() {
-		if (!isAllocd())
+		if (DEBUGPRINT_VIRTUAL)
+			return hintName;
+		if (!isColored())
 			// hasn't allocated, return virtual register name.
 			return hintName;
 		else

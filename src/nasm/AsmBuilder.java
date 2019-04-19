@@ -5,12 +5,16 @@ import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
+import nasm.allocate.AsmRegAllocator;
 import nasm.inst.Call;
 import nasm.reg.GlobalMem;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static config.Config.ALLOCAREGS;
+import static config.Config.COMMENTNASM;
 import static nasm.Utils.BasicBlockRenamer;
 import static nasm.Utils.GlobalRenamer;
 
@@ -57,17 +61,18 @@ public class AsmBuilder {
 			asmfunct.InitCFG(irFunct.bbs.cfg);
 			
 			// do technical function routine.
-			
 			// if asmFunct is main, call _init_ first.
 			if (asmfunct.name.equals("main"))
 				asmfunct.bbs.get(0).insts.add(0, new Call(asmfunct.bbs.get(0), "_init_"));
 
 			translator.ArgsVirtualize();
-			allocator.AllocateRegister(asmfunct);
-//			translator.Backfill();
+			translator.x86_FormCheck();
+			if (ALLOCAREGS)
+				allocator.AllocateRegister(asmfunct);
+			asmfunct.CalcStackOffset();
 			translator.AddPrologue();
-			
-//			asmFuncts.values().forEach(Utils::DelMsg);
+			if (!COMMENTNASM)
+				asmFuncts.values().forEach(Utils::DelMsg);
 		}
 	}
 	

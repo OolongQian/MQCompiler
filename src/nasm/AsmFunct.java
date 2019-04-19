@@ -2,6 +2,8 @@ package nasm;
 
 import ir.structure.BasicBlock;
 import ir.structure.CFG;
+import nasm.inst.Cmp;
+import nasm.inst.Inst;
 import nasm.reg.*;
 
 import java.util.*;
@@ -34,19 +36,65 @@ public class AsmFunct {
 			
 			for (BasicBlock pre : irCFG.predesessors.get(bb)) {
 				String preBBName = BasicBlockRenamer(pre);
+//				Set<AsmBB> preSet = cfg.predesessors.get(curBB);
+//				preSet.add(GetBBbyName(preBBName));
 				cfg.predesessors.get(curBB).add(GetBBbyName(preBBName));
 			}
 			for (BasicBlock scs : irCFG.successors.get(bb)) {
 				String scsBBName = BasicBlockRenamer(scs);
-				cfg.predesessors.get(curBB).add(GetBBbyName(scsBBName));
+				cfg.successors.get(curBB).add(GetBBbyName(scsBBName));
 			}
+		}
+		
+		// some basic blocks have no predesessors or successors. initialize them as an empty hashset.
+		for (AsmBB bb : bbs) {
+			if (!cfg.predesessors.containsKey(bb))
+				cfg.predesessors.put(bb, new HashSet<>());
+			if (!cfg.successors.containsKey(bb))
+				cfg.successors.put(bb, new HashSet<>());
+		}
+	}
+	
+	//
+	public void CalcStackOffset() {
+		assert stackLocalOffset == null;
+		stackLocalOffset = 0;
+		
+		Set<StackMem> worklist = new HashSet<>();
+		
+		for (AsmBB bb : bbs) {
+			for (Inst inst : bb.insts) {
+				
+				if (inst.dst instanceof StackMem && ((StackMem) inst.dst).ebpOffset == null)
+					worklist.add((StackMem) inst.dst);
+				
+				if (inst.src instanceof StackMem && ((StackMem) inst.src).ebpOffset == null) {
+					if (((StackMem) inst.src).varHintName.equals("qpow_alloca_1")) {
+						int a = 1;
+					}
+					worklist.add((StackMem) inst.src);
+				}
+				
+				// Cmp's extra is Reg. Don't consider.
+			}
+		}
+		
+		Map<String, Integer> processed = new HashMap<>();
+		
+		for (Iterator<StackMem> iter = worklist.iterator(); iter.hasNext(); ) {
+			StackMem work = iter.next();
+			
+			if (!processed.containsKey(work.varHintName))
+				processed.put(work.varHintName, (stackLocalOffset += 8));
+			
+			work.ebpOffset = processed.get(work.varHintName);
 		}
 	}
 	
 	/***************** Utility ********************/
 	private int cnt = 0;
 	public Reg GetTmpReg() {
-		return new Reg("inst" + cnt++);
+		return new Reg(String.format("%s_tmp%d", name, ++cnt));
 	}
 	
 	private AsmBB GetBBbyName (String bbName) {
