@@ -57,7 +57,6 @@ public class Main {
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
 		
-		
 		AsmBuilder asmer = new AsmBuilder();
 		asmer.TranslateIr(irProg);
 		AsmPrinter asmPrinter = new AsmPrinter();
@@ -101,7 +100,8 @@ public class Main {
 		  checker.Config(prog);
 		  checker.SemanticCheck();
 		
-		  String irFilePath = "ir.txt";
+		  // don't output ir in test. 
+//		  String irFilePath = "ir.txt";
 		  BuilderContext irCtx = new BuilderContext(checker.functTable);
 		  ir.Builder irBuilder = new ir.Builder(irCtx);
 		  irBuilder.Build(prog);
@@ -111,13 +111,19 @@ public class Main {
 		  SSA ssaBuilder = new SSA();
 		  ssaBuilder.BuildSSA(irProg);
 		  ssaBuilder.OptimSSA(irProg);
-//		  ssaBuilder.DestructSSA(irProg);
-//		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
-//		  CopyPropagator copy = new CopyPropagator();
-//		  copy.PropagateCopy();
+		  ssaBuilder.DestructSSA(irProg);
+		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
+		  CopyPropagator copy = new CopyPropagator();
+		  copy.PropagateCopy();
 		
-		  Printer irPrinter = new Printer(irFilePath);
-		  irProg.Print(irPrinter);
+//		  Printer irPrinter = new Printer(irFilePath);
+//		  irProg.Print(irPrinter);
+		  
+		  AsmBuilder asmer = new AsmBuilder();
+		  asmer.TranslateIr(irProg);
+		  AsmPrinter asmPrinter = new AsmPrinter();
+		  asmPrinter.ConfigOutput(null);
+		  asmer.Print(asmPrinter);
 	  }
   }
 }

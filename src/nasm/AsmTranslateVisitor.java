@@ -175,6 +175,7 @@ public class AsmTranslateVisitor {
 	// FIXME : we haven't cared about caller-save and callee-save registers.
 	public void visit (ir.quad.Call quad) {
 		// follow the calling convention to put the args into suitable registers.
+		int subRspPos = cur.insts.size();
 		Say(cur, "BEGIN args pass\n");
 		int i;
 		for (i = 0; i < 6 && i < quad.args.size(); ++i)
@@ -183,7 +184,6 @@ public class AsmTranslateVisitor {
 		// also, record the stack argument offset.
 		int stackArgsOffset = 0;
 		// must subtract rsp before push stack args.
-		int subRspPos = cur.insts.size();
 		for (int j = quad.args.size() - 1; i < quad.args.size(); ++i, --j) {
 			cur.insts.add(new Push (GetAsmReg(quad.args.get(i)), cur));
 			// each push goes in 8 bytes
@@ -235,7 +235,9 @@ public class AsmTranslateVisitor {
 	public void visit (ir.quad.Ret quad) {
 		if (quad.val != null && !quad.val.getText().equals("@null"))
 			cur.insts.add(new Mov (GetPReg(rax), GetAsmReg(quad.val), cur));
-		AddEpilogue();
+		// add a temporary placeholder here.
+		// back fill ret epilogue later.
+		cur.insts.add(new Ret(cur));
 	}
 	
 	// load effective stack address to allocated virtual register.
@@ -269,32 +271,39 @@ public class AsmTranslateVisitor {
 	
 	/*************** Utility ****************/
 	public void AddEpilogue () {
-		Say (cur, "BEGIN epilogue\n");
-		
-		if (curf.stackLocalOffset != null) {
-			// align stack frame by adding offset divisible by 16.
-			assert curf.stackLocalOffset % 16 == 0;
-			cur.insts.add(new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), cur, Oprt.Op.ADD));
-		} else {
-			// to print nasm before register allocation.
-			cur.insts.add(new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), cur, Oprt.Op.ADD));
-		}
+		for (AsmBB bb : curf.bbs) {
+			for (int i = 0; i < bb.insts.size(); ++i) {
+				if (bb.insts.get(i) instanceof Ret) {
+					Say (bb, i++, "BEGIN epilogue\n");
 
-		if (CALLEESAVE) {
-			Say (cur, "BEGIN restore callee save\n");
-			// restore callee-save registers.
-			for (int j = PhysicalReg.calleeSave.size() - 1; j >= 0; --j)
-				cur.insts.add(new Pop (GetPReg(PhysicalReg.calleeSave.get(j)), cur));
-			Say (cur, "END restore callee save\n");
+					if (CALLEESAVE) {
+						Say (bb, i++, "BEGIN restore callee save\n");
+						// restore callee-save registers.
+						for (int j = PhysicalReg.calleeSave.size() - 1; j >= 0; --j)
+							bb.insts.add(i++, new Pop (GetPReg(PhysicalReg.calleeSave.get(j)), bb));
+						Say (bb, i++, "END restore callee save\n");
+					}
+					
+					if (curf.stackLocalOffset != null) {
+						// align stack frame by adding offset divisible by 16.
+						assert curf.stackLocalOffset % 16 == 0;
+						bb.insts.add(i++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), bb, Oprt.Op.ADD));
+					} else {
+						// to print nasm before register allocation.
+						bb.insts.add(i++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), bb, Oprt.Op.ADD));
+					}
+					
+					// assign rsp's value back to rbp.
+					bb.insts.add(i++, new Mov (GetPReg(rsp), GetPReg(rbp), bb));
+					// pop previous rbp (on stack) to rbp register.
+					bb.insts.add(i++, new Pop(GetPReg(rbp), bb));
+					// ret has already been there like a sentinel
+//					bb.insts.add(new Ret(bb));
+					Say (bb, i++, "END epilogue\n");
+				}
+			}
 		}
 		
-		// assign rsp's value back to rbp.
-		cur.insts.add(new Mov (GetPReg(rsp), GetPReg(rbp), cur));
-		// pop previous rbp (on stack) to rbp register.
-		cur.insts.add(new Pop(GetPReg(rbp), cur));
-		// ret
-		cur.insts.add(new Ret(cur));
-		Say (cur, "END epilogue\n\n");
 	}
 	
 	/** a comprehensive translator from ir-reg/constant/stringLiteral to the corresponding data structure in nasm,
@@ -398,6 +407,8 @@ public class AsmTranslateVisitor {
 					Say(bb, savePos++, "END caller save\n");
 					++i;
 					
+					// skip 'ADD rsp, offset'.
+					++i;
 					Say(bb, ++i, "BEGIN caller restore\n");
 					// pop caller-save registers out.
 					for (int j = PhysicalReg.callerSave.size() - 1; j >= 0; --j)
@@ -524,14 +535,6 @@ public class AsmTranslateVisitor {
 		// mov rbp rsp.
 		head.insts.add(cnt++, new Mov (GetPReg(rbp), GetPReg(rsp), head));
 		
-		if (CALLEESAVE) {
-			// push callee save registers.
-			Say (head, cnt++, "BEGIN callee save\n");
-			for (int j = 0; j < PhysicalReg.calleeSave.size(); ++j)
-				head.insts.add(cnt++, new Push (GetPReg(PhysicalReg.calleeSave.get(j)), head));
-			Say (head, cnt++, "END callee save\n");
-		}
-		
 		// align stack frame by adding offset divisible by 16.
 		if (curf.stackLocalOffset != null) {
 			// after register allocation, and backfill rewriting, rspOffset shouldn't be null
@@ -543,6 +546,14 @@ public class AsmTranslateVisitor {
 			head.insts.add(cnt++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), head, Oprt.Op.SUB));
 		}
 		
+		if (CALLEESAVE) {
+			// push callee save registers.
+			Say (head, cnt++, "BEGIN callee save\n");
+			for (int j = 0; j < PhysicalReg.calleeSave.size(); ++j)
+				head.insts.add(cnt++, new Push (GetPReg(PhysicalReg.calleeSave.get(j)), head));
+			Say (head, cnt++, "END callee save\n");
+		}
+
 		Say (head, cnt++, "END prologue\n\n");
 	}
 }

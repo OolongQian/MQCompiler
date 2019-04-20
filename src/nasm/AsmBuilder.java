@@ -8,7 +8,10 @@ import ir.structure.StringLiteral;
 import nasm.allocate.AsmRegAllocator;
 import nasm.inst.Call;
 import nasm.inst.Msg;
+import nasm.inst.Oprt;
 import nasm.reg.GlobalMem;
+import nasm.reg.Imm;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,7 +20,11 @@ import java.util.Set;
 import static config.Config.ALLOCAREGS;
 import static config.Config.COMMENTNASM;
 import static nasm.Utils.BasicBlockRenamer;
+import static nasm.Utils.GetPReg;
 import static nasm.Utils.GlobalRenamer;
+import static nasm.inst.Oprt.Op.ADD;
+import static nasm.inst.Oprt.Op.SUB;
+import static nasm.reg.PhysicalReg.PhyRegType.rsp;
 
 /** Translate IR to NASM assembly with infinite registers.
  * This AsmBuilder will contain comments, delete them later. */
@@ -65,9 +72,12 @@ public class AsmBuilder {
 			// if asmFunct is main, call _init_ first.
 			if (asmfunct.name.equals("main")) {
 				int cnt = 0;
-				asmfunct.bbs.get(0).insts.add(cnt++, new Msg(asmfunct.bbs.get(0), "BEGIN args pass\n"));
-				asmfunct.bbs.get(0).insts.add(cnt++, new Msg(asmfunct.bbs.get(0), "END args pass\n"));
-				asmfunct.bbs.get(0).insts.add(cnt++, new Call(asmfunct.bbs.get(0), "_init_", Boolean.FALSE));
+				AsmBB cur = asmfunct.bbs.get(0);
+				cur.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(0), cur, SUB));
+				cur.insts.add(cnt++, new Msg(cur, "BEGIN args pass\n"));
+				cur.insts.add(cnt++, new Msg(cur, "END args pass\n"));
+				cur.insts.add(cnt++, new Call(cur, "_init_", Boolean.FALSE));
+				cur.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(0), cur, ADD));
 			}
 
 			translator.ArgsVirtualize();
@@ -77,6 +87,7 @@ public class AsmBuilder {
 			asmfunct.CalcStackOffset();
 			translator.CallerCalleeSave();
 			translator.AddPrologue();
+			translator.AddEpilogue();
 			if (!COMMENTNASM)
 				asmFuncts.values().forEach(Utils::DelMsg);
 		}
