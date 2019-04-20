@@ -10,12 +10,14 @@ public class BasicBlock {
 	public List<Quad> quads = new LinkedList<>();
 	public boolean complete = false;
 	public IrFunct parentFunct;
+	public Integer loopLevel = null;
 	
 	public BasicBlock prev, next;
 	
-	public BasicBlock(String name, IrFunct parentFunct) {
+	public BasicBlock(String name, IrFunct parentFunct, Integer loopLevel) {
 		this.name = name;
 		this.parentFunct = parentFunct;
 		this.prev = this.next = null;
+		this.loopLevel = loopLevel;
 	}
 }

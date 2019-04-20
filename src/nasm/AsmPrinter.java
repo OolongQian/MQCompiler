@@ -11,6 +11,7 @@ import java.io.*;
 import java.util.Map;
 import java.util.Set;
 
+import static com.sun.tools.javac.util.StringUtils.toLowerCase;
 import static ir.Utility.unescape;
 import static nasm.Utils.StringLiteralRenamer;
 
@@ -82,7 +83,7 @@ public class AsmPrinter {
 		TEXT, DATA, bss
 	}
 	public void PrintSection (SECTION sec) {
-		fout.println("SECTION ." + sec.name());
+		fout.println("SECTION ." + toLowerCase(sec.name()));
 		fout.println();
 	}
 	

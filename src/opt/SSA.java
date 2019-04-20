@@ -499,7 +499,8 @@ public class SSA {
 	
 	// create basic block and change quads in corresponding BB.
 	private BasicBlock CreateSplit(BasicBlock from, BasicBlock to, Map<BasicBlock, ParallelCopy> copies) {
-		BasicBlock split = new BasicBlock(cFun.GetBBName("split"), cFun);
+		assert from.loopLevel != null;
+		BasicBlock split = new BasicBlock(cFun.GetBBName("split"), cFun, from.loopLevel);
 		// create copy.
 		ParallelCopy copy = new ParallelCopy();
 		copy.blk = split;

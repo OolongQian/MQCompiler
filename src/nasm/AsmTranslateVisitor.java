@@ -116,6 +116,8 @@ public class AsmTranslateVisitor {
 		cur.insts.add(new Mov (GetPReg(rdx), new Imm(0), cur));
 		// issue idiv divider, to conduct idiv.
 		cur.insts.add(new Oprt(null, GetAsmReg(quad.src2), cur, Oprt.Op.IDIV));
+		// FIXME : separate assign for isDiv is ugly.
+		((Oprt) cur.insts.get(cur.insts.size() - 1)).isDiv = quad.op == DIV;
 		// quotient is stored in rax, remainder is in rdx
 		cur.insts.add(new Mov(GetAsmReg(quad.ans),
 						(quad.op == DIV) ? GetPReg(rax) : GetPReg(rdx),
@@ -172,18 +174,8 @@ public class AsmTranslateVisitor {
 
 	// FIXME : we haven't cared about caller-save and callee-save registers.
 	public void visit (ir.quad.Call quad) {
-		
-		if (CALLERSAVE) {
-			Say(cur, "BEGIN caller save\n");
-			// push caller-save registers
-			for (int j = 0; j < PhysicalReg.callerSave.size(); ++j)
-				cur.insts.add(new Push(GetPReg(PhysicalReg.callerSave.get(j)), cur));
-			Say(cur, "END caller save\n");
-		}
-		
-			Say(cur, "BEGIN args pass\n");
-
 		// follow the calling convention to put the args into suitable registers.
+		Say(cur, "BEGIN args pass\n");
 		int i;
 		for (i = 0; i < 6 && i < quad.args.size(); ++i)
 			cur.insts.add(new Mov (GetPReg(PhysicalReg.regArgsPass.get(i)), GetAsmReg(quad.args.get(i)), cur));
@@ -210,22 +202,13 @@ public class AsmTranslateVisitor {
 		}
 		// if is built-in function, do translation.
 		String asmFunctName = (quad.funcName.startsWith("~")) ? BuiltinRenamer(quad.funcName) : quad.funcName;
-		cur.insts.add(new Call(cur, asmFunctName));
+		cur.insts.add(new Call(cur, asmFunctName, !quad.ret.name.equals("@null")));
 		// add rsp for reset.
 		cur.insts.add(new Oprt (GetPReg(rsp), new Imm(stackArgsOffset), cur, ADD));
 		
 		// move rax result back into the return register.
 		if (!quad.ret.name.equals("@null"))
 			cur.insts.add(new Mov (GetAsmReg(quad.ret), GetPReg(rax), cur));
-		
-		if (CALLERSAVE) {
-			Say(cur, "BEGIN caller restore\n");
-			// pop caller-save registers out.
-			for (int j = PhysicalReg.callerSave.size() - 1; j >= 0; --j)
-				cur.insts.add(new Pop (GetPReg(PhysicalReg.callerSave.get(j)), cur));
-			
-			Say(cur, "END caller restore\n");
-		}
 	}
 	
 	public void visit (Branch quad) {
@@ -288,6 +271,15 @@ public class AsmTranslateVisitor {
 	public void AddEpilogue () {
 		Say (cur, "BEGIN epilogue\n");
 		
+		if (curf.stackLocalOffset != null) {
+			// align stack frame by adding offset divisible by 16.
+			assert curf.stackLocalOffset % 16 == 0;
+			cur.insts.add(new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), cur, Oprt.Op.ADD));
+		} else {
+			// to print nasm before register allocation.
+			cur.insts.add(new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), cur, Oprt.Op.ADD));
+		}
+
 		if (CALLEESAVE) {
 			Say (cur, "BEGIN restore callee save\n");
 			// restore callee-save registers.
@@ -328,20 +320,7 @@ public class AsmTranslateVisitor {
 		return new Reg(((ir.structure.Reg) irReg).name);
 	}
 	
-	// when getting a physical register, we are not directly creating a physical register. But create
-	// a pre-colored temp virtual register.
-	public AsmReg GetPReg (PhysicalReg.PhyRegType phyReg) {
-		Reg tmpVReg = new Reg ("v" + phyReg.name());
-		tmpVReg.AllocReg(new PhysicalReg(phyReg));
-		return tmpVReg;
-	}
-	
-	public AsmReg GetPReg (String hintName, PhysicalReg.PhyRegType phyReg) {
-		Reg tmpVReg = new Reg ("v" + phyReg.name());
-		tmpVReg.AllocReg(new PhysicalReg(hintName, phyReg));
-		return tmpVReg;
-	}
-	
+
 	private Reg GetTmpReg () {
 		return cur.parentFunct.GetTmpReg();
 	}
@@ -357,7 +336,7 @@ public class AsmTranslateVisitor {
 		// start from 0 because prologue hasn't been added.
 		int cnt = 0;
 
-		Say (head, cnt++, "BEGIN args pass:\n");
+		Say (head, cnt++, "BEGIN args virtual:\n");
 		
 		for (int i = 0; i < 6 && i < curf.argNames.size(); ++i)
 			head.insts.add(cnt++, new Mov(new Reg(curf.argNames.get(i)), GetPReg(PhysicalReg.regArgsPass.get(i)), head));
@@ -370,7 +349,7 @@ public class AsmTranslateVisitor {
 			head.insts.add(cnt++, new nasm.inst.Load (new Reg(curf.argNames.get(i)), laterArg, head));
 		}
 		
-		Say (head, cnt++, "END args pass\n\n");
+		Say (head, cnt++, "END args virtual\n\n");
 	}
 	
 	/** Change inst code based on the result of register allocation, conduct the modifications
@@ -394,7 +373,42 @@ public class AsmTranslateVisitor {
 			}
 		}
 	}
+	
+	
+	public void CallerCalleeSave() {
+		if (CALLERSAVE) {
+			for (AsmBB bb : curf.bbs) {
+				for (int i = 0; i < bb.insts.size(); ++i) {
+					if (!(bb.insts.get(i) instanceof Call)) continue;
+					
+					int savePos = i;
+					while (true) {
+						if (bb.insts.get(savePos) instanceof Msg && ((Msg) bb.insts.get(savePos)).msg.equals("BEGIN args pass\n"))
+							break;
+						savePos--;
+					}
+					
+					Say(bb, savePos++, "BEGIN caller save\n");
+					++i;
+					// push caller-save registers
+					for (int j = 0; j < PhysicalReg.callerSave.size(); ++j) {
+						bb.insts.add(savePos++, new Push(GetPReg(PhysicalReg.callerSave.get(j)), cur));
+						++i;
+					}
+					Say(bb, savePos++, "END caller save\n");
+					++i;
+					
+					Say(bb, ++i, "BEGIN caller restore\n");
+					// pop caller-save registers out.
+					for (int j = PhysicalReg.callerSave.size() - 1; j >= 0; --j)
+						bb.insts.add(++i, new Pop(GetPReg(PhysicalReg.callerSave.get(j)), cur));
+					
+					Say(bb, ++i, "END caller restore\n");
+				}
+			}
+		}
 		
+	}
 		/*
 		// change inst when register allocation gives invalid operations.
 		for (AsmBB bb : curf.bbs) {

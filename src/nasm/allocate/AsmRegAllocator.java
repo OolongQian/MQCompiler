@@ -2,6 +2,7 @@ package nasm.allocate;
 
 import nasm.AsmBB;
 import nasm.AsmFunct;
+import nasm.AsmPrinter;
 import nasm.inst.*;
 import nasm.live.LivenessAnalysis;
 import nasm.reg.PhysicalReg;
@@ -14,6 +15,7 @@ import java.util.*;
 import static config.Config.DEBUGPRINT_INTERFERE;
 import static config.Config.DEBUGPRINT_INTERFERE_GRAPHVIZ;
 import static config.Config.DEBUGPRINT_LIVENESS;
+import static java.lang.Double.max;
 import static nasm.Utils.*;
 import static nasm.reg.PhysicalReg.REGNUM;
 
@@ -38,26 +40,33 @@ public class AsmRegAllocator {
 	 */
 	AsmFunct curf;
 	
+	private int allocCnt = 0;
+	
 	public void AllocateRegister(AsmFunct asmFunct) {
 		ctx = new AsmAllocateContext();
 		liveAnalyzer = new LivenessAnalysis();
 		liveAnalyzer.ConfigLiveOut(ctx.liveOuts);
 		
 		curf = asmFunct;
-		ScanPreColoredAndInitial();
+		ScanPreColored_Initial_Heuristic();
+		
+//		System.out.println(String.format("Alloca %d times. vregs number : %d\n", allocCnt++, ctx.initial.size()));
+		
 		liveAnalyzer.LivenessAnalyze(curf);
 			if (DEBUGPRINT_LIVENESS)
 				liveAnalyzer.PrintLiveness();
 		BuildInterference();
 			if (DEBUGPRINT_INTERFERE)
 				ctx.PrintGraph(curf);
-//			try {
-//				if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
-//					ctx.Graphviz(curf);
-//			} catch (FileNotFoundException e) {
-//				throw new RuntimeException();
-//			}
+
 		MakeWorklists();
+		
+		try {
+			if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
+				ctx.Graphviz(curf, true);
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException();
+		}
 		
 		do {
 			if (!ctx.simplifyWorklist.isEmpty())
@@ -76,7 +85,7 @@ public class AsmRegAllocator {
 		
 		try {
 			if (DEBUGPRINT_INTERFERE_GRAPHVIZ)
-				ctx.Graphviz(curf);
+				ctx.Graphviz(curf, false);
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException();
 		}
@@ -94,10 +103,12 @@ public class AsmRegAllocator {
 	
 	// scan pre-colored virtual register and record them into context.
 	// collect all temporary registers, not pre-colored and not yet processed.
-	private void ScanPreColoredAndInitial() {
+	private void ScanPreColored_Initial_Heuristic() {
+//		AsmPrinter printer = new AsmPrinter();
 		// tmp list for registers.
-		for (AsmBB bb : curf.bbs)
+		for (AsmBB bb : curf.bbs) {
 			for (Inst inst : bb.insts) {
+//				printer.Print (inst);
 				for (Reg vreg : GetVregs(inst)) {
 					if (vreg.isColored()) {
 						ctx.precolored.put(vreg.hintName, vreg.color.phyReg);
@@ -107,19 +118,54 @@ public class AsmRegAllocator {
 						ctx.initial.add(vreg.hintName);
 				}
 			}
+		}
+		
+		ctx.heuristicUse.clear();
+		ctx.heuristicDef.clear();
+		for (String vreg : ctx.initial) {
+			// smooth term
+			ctx.heuristicDef.put(vreg, 1.0);
+			ctx.heuristicUse.put(vreg, 0.0);
+		}
+		for (AsmBB bb : curf.bbs) {
+			for (Inst inst : bb.insts) {
+				for (Reg reg : GetDefs(inst)) {
+					String vreg = reg.hintName;
+					if (ctx.precolored.containsKey(vreg)) continue;
+					assert ctx.heuristicDef.containsKey(vreg);
+					ctx.heuristicDef.put(vreg, ctx.heuristicDef.get(vreg) + Math.pow(10.0, bb.loopLevel) * 1);
+				}
+				for (Reg reg : GetUses(inst)) {
+					String vreg = reg.hintName;
+					if (ctx.precolored.containsKey(vreg)) continue;
+					assert ctx.heuristicUse.containsKey(vreg);
+					ctx.heuristicUse.put(vreg, ctx.heuristicUse.get(vreg) + Math.pow(10.0, bb.loopLevel) * 1);
+				}
+			}
+			
+		}
 	}
 
 	// traverse quad in reverse order. Every time a virtual register is defined, it interferes
 	// with other current living virtual registers.
 	// some subtle details are present in this pseudo code, but we don't care.
 	private void BuildInterference() {
+		AsmPrinter printer = new AsmPrinter();
+		
 		for (AsmBB bb : curf.bbs) {
 			Set<String> live = ctx.liveOuts.get(bb);
+			
+//			System.out.println("interfere building reverse-traversal");
+//			System.out.println(bb.hintName + ": ");
 			
 			// reverse traversal current bb.
 			for (int i = bb.insts.size() - 1; i >= 0; --i) {
 				// for mov instruction, it doesn't actually create interfere.
 				Inst inst = bb.insts.get(i);
+				
+//				printer.Print (inst);
+//				live.forEach(x -> System.out.print(x + " "));
+//				System.out.println();
 				
 				Set<String> use = new HashSet<>();
 				GetUses(inst).forEach(x -> use.add(x.hintName));
@@ -311,20 +357,59 @@ public class AsmRegAllocator {
 		// select node to be spilled using favorite heuristic.
 		// NOTE : avoid choosing nodes that are the tiny live ranges resulting
 		// NOTE : from the fetches of previously spilled registers.
+		String spilled = HeuristicDefUse();
+		
+		assert ctx.spillWorklist.contains(spilled);
+		ctx.spillWorklist.remove(spilled);
+		ctx.simplifyWorklist.add(spilled);
+		
+		FreezeMoves(spilled);
+	}
+	
+	// heuristics used by SelectSpill
+	private String HeuristicRandom () {
 		Iterator<String> iter = ctx.spillWorklist.iterator();
 		int heuristicIndex = (int) (Math.random()*(ctx.spillWorklist.size()));
 		for (int i = 0; i < heuristicIndex; ++i) {
 			assert iter.hasNext();
 			iter.next();
 		}
-		
 		assert iter.hasNext();
-		String spilled = iter.next();
+		return iter.next();
+	}
+	
+	private String HeuristicMaxDegree() {
+		String spilled = null;
+		int maxDegree = 0;
+		for (Iterator<String> iter = ctx.spillWorklist.iterator(); iter.hasNext() ; ) {
+			String str = iter.next();
+			if (maxDegree < ctx.itfg.GetDegree(str)) {
+				maxDegree = ctx.itfg.GetDegree(str);
+				spilled = str;
+			}
+		}
+		return spilled;
+	}
+	
+	private String HeuristicDefUse () {
+		double maxHeur = -1;
+		for (String str : ctx.spillWorklist) {
+//			if (str.startsWith("spl"))
+//				continue;
+			assert ctx.heuristicUse.containsKey(str);
+			assert ctx.heuristicDef.containsKey(str);
+			maxHeur = max(maxHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
+		}
+		assert maxHeur != -1;
 		
-		ctx.spillWorklist.remove(spilled);
-		ctx.simplifyWorklist.add(spilled);
+		List<String> spillWaitlist = new LinkedList<>();
+		for (String str : ctx.spillWorklist) {
+			if (Math.abs(maxHeur - (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str))) < 1e-1)
+				spillWaitlist.add(str);
+		}
 		
-		FreezeMoves(spilled);
+		int badluck = (int) (Math.random()*(spillWaitlist.size()));
+		return spillWaitlist.get(badluck);
 	}
 	
 	private void AssignColors() {
@@ -332,11 +417,7 @@ public class AsmRegAllocator {
 			String n = ctx.selectStack.pop();
 			Set<PhysicalReg.PhyRegType> okColors = new HashSet<>(PhysicalReg.okColors);
 			// exclude adjacent colors in interference graph.
-			Set<String> debug = ctx.itfg.GetAdjList(n);
-			Map<String, PhysicalReg.PhyRegType> colored = ctx.colors;
-			
 			for (String w : ctx.itfg.GetAdjList(n)) {
-				String alias = GetAlias(w);
 				if (ctx.coloredNodes.contains(GetAlias(w)) || ctx.precolored.containsKey(GetAlias(w)))
 					okColors.remove(ctx.colors.get(GetAlias(w)));
 			}
@@ -356,7 +437,9 @@ public class AsmRegAllocator {
 		}
 	}
 	
+	private int cnt = 0;
 	private void RewriteProgram() {
+		System.err.println(Integer.toString(cnt++));
 		// allocate memory locations for each spilledNodes.
 		// create a new temporary vi for each definition and each use.
 		// in the program (instructions), insert a store after each definition

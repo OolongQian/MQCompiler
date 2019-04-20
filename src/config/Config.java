@@ -13,7 +13,7 @@ public class Config {
 	public static final boolean CALLEESAVE = true;
 	public static final boolean COMMENTNASM = false;
 	
-	public static final boolean DEBUGPRINT_LIVENESS = true;
+	public static final boolean DEBUGPRINT_LIVENESS = false;
 	public static final boolean DEBUGPRINT_INTERFERE = false;
 	public static final boolean DEBUGPRINT_INTERFERE_GRAPHVIZ = false;
 	public static final boolean DEBUGPRINT_VIRTUAL = false;

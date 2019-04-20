@@ -7,6 +7,7 @@ import ir.structure.Reg;
 import ir.structure.StringLiteral;
 import nasm.allocate.AsmRegAllocator;
 import nasm.inst.Call;
+import nasm.inst.Msg;
 import nasm.reg.GlobalMem;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,7 +52,7 @@ public class AsmBuilder {
 			
 			// create and translate each basic block.
 			for (BasicBlock cur = irFunct.bbs.list.Head(); cur != null; cur = cur.next) {
-				AsmBB asmCur = new AsmBB(BasicBlockRenamer(cur), asmfunct);
+				AsmBB asmCur = new AsmBB(BasicBlockRenamer(cur), asmfunct, cur.loopLevel);
 				asmfunct.bbs.add(asmCur);
 				translator.ConfigAsmBB(asmCur);
 				translator.TranslateQuadList(cur.quads);
@@ -62,14 +63,19 @@ public class AsmBuilder {
 			
 			// do technical function routine.
 			// if asmFunct is main, call _init_ first.
-			if (asmfunct.name.equals("main"))
-				asmfunct.bbs.get(0).insts.add(0, new Call(asmfunct.bbs.get(0), "_init_"));
+			if (asmfunct.name.equals("main")) {
+				int cnt = 0;
+				asmfunct.bbs.get(0).insts.add(cnt++, new Msg(asmfunct.bbs.get(0), "BEGIN args pass\n"));
+				asmfunct.bbs.get(0).insts.add(cnt++, new Msg(asmfunct.bbs.get(0), "END args pass\n"));
+				asmfunct.bbs.get(0).insts.add(cnt++, new Call(asmfunct.bbs.get(0), "_init_", Boolean.FALSE));
+			}
 
 			translator.ArgsVirtualize();
 			translator.x86_FormCheck();
 			if (ALLOCAREGS)
 				allocator.AllocateRegister(asmfunct);
 			asmfunct.CalcStackOffset();
+			translator.CallerCalleeSave();
 			translator.AddPrologue();
 			if (!COMMENTNASM)
 				asmFuncts.values().forEach(Utils::DelMsg);

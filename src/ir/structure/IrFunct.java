@@ -38,7 +38,7 @@ public class IrFunct {
 	
 	public IrFunct(String name) {
 		this.name = name;
-		BasicBlock entry = new BasicBlock(GetBBName("entry"), this);
+		BasicBlock entry = new BasicBlock(GetBBName("entry"), this, 0);
 		bbs.list.PushBack(entry);
 		curBB = entry;
 	}

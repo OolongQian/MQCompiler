@@ -19,6 +19,7 @@ import semantic.Semanticar;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
+import static config.Config.DEBUGPRINT_VIRTUAL;
 import static config.Config.TEST;
 
 public class Main {
@@ -74,7 +75,10 @@ public class Main {
 	
   public static void main(String[] args) throws Exception {
 	  if (!TEST) {
-		  IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm.asm");
+	  	if (DEBUGPRINT_VIRTUAL)
+		    IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm_virtual.asm");
+		  else
+		  	IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm.asm");
 		  IrInterp("Mx_ir.txt");
 	  }
 	  else {

@@ -414,9 +414,10 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Store(iter, initAddr));
 		// ctx.CompleteCurBB();
 		
-		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "arrCond_n");
-		BasicBlock then = ctx.NewBBAfter(cond, "arrThen_n");
-		BasicBlock after = ctx.NewBBAfter(then, "arrAfter_n");
+		assert ctx.cFun.curBB.loopLevel != null;
+		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "arrCond_n", ctx.cFun.curBB.loopLevel);
+		BasicBlock then = ctx.NewBBAfter(cond, "arrThen_n", ctx.cFun.curBB.loopLevel + 1);
+		BasicBlock after = ctx.NewBBAfter(then, "arrAfter_n", ctx.cFun.curBB.loopLevel);
 		
 		// when we haven't exceed the array to be constructed, continue to stay in then BB.
 		ctx.SetCurBB(cond);
@@ -628,13 +629,15 @@ public class Builder extends AstBaseVisitor<Void> {
 			logicVars.push(logi);
 			
 			// create merge collector block.
-			BasicBlock merge = ctx.NewBBAfter(ctx.cFun.curBB, "merge");
+			assert ctx.cFun.curBB.loopLevel != null;
+			BasicBlock merge = ctx.NewBBAfter(ctx.cFun.curBB, "merge", ctx.cFun.curBB.loopLevel);
 			node.ifTrue = merge;
 			node.ifFalse = merge;
 			
 			// distribute jump target.
+			assert ctx.cFun.curBB.loopLevel != null;
 			String opStr = (node.op.equals("&&")) ? "and_" : "or_";
-			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs");
+			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs", ctx.cFun.curBB.loopLevel);
 			PushDownTargetBB(node, rhsBB);
 			// child evaluation and record jump target&value pair.
 			ChildEvaluation(node.lhs);
@@ -653,8 +656,9 @@ public class Builder extends AstBaseVisitor<Void> {
 		}
 		else {
 			// distribute jump target.
+			assert ctx.cFun.curBB.loopLevel != null;
 			String opStr = (node.op.equals("&&")) ? "and_" : "or_";
-			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs");
+			BasicBlock rhsBB = ctx.NewBBAfter(ctx.cFun.curBB, opStr + "rhs", ctx.cFun.curBB.loopLevel);
 			PushDownTargetBB(node, rhsBB);
 			
 			// downstream evaluation, and record jump target&value pair.
@@ -710,9 +714,10 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(IfStm node) {
-		BasicBlock then = ctx.NewBBAfter(ctx.cFun.curBB, "ifThen");
-		BasicBlock merge = ctx.NewBBAfter(then, "ifMerge");
-		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "ifElse") : merge;
+		assert ctx.cFun.curBB.loopLevel != null;
+		BasicBlock then = ctx.NewBBAfter(ctx.cFun.curBB, "ifThen", ctx.cFun.curBB.loopLevel);
+		BasicBlock merge = ctx.NewBBAfter(then, "ifMerge", ctx.cFun.curBB.loopLevel);
+		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "ifElse", ctx.cFun.curBB.loopLevel) : merge;
 		
 		// condition may set us to curBB or mergeBB, we resume to genIR.
 		node.cond.Accept(this);
@@ -746,10 +751,10 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(WhileStm node) {
-		
-		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "whileCond");
-		BasicBlock step = ctx.NewBBAfter(cond, "whileStep");
-		BasicBlock after = ctx.NewBBAfter(step, "whileAfter");
+		assert ctx.cFun.curBB.loopLevel != null;
+		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "whileCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock step = ctx.NewBBAfter(cond, "whileStep", ctx.cFun.curBB.loopLevel + 1);
+		BasicBlock after = ctx.NewBBAfter(step, "whileAfter", ctx.cFun.curBB.loopLevel);
 		ctx.RecordLoop(cond, after);
 		// ctx.CompleteCurBB();
 		
@@ -781,9 +786,10 @@ public class Builder extends AstBaseVisitor<Void> {
 		}
 		// ctx.CompleteCurBB();
 		
-		BasicBlock check = ctx.NewBBAfter(ctx.cFun.curBB, "forCond");
-		BasicBlock step = ctx.NewBBAfter(check, "forStep");
-		BasicBlock after = ctx.NewBBAfter(step, "forAfter");
+		assert ctx.cFun.curBB.loopLevel != null;
+		BasicBlock check = ctx.NewBBAfter(ctx.cFun.curBB, "forCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock step = ctx.NewBBAfter(check, "forStep", ctx.cFun.curBB.loopLevel + 1);
+		BasicBlock after = ctx.NewBBAfter(step, "forAfter", ctx.cFun.curBB.loopLevel);
 		ctx.RecordLoop(check, after);
 		
 		ctx.SetCurBB(check);

@@ -68,12 +68,8 @@ public class AsmFunct {
 				if (inst.dst instanceof StackMem && ((StackMem) inst.dst).ebpOffset == null)
 					worklist.add((StackMem) inst.dst);
 				
-				if (inst.src instanceof StackMem && ((StackMem) inst.src).ebpOffset == null) {
-					if (((StackMem) inst.src).varHintName.equals("qpow_alloca_1")) {
-						int a = 1;
-					}
+				if (inst.src instanceof StackMem && ((StackMem) inst.src).ebpOffset == null)
 					worklist.add((StackMem) inst.src);
-				}
 				
 				// Cmp's extra is Reg. Don't consider.
 			}

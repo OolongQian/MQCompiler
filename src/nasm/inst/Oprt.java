@@ -15,6 +15,7 @@ public class Oprt extends Inst {
 		NEG, BIT_NOT
 	}
 	public Op op;
+	public Boolean isDiv = null;
 	
 	public Oprt(AsmReg dst, AsmReg src, AsmBB blk, Op op) {
 		super(dst, src, blk);

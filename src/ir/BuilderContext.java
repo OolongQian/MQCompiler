@@ -93,10 +93,10 @@ public class BuilderContext {
 	 * Create a BB after specified BB.
 	 * It will be renamed to avoid naming issue.
 	 * */
-	public BasicBlock NewBBAfter(BasicBlock bb, String name) {
+	public BasicBlock NewBBAfter(BasicBlock bb, String name, Integer newLoopLevel) {
 		assert cFun == bb.parentFunct;
 		String renameBB = cFun.GetBBName(name);
-		BasicBlock nb = new BasicBlock(renameBB, bb.parentFunct);
+		BasicBlock nb = new BasicBlock(renameBB, bb.parentFunct, newLoopLevel);
 		
 		cFun.bbs.list.InsertAfter(bb, nb);
 		return nb;

@@ -58,6 +58,8 @@ public class PhysicalReg {
 //		callerSave.add(rax);
 		callerSave.add(rcx);
 		callerSave.add(rdx);
+		callerSave.add(rsi);
+		callerSave.add(rdi);
 		callerSave.add(r8);
 		callerSave.add(r9);
 		callerSave.add(r10);

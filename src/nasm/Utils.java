@@ -2,12 +2,18 @@ package nasm;
 
 import ir.structure.BasicBlock;
 import nasm.inst.*;
+import nasm.reg.AsmReg;
+import nasm.reg.PhysicalReg;
 import nasm.reg.Reg;
+import sun.security.action.GetPropertyAction;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static nasm.reg.PhysicalReg.PhyRegType.rax;
+import static nasm.reg.PhysicalReg.PhyRegType.rdx;
 
 public class Utils {
 	public static void DelMsg (AsmFunct asmFunct) {
@@ -65,6 +71,21 @@ public class Utils {
 		return builtin2Extern.get(fName);
 	}
 	
+	// when getting a physical register, we are not directly creating a physical register. But create
+	// a pre-colored temp virtual register.
+	public static AsmReg GetPReg (PhysicalReg.PhyRegType phyReg) {
+		Reg tmpVReg = new Reg ("v" + phyReg.name());
+		tmpVReg.AllocReg(new PhysicalReg(phyReg));
+		return tmpVReg;
+	}
+	
+	public static AsmReg GetPReg (String hintName, PhysicalReg.PhyRegType phyReg) {
+		Reg tmpVReg = new Reg ("v" + phyReg.name());
+		tmpVReg.AllocReg(new PhysicalReg(hintName, phyReg));
+		return tmpVReg;
+	}
+	
+	
 	public static List<Reg> GetUses (Inst inst) {
 		List<Reg> uses = new LinkedList<>();
 		
@@ -75,13 +96,17 @@ public class Utils {
 		}
 		else if (inst instanceof Jmp) { }
 		else if (inst instanceof Lea) {
-			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
+//			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
 		else if (inst instanceof Mov) {
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
 		else if (inst instanceof Oprt) {
+			if (((Oprt) inst).op == Oprt.Op.IDIV) {
+				uses.add((Reg) GetPReg(rax));
+				uses.add((Reg) GetPReg(rdx));
+			}
 			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
@@ -109,7 +134,10 @@ public class Utils {
 	public static List<Reg> GetDefs (Inst inst) {
 		List<Reg> defs = new LinkedList<>();
 		
-		if (inst instanceof Call) { }
+		if (inst instanceof Call) {
+			// add a virtual rax register.
+			if (((Call) inst).ret) defs.add((Reg) GetPReg(rax));
+		}
 		else if (inst instanceof Cmp) {
 			if (((Cmp) inst).flagReg instanceof Reg) defs.add(((Cmp) inst).flagReg);
 		}
@@ -121,7 +149,13 @@ public class Utils {
 			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
 		}
 		else if (inst instanceof Oprt) {
-			if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+			// idiv is strange.
+			if (((Oprt) inst).op == Oprt.Op.IDIV) {
+				if (((Oprt) inst).isDiv) defs.add((Reg) GetPReg(rax));
+				else defs.add((Reg) GetPReg(rdx));
+			}
+			else if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
+			
 		}
 		else if (inst instanceof Msg) { }
 		else if (inst instanceof Pop) {
@@ -208,6 +242,11 @@ public class Utils {
 			}
 		}
 		else if (inst instanceof Store) {
+			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
+				assert !((Reg) inst.dst).isColored();
+				((Reg) inst.dst).hintName = new_;
+				changed = true;
+			}
 			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
 				assert !((Reg) inst.src).isColored();
 				((Reg) inst.src).hintName = new_;

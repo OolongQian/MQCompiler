@@ -1,5 +1,6 @@
 package nasm.allocate;
 
+import com.sun.tools.corba.se.idl.InterfaceGen;
 import nasm.AsmBB;
 import nasm.AsmFunct;
 import nasm.inst.Mov;
@@ -48,6 +49,11 @@ public class AsmAllocateContext {
 	public Set<String> coloredNodes = new LinkedHashSet<>(); 
 	// stack containing temporaries removed from graph. (due to simplification or something else).
 	public Stack<String> selectStack = new Stack<>();
+	
+	/**************** Heuristic ****************************/
+	public Map<String, Double> heuristicUse = new HashMap<>();
+	public Map<String, Double> heuristicDef = new HashMap<>();
+	
 	/*********************** Other data structures *************************/
 	// a map from a node to the list of moves it is associated with.
 	private Map<String, Set<Mov>> movelists = new HashMap<>();
@@ -96,8 +102,9 @@ public class AsmAllocateContext {
 		System.out.println();
 	}
 	
-	public void Graphviz(AsmFunct curFunct) throws FileNotFoundException {
-		String filepath = String.format("./g%s.dot", curFunct.name);
+	public void Graphviz(AsmFunct curFunct, boolean beforeAlloca) throws FileNotFoundException {
+		String filepath = (beforeAlloca) ? String.format("./bef_%s.dot", curFunct.name) :
+																		String.format("./aft_%s.dot", curFunct.name);
 		itfg.Graphviz(filepath, curFunct.name);
 	}
 }

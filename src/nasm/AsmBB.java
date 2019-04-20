@@ -11,10 +11,11 @@ public class AsmBB {
 	public String hintName;
 	public AsmFunct parentFunct;
 	public List<Inst> insts = new LinkedList<>();
+	public Integer loopLevel = null;
 	
-	public AsmBB (String hintName, AsmFunct parent) {
+	public AsmBB (String hintName, AsmFunct parent, Integer loopLevel) {
 		this.hintName = hintName;
 		this.parentFunct = parent;
+		this.loopLevel = loopLevel;
 	}
-	
 }
