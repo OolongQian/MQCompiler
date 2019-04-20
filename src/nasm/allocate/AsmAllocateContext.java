@@ -1,6 +1,5 @@
 package nasm.allocate;
 
-import com.sun.tools.corba.se.idl.InterfaceGen;
 import nasm.AsmBB;
 import nasm.AsmFunct;
 import nasm.inst.Mov;

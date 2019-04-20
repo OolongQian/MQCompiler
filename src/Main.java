@@ -100,7 +100,7 @@ public class Main {
 		  checker.Config(prog);
 		  checker.SemanticCheck();
 		
-		  // don't output ir in test. 
+		  // don't output ir in test.
 //		  String irFilePath = "ir.txt";
 		  BuilderContext irCtx = new BuilderContext(checker.functTable);
 		  ir.Builder irBuilder = new ir.Builder(irCtx);

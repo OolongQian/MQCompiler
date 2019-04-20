@@ -96,11 +96,11 @@ public class AsmBuilder {
 	public void Print (AsmPrinter printer) throws Exception {
 		printer.PrintExtern();
 		printer.PrintHeaders(asmFuncts, globalMems);
-		printer.PrintSection(AsmPrinter.SECTION.TEXT);
+		printer.PrintSection(AsmPrinter.SECTION.text);
 		for (AsmFunct asmFunct : asmFuncts.values()) {
 			printer.Print(asmFunct);
 		}
-		printer.PrintSection(AsmPrinter.SECTION.DATA);
+		printer.PrintSection(AsmPrinter.SECTION.data);
 		printer.PrintStringLabels(strings);
 		printer.PrintSection(AsmPrinter.SECTION.bss);
 		printer.PrintGVar(globalMems);

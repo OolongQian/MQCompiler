@@ -5,7 +5,6 @@ import nasm.inst.*;
 import nasm.reg.AsmReg;
 import nasm.reg.PhysicalReg;
 import nasm.reg.Reg;
-import sun.security.action.GetPropertyAction;
 
 import java.util.HashMap;
 import java.util.LinkedList;
