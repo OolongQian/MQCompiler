@@ -194,11 +194,11 @@ public class Utils {
 		}
 		else if (inst instanceof Jmp) { }
 		else if (inst instanceof Lea) {
-			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
-				assert !((Reg) inst.dst).isColored();
-				((Reg) inst.dst).hintName = new_;
-				changed = true;
-			}
+//			if (inst.dst instanceof Reg && ((Reg) inst.dst).hintName.equals(old)) {
+//				assert !((Reg) inst.dst).isColored();
+//				((Reg) inst.dst).hintName = new_;
+//				changed = true;
+//			}
 			if (inst.src instanceof Reg && ((Reg) inst.src).hintName.equals(old)) {
 				assert !((Reg) inst.src).isColored();
 				((Reg) inst.src).hintName = new_;

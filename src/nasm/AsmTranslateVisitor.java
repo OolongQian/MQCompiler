@@ -248,8 +248,12 @@ public class AsmTranslateVisitor {
 	}
 	
 	public void visit (Store quad) {
-		// we need to dererence.
-		cur.insts.add(new nasm.inst.Store(GetAsmReg(quad.dst), GetAsmReg(quad.src), cur));
+		// we need to dereference.
+		// if store @null, just store 0.
+		if (quad.src instanceof ir.structure.Reg && ((ir.structure.Reg) quad.src).name.equals("@null"))
+			cur.insts.add(new nasm.inst.Store(GetAsmReg(quad.dst), new Imm(0), cur));
+		else
+			cur.insts.add(new nasm.inst.Store(GetAsmReg(quad.dst), GetAsmReg(quad.src), cur));
 	}
 	
 	public void visit (Load quad) {
@@ -317,8 +321,12 @@ public class AsmTranslateVisitor {
 			return str;
 		}
 		assert irReg instanceof ir.structure.Reg;
-		if (((ir.structure.Reg) irReg).name.startsWith("@"))
+		if (((ir.structure.Reg) irReg).name.startsWith("@")) {
+			// handle null value.
+			if (((ir.structure.Reg) irReg).name.equals("@null"))
+				return new Imm(0);
 			return new GlobalMem(GlobalRenamer(((ir.structure.Reg) irReg).name));
+		}
 		
 		// return the register with effective address of assigned stackMem.
 //		if (allocated.contains(((ir.structure.Reg) irReg).name))
@@ -389,6 +397,7 @@ public class AsmTranslateVisitor {
 			for (AsmBB bb : curf.bbs) {
 				for (int i = 0; i < bb.insts.size(); ++i) {
 					if (!(bb.insts.get(i) instanceof Call)) continue;
+					Call call = (Call) bb.insts.get(i);
 					
 					int savePos = i;
 					while (true) {
@@ -396,6 +405,8 @@ public class AsmTranslateVisitor {
 							break;
 						savePos--;
 					}
+					// caller save before 'SUB rsp offset', which adjust stack alignment, and args passing behind it.
+					savePos--;
 					
 					Say(bb, savePos++, "BEGIN caller save\n");
 					++i;
@@ -404,12 +415,23 @@ public class AsmTranslateVisitor {
 						bb.insts.add(savePos++, new Push(GetPReg(PhysicalReg.callerSave.get(j)), cur));
 						++i;
 					}
+					// if function has null return value, note that rax is not defined by it, thus we need to make it caller-save.
+					assert call.ret != null;
+					if (!call.ret)
+						bb.insts.add(savePos++, new Push(GetPReg(rax), cur));
+					
 					Say(bb, savePos++, "END caller save\n");
 					++i;
 					
-					// skip 'ADD rsp, offset'.
+					// skip 'ADD rsp, offset', which restores positive stack arguments passing.
+					// stack args has to be right after Call.
 					++i;
 					Say(bb, ++i, "BEGIN caller restore\n");
+					// rax is the last preserved, thus first restored.
+					assert call.ret != null;
+					if (!call.ret)
+						bb.insts.add(++i, new Pop(GetPReg(rax), cur));
+					
 					// pop caller-save registers out.
 					for (int j = PhysicalReg.callerSave.size() - 1; j >= 0; --j)
 						bb.insts.add(++i, new Pop(GetPReg(PhysicalReg.callerSave.get(j)), cur));
