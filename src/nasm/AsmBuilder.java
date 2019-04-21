@@ -19,9 +19,7 @@ import java.util.Set;
 
 import static config.Config.ALLOCAREGS;
 import static config.Config.COMMENTNASM;
-import static nasm.Utils.BasicBlockRenamer;
-import static nasm.Utils.GetPReg;
-import static nasm.Utils.GlobalRenamer;
+import static nasm.Utils.*;
 import static nasm.inst.Oprt.Op.ADD;
 import static nasm.inst.Oprt.Op.SUB;
 import static nasm.reg.PhysicalReg.PhyRegType.rsp;
@@ -53,7 +51,7 @@ public class AsmBuilder {
 		for (IrFunct irFunct : ir.functs.values()) {
 			
 			// create and config asmfunct
-			AsmFunct asmfunct = new AsmFunct(irFunct.name, irFunct.regArgs);
+			AsmFunct asmfunct = new AsmFunct(FunctRenamer(irFunct.name), irFunct.regArgs);
 			asmFuncts.put(asmfunct.name, asmfunct);
 			translator.ConfigAsmFunct(asmfunct);
 			

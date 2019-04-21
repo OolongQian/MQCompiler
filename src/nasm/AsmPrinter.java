@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static ir.Utility.unescape;
+import static nasm.Utils.FunctRenamer;
 import static nasm.Utils.StringLiteralRenamer;
 
 public class AsmPrinter {
@@ -28,7 +29,7 @@ public class AsmPrinter {
 	public void PrintHeaders (Map<String, AsmFunct> functs, Map<String, GlobalMem> globals) {
 		for (String s : functs.keySet())
 			if (!s.equals("_init_"))
-				fout.println("global " + s);
+				fout.println("global " + FunctRenamer(s));
 		
 		for (GlobalMem gMem : globals.values())
 			fout.println("global " + gMem.hintName);

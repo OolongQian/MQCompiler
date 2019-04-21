@@ -37,7 +37,7 @@ public class Utils {
 	// rename basic block's name to be AsmBB, attach parentFunction to it.
 	// and again, rename Basic block name in jump.
 	public static String BasicBlockRenamer (BasicBlock bb) {
-		return String.format("_B_%s_%s", bb.name.substring(1), bb.parentFunct.name);
+		return String.format("_B_%s_%s", bb.name.substring(1), FunctRenamer(bb.parentFunct.name));
 	}
 	
 	// change @a to _G_a.
@@ -65,9 +65,16 @@ public class Utils {
 		builtin2Extern.put("~-string#eq", "_stringLe");
 		builtin2Extern.put("~-string#ne", "_stringGe");
 	}
-	public static String BuiltinRenamer (String fName) {
-		assert builtin2Extern.containsKey(fName);
-		return builtin2Extern.get(fName);
+	public static String FunctRenamer (String fName) {
+		if (fName.startsWith("~")) {
+			assert builtin2Extern.containsKey(fName);
+			return builtin2Extern.get(fName);
+		}
+		else {
+			fName = fName.replace('-', '_');
+			fName = fName.replace('#', '_');
+			return fName;
+		}
 	}
 	
 	// when getting a physical register, we are not directly creating a physical register. But create

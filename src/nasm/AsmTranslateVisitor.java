@@ -201,7 +201,7 @@ public class AsmTranslateVisitor {
 			cur.insts.add(subRspPos, new Oprt (GetPReg(rsp), new Imm(0), cur, SUB));
 		}
 		// if is built-in function, do translation.
-		String asmFunctName = (quad.funcName.startsWith("~")) ? BuiltinRenamer(quad.funcName) : quad.funcName;
+		String asmFunctName = FunctRenamer(quad.funcName);
 		cur.insts.add(new Call(cur, asmFunctName, !quad.ret.name.equals("@null")));
 		// add rsp for reset.
 		cur.insts.add(new Oprt (GetPReg(rsp), new Imm(stackArgsOffset), cur, ADD));
