@@ -150,8 +150,8 @@ public class Utils {
 		else if (inst instanceof Oprt) {
 			// idiv is strange.
 			if (((Oprt) inst).op == Oprt.Op.IDIV) {
-				if (((Oprt) inst).isDiv) defs.add((Reg) GetPReg(rax));
-				else defs.add((Reg) GetPReg(rdx));
+				defs.add((Reg) GetPReg(rax));
+				defs.add((Reg) GetPReg(rdx));
 			}
 			else if (inst.dst instanceof Reg) defs.add((Reg) inst.dst);
 			

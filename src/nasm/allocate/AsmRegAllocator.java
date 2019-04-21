@@ -457,7 +457,7 @@ public class AsmRegAllocator {
 					
 					boolean addStore = false;
 					if (defs.size() > 0) {
-						assert defs.size() == 1;
+						assert defs.size() == 1 || inst instanceof Oprt && ((Oprt) inst).op == Oprt.Op.IDIV;
 						// need to add a store, if the defined virtual register is spilled.
 						addStore = spl.equals(defs.get(0).hintName);
 					}
