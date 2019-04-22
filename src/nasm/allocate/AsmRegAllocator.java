@@ -408,7 +408,8 @@ public class AsmRegAllocator {
 				spillWaitlist.add(str);
 		}
 		
-		int badluck = (int) (Math.random()*(spillWaitlist.size()));
+//		int badluck = (int) (Math.random()*(spillWaitlist.size()));
+		int badluck = spillWaitlist.size() - 1;
 		return spillWaitlist.get(badluck);
 	}
 	
