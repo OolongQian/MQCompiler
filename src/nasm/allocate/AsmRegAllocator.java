@@ -45,8 +45,8 @@ public class AsmRegAllocator {
 	
 	public void AllocateRegister(AsmFunct asmFunct) {
 		
-		AsmPrinter printer = new AsmPrinter();
-		printer.Print(asmFunct);
+//		AsmPrinter printer = new AsmPrinter();
+//		printer.Print(asmFunct);
 		
 		
 		ctx = new AsmAllocateContext();
