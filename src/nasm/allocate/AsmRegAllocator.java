@@ -1,5 +1,6 @@
 package nasm.allocate;
 
+import ir.Printer;
 import nasm.AsmBB;
 import nasm.AsmFunct;
 import nasm.AsmPrinter;
@@ -43,6 +44,11 @@ public class AsmRegAllocator {
 	private int allocCnt = 0;
 	
 	public void AllocateRegister(AsmFunct asmFunct) {
+		
+		AsmPrinter printer = new AsmPrinter();
+		printer.Print(asmFunct);
+		
+		
 		ctx = new AsmAllocateContext();
 		liveAnalyzer = new LivenessAnalysis();
 		liveAnalyzer.ConfigLiveOut(ctx.liveOuts);
@@ -124,7 +130,7 @@ public class AsmRegAllocator {
 		ctx.heuristicDef.clear();
 		for (String vreg : ctx.initial) {
 			// smooth term
-			ctx.heuristicDef.put(vreg, 1.0);
+			ctx.heuristicDef.put(vreg, 0.0);
 			ctx.heuristicUse.put(vreg, 0.0);
 		}
 		for (AsmBB bb : curf.bbs) {
@@ -393,12 +399,14 @@ public class AsmRegAllocator {
 	
 	private String HeuristicDefUse () {
 		double maxHeur = -1;
+		boolean existNonSpilled = false;
 		for (String str : ctx.spillWorklist) {
 //			if (str.startsWith("spl"))
 //				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
 			maxHeur = max(maxHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
+			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
 		assert maxHeur != -1;
 		
@@ -409,7 +417,16 @@ public class AsmRegAllocator {
 		}
 		
 //		int badluck = (int) (Math.random()*(spillWaitlist.size()));
-		int badluck = spillWaitlist.size() - 1;
+		int badluck = 0;
+		if (existNonSpilled) {
+			for (int i = spillWaitlist.size() - 1; i >= 0; --i)
+				if (!spillWaitlist.get(i).startsWith("spl")) {
+					badluck = i;
+					break;
+				}
+		} else {
+			badluck = spillWaitlist.size() - 1;
+		}
 		return spillWaitlist.get(badluck);
 	}
 	
