@@ -10,7 +10,9 @@ import java.util.Set;
 
 public class ParallelCopy extends Quad {
 	
-	public Set<Store> copies = new HashSet<>();
+//	public Set<Store> copies = new HashSet<>();
+	
+	public Set<Mov> copies = new HashSet<>();
 	
 	@Override
 	public void ReplaceUse(Reg v, IrValue val) {

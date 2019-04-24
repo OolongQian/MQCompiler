@@ -596,6 +596,9 @@ public class Interpreter {
 							break;
 					}
 				}
+				if (ans == null) {
+					int a = 1;
+				}
 				assert ans != null;
 				binAns.SetValue(ans);
 		}

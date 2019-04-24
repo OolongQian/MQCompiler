@@ -467,9 +467,16 @@ public class SSA {
 			}
 			while (!phisList.isEmpty()) {
 				// alloca a mem address for the phi to load.
-				Phi phi = phisList.poll();
-				Reg phiDst = ReplacePhiByLoad(phi);
-				InsertCopies(splitsCopies, phiDst, phi);
+				Phi phi = phisList.remove();
+				// note : we turn phi to mov, and insert mov at suitable places.
+//				Reg phiDst = ReplacePhiByLoad(phi);
+				// remove phi node.
+				// and don't have to load here, because phi destination has been copied in predecessors.
+				phi.blk.quads.remove(phi);
+				// insert moves in predecessors in the split parallel copies.
+				Reg phiDst = phi.var;
+				InsertMoves (splitsCopies, phiDst, phi);
+//				InsertCopies(splitsCopies, phiDst, phi);
 			}
 		}
 		SequentializeParallelCopies();
@@ -487,14 +494,88 @@ public class SSA {
 			cur = cur.next;
 		}
 		
+		// transform previous simple approach by parallel copy sequentialization.
+		// note : here we sequentialize the pcopy.
+		while (!copies.isEmpty()) {
+			ParallelCopy pcopy = copies.remove();
+			cur = pcopy.blk;
+			
+			List<Mov> seq = new LinkedList<>();
+			
+			while (!AllTrivialCopy(pcopy)) {
+				Mov copy = null;
+				for (Mov move : pcopy.copies)
+					if (!TrivialCopy(move) && !ExistNonTrivialDstuse(pcopy, move)) {
+						copy = move;
+						break;
+					}
+				if (copy != null) {
+					// exist, append to seq.
+					seq.add(copy);
+					pcopy.copies.remove(copy);
+				} else {
+					// pcopy is only made-up of cycles; break one of them.
+					// not a <- a, we need a <- b
+					Mov nonself = null;
+					for (Mov move : pcopy.copies)
+						if (!TrivialCopy(move)) {
+							nonself = move;
+							break;
+						}
+					
+					assert nonself != null;
+					assert nonself.src instanceof Reg;
+					Reg brkCycle = new Reg(String.format("clc_%s_%s", ((Reg) nonself.src).name, cFun.name));
+					// create a' <- a.
+					Mov loopBrker = new Mov(brkCycle, nonself.src);
+					loopBrker.blk = cur;
+					seq.add(loopBrker);
+					// replace b <- a into b <- a' in pcopy.
+					nonself.src = brkCycle;
+				}
+			}
+			
+			// ok, now add sequentialized copies.
+			int pcopyIndex = cur.quads.indexOf(pcopy);
+			for (Mov copy : seq)
+				cur.quads.add(pcopyIndex++, copy);
+			cur.quads.remove(pcopy);
+		}
+		/*
 		while (!copies.isEmpty()) {
 			ParallelCopy pcopy = copies.remove();
 			cur = pcopy.blk;
 			int pcopyIndex = cur.quads.indexOf(pcopy);
-			for (Store copy : (pcopy).copies)
-				cur.quads.add(pcopyIndex+1, copy);
+			// FIXME : stores in pcopy has been updated to moves.
+//			for (Store copy : (pcopy).copies)
+//				cur.quads.add(pcopyIndex+1, copy);
 			cur.quads.remove(pcopy);
 		}
+		*/
+	}
+	
+	// logic methods used by copy sequentialization.
+	private boolean ExistNonTrivialDstuse (ParallelCopy pcopy, Mov move) {
+		assert !TrivialCopy(move);
+		// this copy is b <- a. Check there doesn't exist c <- b.
+		for (Mov mov : pcopy.copies) {
+			if (mov.src instanceof Reg &&
+							((Reg) mov.src).name.equals(move.dst.name) && // use b
+							!TrivialCopy(mov))  // not trivial
+				return true;
+		}
+		return false;
+	}
+	
+	private boolean AllTrivialCopy (ParallelCopy pcopy) {
+		for (Mov copy : pcopy.copies)
+			if (!TrivialCopy(copy))
+				return false;
+		return true;
+	}
+	
+	private boolean TrivialCopy (Mov copy) {
+		return copy.src instanceof Reg && copy.dst.name.equals(((Reg) copy.src).name);
 	}
 	
 	// create basic block and change quads in corresponding BB.
@@ -533,7 +614,20 @@ public class SSA {
 //						Mov move = new Mov(phi.var, phi.options.get(from));
 //						move.blk = null;
 			assert copies.containsKey(from);
-			copies.get(from).copies.add(phiAssign);
+			// NOTE : parallel copy's pcopy data structure has been changed to Set<Mov> instead of Set<Store>.
+//			copies.get(from).copies.add(phiAssign);
+		}
+	}
+	
+	private void InsertMoves (Map<BasicBlock, ParallelCopy> copies, Reg phiDst, Phi phi) {
+		for (BasicBlock from : phi.options.keySet()) {
+			// create 'move' for phi node.
+			Mov phiMove = new Mov(phiDst, phi.options.get(from));
+			phiMove.blk = from;
+			// add these moves to predecessors' pcopy via 'copies' map.
+			// pcopies will be sequentialized later on.
+			assert copies.containsKey(from);
+			copies.get(from).copies.add(phiMove);
 		}
 	}
 	// alloca a mem addr for phi to load
@@ -541,6 +635,7 @@ public class SSA {
 		BasicBlock entry = cFun.bbs.list.Head();
 		BasicBlock cur = phi.blk;
 
+		// create a new phiDst, and insert an alloca.
 		Reg phiDst = cFun.GetReserveReg(phi.var.name + "phi_dst");
 		Alloca phiAlloca = new Alloca(phiDst);
 		phiAlloca.blk = entry;

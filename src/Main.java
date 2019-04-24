@@ -48,13 +48,13 @@ public class Main {
 		
 		SSA ssaBuilder = new SSA();
 		ssaBuilder.BuildSSA(irProg);
-		ssaBuilder.OptimSSA(irProg);
+//		ssaBuilder.OptimSSA(irProg);
 		ssaBuilder.DestructSSA(irProg);
 //		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
 		irProg.BuildCFG();
 	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
-	  CopyPropagator copy = new CopyPropagator();
-	  copy.PropagateCopy();
+//	  CopyPropagator copy = new CopyPropagator();
+//	  copy.PropagateCopy();
 		
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
