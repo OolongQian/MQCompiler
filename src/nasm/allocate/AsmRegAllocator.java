@@ -16,7 +16,9 @@ import java.util.*;
 import static config.Config.DEBUGPRINT_INTERFERE;
 import static config.Config.DEBUGPRINT_INTERFERE_GRAPHVIZ;
 import static config.Config.DEBUGPRINT_LIVENESS;
+import static java.lang.Double.MAX_VALUE;
 import static java.lang.Double.max;
+import static java.lang.Double.min;
 import static nasm.Utils.*;
 import static nasm.reg.PhysicalReg.REGNUM;
 
@@ -44,6 +46,7 @@ public class AsmRegAllocator {
 	private int allocCnt = 0;
 	
 	public void AllocateRegister(AsmFunct asmFunct) {
+		
 		
 //		AsmPrinter printer = new AsmPrinter();
 //		printer.Print(asmFunct);
@@ -100,6 +103,7 @@ public class AsmRegAllocator {
 		if (!ctx.spilledNodes.isEmpty()) {
 			RewriteProgram();
 			AllocateRegister(asmFunct);
+			return ;
 		}
 		
 		// attach color map in allocateContext to Reg in nasm instructions.
@@ -147,7 +151,6 @@ public class AsmRegAllocator {
 					ctx.heuristicUse.put(vreg, ctx.heuristicUse.get(vreg) + Math.pow(10.0, bb.loopLevel) * 1);
 				}
 			}
-			
 		}
 	}
 
@@ -155,7 +158,6 @@ public class AsmRegAllocator {
 	// with other current living virtual registers.
 	// some subtle details are present in this pseudo code, but we don't care.
 	private void BuildInterference() {
-		AsmPrinter printer = new AsmPrinter();
 		
 		for (AsmBB bb : curf.bbs) {
 			Set<String> live = ctx.liveOuts.get(bb);
@@ -168,6 +170,7 @@ public class AsmRegAllocator {
 				// for mov instruction, it doesn't actually create interfere.
 				Inst inst = bb.insts.get(i);
 				
+//				AsmPrinter printer = new AsmPrinter();
 //				printer.Print (inst);
 //				live.forEach(x -> System.out.print(x + " "));
 //				System.out.println();
@@ -194,8 +197,12 @@ public class AsmRegAllocator {
 				
 				// defined virtual register interferes with all living virtual register.
 				for (String d : def)
-					for (String l : live)
+					for (String l : live) {
+						if (d.startsWith("spl_") || l.startsWith("spl_")) {
+							int a =1;
+						}
 						AddInterEdge(d, l);
+					}
 				
 				live.removeIf(def::contains);
 				live.addAll(use);
@@ -253,11 +260,6 @@ public class AsmRegAllocator {
 			u = x; v = y;
 		}
 		
-		
-		if (u.equals("!$i(0)[3]") || v.equals("!$i(0)[3]")) {
-			int a = 1;
-		}
-
 		if (u.equals(v)) {
 			ctx.coalescedMoves.add(mov);
 			AddWorklist(u);
@@ -363,7 +365,7 @@ public class AsmRegAllocator {
 		// NOTE : avoid choosing nodes that are the tiny live ranges resulting
 		// NOTE : from the fetches of previously spilled registers.
 		String spilled = HeuristicDefUse();
-		
+
 		assert ctx.spillWorklist.contains(spilled);
 		ctx.spillWorklist.remove(spilled);
 		ctx.simplifyWorklist.add(spilled);
@@ -397,21 +399,21 @@ public class AsmRegAllocator {
 	}
 	
 	private String HeuristicDefUse () {
-		double maxHeur = -1;
+		double minHeur = MAX_VALUE;
 		boolean existNonSpilled = false;
 		for (String str : ctx.spillWorklist) {
 //			if (str.startsWith("spl"))
 //				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
-			maxHeur = max(maxHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
+			minHeur = min(minHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
 			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
-		assert maxHeur != -1;
+		assert minHeur != MAX_VALUE;
 		
 		List<String> spillWaitlist = new LinkedList<>();
 		for (String str : ctx.spillWorklist) {
-			if (Math.abs(maxHeur - (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str))) < 1e-1)
+			if (Math.abs(minHeur - (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str))) < 1e-1)
 				spillWaitlist.add(str);
 		}
 		
@@ -448,8 +450,6 @@ public class AsmRegAllocator {
 		}
 		
 		for (String coale : ctx.coalescedNodes) {
-			String alias = GetAlias(coale);
-			PhysicalReg.PhyRegType color = ctx.colors.get(alias);
 			ctx.colors.put(coale, ctx.colors.get(GetAlias(coale)));
 		}
 	}
@@ -640,13 +640,15 @@ public class AsmRegAllocator {
 						ctx.itfg.HasAdjSet(t, r);
 	}
 	
+	// FIXME !!!
 	// use conservative coalesce strategy.
 	private boolean Conservative(Set<String> vregs) {
-		int k = 0;
-		for (String vreg : vregs)
-			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
-				++k;
-		return k < REGNUM;
+		return vregs.size() < REGNUM;
+//		int k = 0;
+//		for (String vreg : vregs)
+//			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
+//				++k;
+//		return k < REGNUM;
 	}
 	
 	// simple union-find set

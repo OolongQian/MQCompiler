@@ -55,7 +55,7 @@ public class PhysicalReg {
 	
 	public static List<PhyRegType> callerSave = new LinkedList<>();
 	static {
-//		callerSave.add(rax);
+		callerSave.add(rax);
 		callerSave.add(rcx);
 		callerSave.add(rdx);
 		callerSave.add(rsi);

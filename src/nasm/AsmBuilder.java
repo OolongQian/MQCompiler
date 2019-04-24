@@ -80,10 +80,10 @@ public class AsmBuilder {
 
 			translator.ArgsVirtualize();
 			translator.x86_FormCheck();
+			translator.CalleeSave();
 			if (ALLOCAREGS)
 				allocator.AllocateRegister(asmfunct);
 			asmfunct.CalcStackOffset();
-			translator.CallerCalleeSave();
 			translator.AddPrologue();
 			translator.AddEpilogue();
 			if (!COMMENTNASM)

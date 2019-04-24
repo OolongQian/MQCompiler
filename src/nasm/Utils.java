@@ -130,7 +130,10 @@ public class Utils {
 			if (inst.dst instanceof Reg) uses.add((Reg) inst.dst);
 			if (inst.src instanceof Reg) uses.add((Reg) inst.src);
 		}
-		else if (inst instanceof Ret) { }
+		else if (inst instanceof Ret) {
+			for (PhysicalReg.PhyRegType lee : PhysicalReg.calleeSave)
+				uses.add((Reg) GetPReg(lee));
+		}
 		else {
 			assert false;
 		}
@@ -143,8 +146,8 @@ public class Utils {
 		
 		if (inst instanceof Call) {
 			// add a virtual rax register.
-			if (((Call) inst).ret) defs.add((Reg) GetPReg(rax));
-//			PhysicalReg.callerSave.forEach(x -> defs.add((Reg) GetPReg(x)));
+//			if (((Call) inst).ret) defs.add((Reg) GetPReg(rax));
+			PhysicalReg.callerSave.forEach(x -> defs.add((Reg) GetPReg(x)));
 		}
 		else if (inst instanceof Cmp) {
 			if (((Cmp) inst).flagReg instanceof Reg) defs.add(((Cmp) inst).flagReg);

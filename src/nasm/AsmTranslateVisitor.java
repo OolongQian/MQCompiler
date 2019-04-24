@@ -397,7 +397,28 @@ public class AsmTranslateVisitor {
 	}
 	
 	
-	public void CallerCalleeSave() {
+	// prologue and epilogue are not added.
+	public void CalleeSave() {
+		AsmBB entry = curf.bbs.get(0);
+		int cnt = 0;
+		// upon enter.
+		for (PhysicalReg.PhyRegType lee : PhysicalReg.calleeSave) {
+			Reg tmpLee = new Reg (String.format("lee_%s_%s", lee.name(), curf.name));
+			entry.insts.add(cnt++, new Mov(tmpLee, GetPReg(lee), entry));
+		}
+		
+		// before ret.
+		for (AsmBB bb : curf.bbs) {
+			for (int i = 0 ; i < bb.insts.size(); ++i) {
+				if (bb.insts.get(i) instanceof Ret) {
+					for (PhysicalReg.PhyRegType lee : PhysicalReg.calleeSave) {
+						Reg tmpLee = new Reg (String.format("lee_%s_%s", lee.name(), curf.name));
+						bb.insts.add(i++, new Mov(GetPReg(lee), tmpLee, bb));
+					}
+				}
+			}
+		}
+		
 		if (CALLERSAVE) {
 			for (AsmBB bb : curf.bbs) {
 				for (int i = 0; i < bb.insts.size(); ++i) {
