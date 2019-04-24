@@ -31,4 +31,9 @@ public class StackMem extends AsmReg {
 		else
 			return String.format("[rbp+%d]", -this.ebpOffset);
 	}
+	
+	@Override
+	public String GetVreg() {
+		return varHintName;
+	}
 }

@@ -469,16 +469,38 @@ public class AsmRegAllocator {
 				for (int i = 0; i < bb.insts.size(); ++i) {
 					Inst inst = bb.insts.get(i);
 					
+					// add spl spl.
+					// spl can be simultaneously used and defed in a single instruction.
+					// we first replace use. load use and create new tmp register to rewrite the instruction as :
+					// load vreg spl_stack. add vreg vreg.
+					// then, we will have to store the result, because the spilled vreg is also defined.
+					
+					// if def won't be rewritten : add spl vreg. we create a tmp register to hold spl, and store tmp to spl_stack.
+					// if def has been rewritten by a vreg -> add vreg vreg in use replacement, we just store that vreg to spl_stack.
 					List<Reg> uses = GetUses(inst);
 					List<Reg> defs = GetDefs(inst);
 					
 					boolean addStore = false;
-					
-					// need to add a store, if the defined virtual register is spilled.
-					for (Reg def : defs)
+					for (Reg def : defs) {
 						if (def.hintName.equals(spl))
 							addStore = true;
-					
+					}
+					// FIXME : multiple load is redundant.
+					/*
+					boolean splUsed = false;
+					for (Reg use : uses)
+						if (use.hintName.equals(spl)) {
+							splUsed = true;
+							break;
+						}
+					if (splUsed) {
+						// now, since current use is spilled, allocate a stack address for it.
+						StackMem splStack = new StackMem(String.format("stpl_%s_stack", spl));
+						// create tmp rewritten virtual register and load it.
+						Reg vspl = new Reg (ctx.GetNewTempforSpilled(curf, use));
+					}
+					*/
+					Set<String> rewritten = new HashSet<>();
 					for (Reg use : uses) {
 						if (spl.equals(use.hintName)) {
 							// now, since current use is spilled, allocate a stack address for it.
@@ -487,47 +509,32 @@ public class AsmRegAllocator {
 							Reg vspl = new Reg(ctx.GetNewTempforSpilled(curf, use));
 							bb.insts.add(i++, new Load(vspl, splStack, bb));
 							use.hintName = vspl.hintName;
+							
+							rewritten.add(vspl.hintName);
 						}
 					}
 					
-					/*
-					for (Reg use : uses) {
-						// if use is spilled, create a virtual register,
-						// load it in advance, and load it.
-						if (spl.equals(use.hintName)) {
-							String splTmp = ctx.GetNewTempforSpilled(curf, use);
-							StackMem spilled = new StackMem(spl + "stack");
-							bb.insts.add(i++, new Load(use, spilled, bb));
-							ReplaceUses(inst, use.hintName, splTmp);
-						}
-					}
-					*/
-					
+					int cnt = 0;
 					if (addStore) {
-						int cnt = 0;
 						for (Reg def : defs) {
+							assert cnt == 0;
+							// if def hasn't been rewritten by usage, rewrite it by a tmp register and add a store.
 							if (def.hintName.equals(spl)) {
-								// one instruction can only define spilled register once.
-								assert cnt == 0;
 								StackMem splStack = new StackMem(String.format("spl_%s_stack", spl));
 								Reg vspl = new Reg(ctx.GetNewTempforSpilled(curf, def));
 								def.hintName = vspl.hintName;
 								bb.insts.add(++i, new Mov (splStack, vspl, bb));
 								++cnt;
 							}
+							else {
+								assert rewritten.contains(def.hintName);
+								StackMem splStack = new StackMem(String.format("spl_%s_stack", spl));
+								bb.insts.add(++i, new Mov (splStack, def, bb));
+								++cnt;
+							}
 						}
-						/*
-						assert defs.size() == 1;
-						Reg def = defs.get(0);
-						
-						// if current def's name has been changed by use... no extra virtual register is needed.
-						// if current def's name is still spl, an extra virtual register is needed to hold the
-						// nasm calculated value, and then store the vreg into stackMem.
-						if (spl.equals(def.hintName))
-							def.hintName = ctx.GetNewTempforSpilled(curf, def);
-						bb.insts.add(++i, new Mov(new StackMem(spl), def, bb));
-						*/
 					}
+					
 				}
 			}
 		}

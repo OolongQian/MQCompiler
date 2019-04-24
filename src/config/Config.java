@@ -18,6 +18,8 @@ public class Config {
 	public static final boolean DEBUGPRINT_INTERFERE_GRAPHVIZ = false;
 	public static final boolean DEBUGPRINT_VIRTUAL = false;
 	
+	public static final boolean DEBUGPRINT_VREG = false;
+	
 	// for object null type.
 	// for primitive type, will be optimized.
 	public static final int NULL = 0;

@@ -39,5 +39,10 @@ public class Reg extends AsmReg {
 			// has allocated, return physical register name.
 			return color.GetPhyName();
 	}
+	
+	@Override
+	public String GetVreg() {
+		return hintName;
+	}
 }
 

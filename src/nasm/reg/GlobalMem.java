@@ -22,4 +22,9 @@ public class GlobalMem extends AsmReg {
 		else
 			return String.format("qword [rel %s]", hintName);
 	}
+	
+	@Override
+	public String GetVreg() {
+		return hintName;
+	}
 }

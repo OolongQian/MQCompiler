@@ -11,6 +11,7 @@ import java.io.*;
 import java.util.Map;
 import java.util.Set;
 
+import static config.Config.DEBUGPRINT_VREG;
 import static ir.Utility.unescape;
 import static nasm.Utils.FunctRenamer;
 import static nasm.Utils.StringLiteralRenamer;
@@ -110,11 +111,24 @@ public class AsmPrinter {
 			assert asm.dst.GetText().equals("rax");
 			PrintLine("movzx", "rax", "al");
 		}
-		else
-			PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
+		else {
+			if (DEBUGPRINT_VREG)
+				PrintLine("mov", asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			else
+				PrintLine("mov", asm.dst.GetText(), asm.src.GetText());
+		}
 	}
 	
 	public void Print (Oprt asm) {
+		if (DEBUGPRINT_VREG) {
+			if (asm.dst == null)
+				PrintLine(asm.op.name(), asm.src.GetText(), ";", asm.src.GetVreg());
+			else if (asm.src == null)
+				PrintLine(asm.op.name(), asm.dst.GetText(), ";", asm.dst.GetVreg());
+			else
+				PrintLine(asm.op.name(), asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			return ;
+		}
 		if (asm.dst == null)
 			PrintLine(asm.op.name(), asm.src.GetText());
 		else if (asm.src == null)
@@ -128,11 +142,17 @@ public class AsmPrinter {
 	}
 	
 	public void Print (Push asm) {
-		PrintLine("push", asm.src.GetText());
+		if (DEBUGPRINT_VREG)
+			PrintLine("push", asm.src.GetText(), ";", asm.src.GetVreg());
+		else
+			PrintLine("push", asm.src.GetText());
 	}
 	
 	public void Print (Pop asm) {
-		PrintLine("pop", asm.dst.GetText());
+		if (DEBUGPRINT_VREG)
+			PrintLine("pop", asm.dst.GetText(), ";", asm.dst.GetVreg());
+		else
+			PrintLine("pop", asm.dst.GetText());
 	}
 	
 	public void Print (Ret asm) {
@@ -140,7 +160,10 @@ public class AsmPrinter {
 	}
 	
 	public void Print (Cmp asm) {
-		PrintLine("cmp", asm.dst.GetText(), asm.src.GetText());
+		if (DEBUGPRINT_VREG)
+			PrintLine("cmp", asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+		 else
+			PrintLine("cmp", asm.dst.GetText(), asm.src.GetText());
 		// if jump directly, no need to do this routine.
 		if (!asm.jmp) {
 			String lowerReg = PhysicalReg.wide2lower.get(asm.flagReg.color.phyReg);
@@ -156,6 +179,14 @@ public class AsmPrinter {
 	
 	// can load from regs or globals
 	public void Print (Load asm) {
+		if (DEBUGPRINT_VREG) {
+			if (asm.src instanceof Reg)
+				PrintLine("mov", asm.dst.GetText(), String.format("[%s]", asm.src.GetText()), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			else
+				PrintLine("mov", asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			return ;
+		}
+		
 		if (asm.src instanceof Reg)
 			PrintLine("mov", asm.dst.GetText(), String.format("[%s]", asm.src.GetText()));
 		else
@@ -164,6 +195,13 @@ public class AsmPrinter {
 	
 	// can store into usual reg or globals.
 	public void Print (Store asm) {
+		if (DEBUGPRINT_VREG) {
+			if (asm.dst instanceof Reg)
+				PrintLine("mov", String.format("qword [%s]", asm.dst.GetText()), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			else
+				PrintLine("mov", asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			return ;
+		}
 		if (asm.dst instanceof Reg)
 			PrintLine("mov", String.format("qword [%s]", asm.dst.GetText()), asm.src.GetText());
 		else
@@ -171,6 +209,10 @@ public class AsmPrinter {
 	}
 	
 	public void Print (Lea asm) {
+		if (DEBUGPRINT_VREG) {
+			PrintLine("lea", asm.dst.GetText(), ((StackMem) asm.src).GetLeaText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
+			return ;
+		}
 		PrintLine("lea", asm.dst.GetText(), ((StackMem) asm.src).GetLeaText());
 	}
 	
@@ -181,8 +223,15 @@ public class AsmPrinter {
 	/******************* Utility ***************************/
 	protected void PrintLine(String inst, String... args) {
 		StringBuilder line = new StringBuilder(String.format("\t\t%-8s", inst));
+		boolean comment = false;
 		for (int i = 0; i < args.length; ++i) {
-			if (i != 0) line.append(", ");
+			if (args[i].equals(";")) comment = true;
+			if (i != 0) {
+				if (!comment)
+					line.append(", ");
+				else
+					line.append(" ") ;
+			}
 			line.append(args[i]);
 		}
 		fout.println(line.toString());

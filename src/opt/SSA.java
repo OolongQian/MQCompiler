@@ -540,8 +540,8 @@ public class SSA {
 	private Reg ReplacePhiByLoad(Phi phi) {
 		BasicBlock entry = cFun.bbs.list.Head();
 		BasicBlock cur = phi.blk;
-		
-		Reg phiDst = cFun.GetReserveReg("phi_dst");
+
+		Reg phiDst = cFun.GetReserveReg(phi.var.name + "phi_dst");
 		Alloca phiAlloca = new Alloca(phiDst);
 		phiAlloca.blk = entry;
 		entry.quads.add(0, phiAlloca);

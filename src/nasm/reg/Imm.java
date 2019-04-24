@@ -11,4 +11,9 @@ public class Imm extends AsmReg {
 	public String GetText() {
 		return Integer.toString(imm);
 	}
+	
+	@Override
+	public String GetVreg() {
+		return GetText();
+	}
 }
