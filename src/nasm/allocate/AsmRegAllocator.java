@@ -48,7 +48,6 @@ public class AsmRegAllocator {
 //		AsmPrinter printer = new AsmPrinter();
 //		printer.Print(asmFunct);
 		
-		
 		ctx = new AsmAllocateContext();
 		liveAnalyzer = new LivenessAnalysis();
 		liveAnalyzer.ConfigLiveOut(ctx.liveOuts);
@@ -474,24 +473,50 @@ public class AsmRegAllocator {
 					List<Reg> defs = GetDefs(inst);
 					
 					boolean addStore = false;
-					if (defs.size() > 0) {
-						assert defs.size() == 1 || inst instanceof Oprt && ((Oprt) inst).op == Oprt.Op.IDIV;
-						// need to add a store, if the defined virtual register is spilled.
-						addStore = spl.equals(defs.get(0).hintName);
+					
+					// need to add a store, if the defined virtual register is spilled.
+					for (Reg def : defs)
+						if (def.hintName.equals(spl))
+							addStore = true;
+					
+					for (Reg use : uses) {
+						if (spl.equals(use.hintName)) {
+							// now, since current use is spilled, allocate a stack address for it.
+							StackMem splStack = new StackMem(String.format("spl_%s_stack", spl));
+							// rename virtual register usage and load it.
+							Reg vspl = new Reg(ctx.GetNewTempforSpilled(curf, use));
+							bb.insts.add(i++, new Load(vspl, splStack, bb));
+							use.hintName = vspl.hintName;
+						}
 					}
 					
+					/*
 					for (Reg use : uses) {
 						// if use is spilled, create a virtual register,
 						// load it in advance, and load it.
 						if (spl.equals(use.hintName)) {
 							String splTmp = ctx.GetNewTempforSpilled(curf, use);
-							StackMem spilled = new StackMem(spl);
+							StackMem spilled = new StackMem(spl + "stack");
 							bb.insts.add(i++, new Load(use, spilled, bb));
 							ReplaceUses(inst, use.hintName, splTmp);
 						}
 					}
+					*/
 					
 					if (addStore) {
+						int cnt = 0;
+						for (Reg def : defs) {
+							if (def.hintName.equals(spl)) {
+								// one instruction can only define spilled register once.
+								assert cnt == 0;
+								StackMem splStack = new StackMem(String.format("spl_%s_stack", spl));
+								Reg vspl = new Reg(ctx.GetNewTempforSpilled(curf, def));
+								def.hintName = vspl.hintName;
+								bb.insts.add(++i, new Mov (splStack, vspl, bb));
+								++cnt;
+							}
+						}
+						/*
 						assert defs.size() == 1;
 						Reg def = defs.get(0);
 						
@@ -501,6 +526,7 @@ public class AsmRegAllocator {
 						if (spl.equals(def.hintName))
 							def.hintName = ctx.GetNewTempforSpilled(curf, def);
 						bb.insts.add(++i, new Mov(new StackMem(spl), def, bb));
+						*/
 					}
 				}
 			}

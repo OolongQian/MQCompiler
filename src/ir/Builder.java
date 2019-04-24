@@ -384,16 +384,23 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Binary(exDim, ADD, dim, MakeInt(1)));
 		// multiply INT_SIZE to get the actual offset, use << for efficiency.
 		Reg exDimByte = ctx.cFun.GetTmpReg();
-		ctx.EmplaceInst(new Binary(exDimByte, SHL, exDim, MakeInt(3)));
+		ctx.EmplaceInst(new Binary(exDimByte, MUL, exDim, MakeInt(8)));
 		// malloc mem space, let arrAddr take on the address.
 		ctx.EmplaceInst(new Malloc(arrTmp, exDimByte));
-		// record array dimension after recording, right at the head of malloc_ed mem.
-		ctx.EmplaceInst(new Store(arrTmp, dim));
 		
-		// if there's no other dimensions to create, stop and return.
 		if (dims.isEmpty()) {
+			// if there's no other dimensions to create, stop and return.
+			// clear currently created array to all zero.
+			List<IrValue> args = new LinkedList<>();
+			args.add(arrTmp); args.add(MakeInt(0)); args.add(exDimByte);
+			ctx.EmplaceInst(new Call("~memset", MakeGreg("null"), args));
+			// remember to record the array length.
+			ctx.EmplaceInst(new Store(arrTmp, dim));
 			return arrTmp;
 		}
+		
+		// record array dimension after recording, right at the head of malloc_ed mem.
+		ctx.EmplaceInst(new Store(arrTmp, dim));
 		
 		// otherwise, construct a loop to create pointers for inner dimensions.
 		// collect and store the addresses malloc_ed during sub-problems into currently malloc_ed address.
@@ -478,8 +485,18 @@ public class Builder extends AstBaseVisitor<Void> {
 		
 		// NOTE : These are simple tricks, later we do it.
 		// NOTE : if no offset, no need to get element.
-		
 		Reg elemAddr = ctx.cFun.GetTmpReg();
+//		IrValue acsIndex = GetArithResult(node.subscript);
+//		List<IrValue> args = new LinkedList<>();
+//		args.add(baseAddr);
+//		args.add(acsIndex);
+//		 size per index
+//		args.add(MakeInt(8));
+//		 offset
+//		args.add(MakeInt(8));
+//		ctx.EmplaceInst(new Call("~getElementPointer", elemAddr, args));
+//		node.setIrAddr(elemAddr);
+
 		// FIXME : when we use java convention, all array type element is a pointer or built-in type.
 //		VarTypeRef arrElemType = node.arrInstance.varTypeRef.innerType;
 //		IrValue elemSize = MakeInt(arrElemType.GetTypeSpace());

@@ -168,7 +168,14 @@ public class Printer {
 	}
 	
 	public void print(Store quad) {
-		fout.println("store " + quad.dst.getText() + " " + quad.src.getText());
+		if (quad.dst == null) {
+			int a = 1;
+		}
+		try {
+			fout.println("store " + quad.dst.getText() + " " + quad.src.getText());
+		} catch (NullPointerException e)  {
+			int a = 1;
+		}
 	}
 	
 	public void print(Unary quad) {

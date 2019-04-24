@@ -736,7 +736,17 @@ public class Interpreter {
 				String strcmp2 = mem.LoadStr(strcmpAddr2);
 				System.err.println("compare string not implemented");
 				break;
+			case "memset":
+				System.err.println("memset not implemented");
+				break;
 				
+			case "getElementPointer" :
+				assert args.size() == 4;
+				int base = args.get(0).GetValue();
+				int index = args.get(1).GetValue();
+				int elemSize = args.get(2).GetValue(); assert elemSize == 8;
+				int offset = args.get(3).GetValue(); assert offset == 8;
+				return base + index * elemSize + offset;
 			default:
 				assert false;
 		}

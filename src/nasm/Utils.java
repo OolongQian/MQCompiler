@@ -48,6 +48,7 @@ public class Utils {
 	private static Map<String, String> builtin2Extern = new HashMap<>();
 	static {
 		builtin2Extern.put("~print", "print");
+		builtin2Extern.put("~memset", "memset");
 		builtin2Extern.put("~println", "println");
 		builtin2Extern.put("~getString", "getString");
 		builtin2Extern.put("~getInt", "getInt");

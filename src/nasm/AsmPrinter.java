@@ -65,6 +65,7 @@ public class AsmPrinter {
 	
 	/************************* Extern print ******************************/
 	public void PrintExtern () {
+		fout.println("extern memset");
 		fout.println("extern strcmp");
 		fout.println("extern snprintf");
 		fout.println("extern __stack_chk_fail");

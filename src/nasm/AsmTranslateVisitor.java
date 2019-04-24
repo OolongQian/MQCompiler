@@ -174,6 +174,11 @@ public class AsmTranslateVisitor {
 
 	// FIXME : we haven't cared about caller-save and callee-save registers.
 	public void visit (ir.quad.Call quad) {
+//		if (quad.funcName.equals("~getElementPointer")) {
+//			ProcessGetElementPointer(quad);
+//			return ;
+//		}
+		
 		// follow the calling convention to put the args into suitable registers.
 		int subRspPos = cur.insts.size();
 		Say(cur, "BEGIN args pass\n");
