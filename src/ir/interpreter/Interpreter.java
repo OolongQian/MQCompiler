@@ -740,7 +740,7 @@ public class Interpreter {
 				System.err.println("compare string not implemented");
 				break;
 			case "memset":
-				System.err.println("memset not implemented");
+				// System.err.println("memset not implemented");
 				break;
 				
 			case "getElementPointer" :

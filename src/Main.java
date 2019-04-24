@@ -115,11 +115,11 @@ public class Main {
 		  ssaBuilder.OptimSSA(irProg);
 		  ssaBuilder.DestructSSA(irProg);
 		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
-		  CopyPropagator copy = new CopyPropagator();
-		  copy.PropagateCopy();
+//		  CopyPropagator copy = new CopyPropagator();
+//		  copy.PropagateCopy();
 		
-//		  Printer irPrinter = new Printer(irFilePath);
-//		  irProg.Print(irPrinter);
+		  // Printer irPrinter = new Printer(null);
+		  // irProg.Print(irPrinter);
 		  
 		  AsmBuilder asmer = new AsmBuilder();
 		  asmer.TranslateIr(irProg);
