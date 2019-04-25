@@ -35,8 +35,13 @@ public class Jump extends Quad {
   
   @Override
   public Quad Copy(Map<String, BasicBlock> BBMap) {
-    Jump tmp = new Jump(BBMap.get( target.name + inlinePrefix));
-	  tmp.blk = BBMap.get( blk.name + inlinePrefix);
-    return tmp;
+  	try {
+		  Jump tmp = new Jump(BBMap.get( target.name + inlinePrefix));
+		  tmp.blk = BBMap.get( blk.name + inlinePrefix);
+		  return tmp;
+	  } catch (NullPointerException e) {
+  		int a = 1;
+	  }
+	  return null;
   }
 }

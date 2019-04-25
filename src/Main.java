@@ -51,6 +51,7 @@ public class Main {
 		irProg.LinkedListCheck();
 		
 		ControlFlowCleaner cleaner = new ControlFlowCleaner();
+		cleaner.AppendReturn(irProg);
 		cleaner.ClearBeforeRet(irProg);
 		
 		irProg.LinkedListCheck();
@@ -194,8 +195,8 @@ public class Main {
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();
 		
-		  // Printer irPrinter = new Printer(null);
-		  // irProg.Print(irPrinter);
+//		  Printer irPrinter = new Printer(null);
+//		  irProg.Print(irPrinter);
 		  
 		  AsmBuilder asmer = new AsmBuilder();
 		  asmer.TranslateIr(irProg);
