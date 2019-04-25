@@ -7,13 +7,10 @@ import ir.BuilderContext;
 import ir.IrProg;
 import ir.Printer;
 import ir.interpreter.Interpreter;
-import ir.structure.BasicBlock;
-import ir.structure.IrFunct;
 import nasm.AsmBuilder;
 import nasm.AsmPrinter;
 import opt.SSA;
 import opt.optimizers.ControlFlowCleaner;
-import opt.optimizers.Defuse;
 import opt.optimizers.FunctInliner;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -62,7 +59,7 @@ public class Main {
 		
 		// function inline depends on useless bb elimination.
 		FunctInliner inliner = new FunctInliner();
-		inliner.FunctInline(irProg);
+//		inliner.FunctInline(irProg);
 		
 		irProg.LinkedListCheck();
 		
@@ -195,14 +192,14 @@ public class Main {
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();
 		
-//		  Printer irPrinter = new Printer(null);
-//		  irProg.Print(irPrinter);
+		  Printer irPrinter = new Printer(null);
+		  irProg.Print(irPrinter);
 		  
-		  AsmBuilder asmer = new AsmBuilder();
-		  asmer.TranslateIr(irProg);
-		  AsmPrinter asmPrinter = new AsmPrinter();
-		  asmPrinter.ConfigOutput(null);
-		  asmer.Print(asmPrinter);
+//		  AsmBuilder asmer = new AsmBuilder();
+//		  asmer.TranslateIr(irProg);
+//		  AsmPrinter asmPrinter = new AsmPrinter();
+//		  asmPrinter.ConfigOutput(null);
+//		  asmer.Print(asmPrinter);
 	  }
   }
 }
