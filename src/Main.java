@@ -7,11 +7,14 @@ import ir.BuilderContext;
 import ir.IrProg;
 import ir.Printer;
 import ir.interpreter.Interpreter;
+import ir.structure.BasicBlock;
+import ir.structure.IrFunct;
 import nasm.AsmBuilder;
 import nasm.AsmPrinter;
 import opt.SSA;
-import opt.optimizers.CopyPropagator;
+import opt.optimizers.ControlFlowCleaner;
 import opt.optimizers.Defuse;
+import opt.optimizers.FunctInliner;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -44,20 +47,79 @@ public class Main {
 		ir.Builder irBuilder = new ir.Builder(irCtx);
 		irBuilder.Build(prog);
 		IrProg irProg = irCtx.ir;
+		
+		irProg.LinkedListCheck();
+		
+		ControlFlowCleaner cleaner = new ControlFlowCleaner();
+		cleaner.ClearBeforeRet(irProg);
+		
+		irProg.LinkedListCheck();
+		
+		// clear useless depends on cfg building.
 		irProg.BuildCFG();
+		cleaner.ClearUselessBB(irProg);
+		
+		// function inline depends on useless bb elimination.
+		FunctInliner inliner = new FunctInliner();
+		inliner.FunctInline(irProg);
+		
+		irProg.LinkedListCheck();
 		
 		SSA ssaBuilder = new SSA();
-		ssaBuilder.BuildSSA(irProg);
-//		ssaBuilder.OptimSSA(irProg);
-		ssaBuilder.DestructSSA(irProg);
-//		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
 		irProg.BuildCFG();
-	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
+		ssaBuilder.BuildSSA(irProg);
+		ssaBuilder.OptimSSA(irProg);
+		irProg.BuildCFG();
+		ssaBuilder.DestructSSA(irProg);
+		
+//		ControlFlowCleaner cleaner = new ControlFlowCleaner();
+//		cleaner.ClearBeforeRet(irProg);
+
+//		irProg.LinkedListCheck();
+		
+//		FunctInliner inliner = new FunctInliner();
+//		inliner.FunctInline(irProg);
+
+//		cleaner.ClearUselessBB(irProg);
+		
+//		Printer irPrinter = new Printer(null);
+//		irProg.Print(irPrinter);
+		
+//		irProg.BuildCFG();
+		
+//		for (IrFunct funct : irProg.functs.values()) {
+//			System.out.println("function " + funct.name);
+//			System.out.println("scs");
+//			for (BasicBlock basicBlock : funct.bbs.cfg.successors.keySet()) {
+//				System.out.print(basicBlock.name + " ");
+//				for (BasicBlock block : funct.bbs.cfg.successors.get(basicBlock)) {
+//					System.out.print(block.name + " ");
+//				}
+//				System.out.println();
+//			}
+//			System.out.println("pred");
+//			for (BasicBlock basicBlock : funct.bbs.cfg.predesessors.keySet()) {
+//				System.out.print(basicBlock.name + " ");
+//				for (BasicBlock block : funct.bbs.cfg.predesessors.get(basicBlock)) {
+//					System.out.print(block.name + " ");
+//				}
+//				System.out.println();
+//			}
+//		}
+
+//		irProg.BuildCFG();
+//		ssaBuilder.OptimSSA(irProg);
+		
+		Printer printer = new Printer(ir_dir);
+		irProg.Print(printer);
+
+		
+//		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
+//		irProg.BuildCFG();
+//	  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
 //	  CopyPropagator copy = new CopyPropagator();
 //	  copy.PropagateCopy();
-		
-		Printer irPrinter = new Printer(ir_dir);
-		irProg.Print(irPrinter);
+
 		
 		AsmBuilder asmer = new AsmBuilder();
 		asmer.TranslateIr(irProg);
@@ -108,24 +170,38 @@ public class Main {
 		  ir.Builder irBuilder = new ir.Builder(irCtx);
 		  irBuilder.Build(prog);
 		  IrProg irProg = irCtx.ir;
-		  irProg.BuildCFG();
 		
+		  ControlFlowCleaner cleaner = new ControlFlowCleaner();
+		  cleaner.ClearBeforeRet(irProg);
+		
+		  irProg.LinkedListCheck();
+
+		  // clearUselessBB only used after building cfg.
+		  irProg.BuildCFG();
+		  cleaner.ClearUselessBB(irProg);
+		
+		  FunctInliner inliner = new FunctInliner();
+		  inliner.FunctInline(irProg);
+		  
 		  SSA ssaBuilder = new SSA();
+		  irProg.BuildCFG();
 		  ssaBuilder.BuildSSA(irProg);
 		  ssaBuilder.OptimSSA(irProg);
+		  irProg.BuildCFG();
 		  ssaBuilder.DestructSSA(irProg);
-		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
+		  
+//		  irProg.functs.values().forEach(Defuse::CollectFunctDefuse);
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();
 		
-		  // Printer irPrinter = new Printer(null);
-		  // irProg.Print(irPrinter);
+		  Printer irPrinter = new Printer(null);
+		  irProg.Print(irPrinter);
 		  
-		  AsmBuilder asmer = new AsmBuilder();
-		  asmer.TranslateIr(irProg);
-		  AsmPrinter asmPrinter = new AsmPrinter();
-		  asmPrinter.ConfigOutput(null);
-		  asmer.Print(asmPrinter);
+//		  AsmBuilder asmer = new AsmBuilder();
+//		  asmer.TranslateIr(irProg);
+//		  AsmPrinter asmPrinter = new AsmPrinter();
+//		  asmPrinter.ConfigOutput(null);
+//		  asmer.Print(asmPrinter);
 	  }
   }
 }

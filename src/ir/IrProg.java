@@ -1,5 +1,6 @@
 package ir;
 
+import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
@@ -38,6 +39,12 @@ public class IrProg {
 		functs.values().forEach(IrFunct::BuildCFG);
 	}
 	
+	public void LinkedListCheck() {
+		for (IrFunct funct : functs.values()) {
+			funct.LinkedListCheck();
+			
+		}
+	}
 	
 	/******************** interface for printer ******************/
 	public void Print(Printer printer) {

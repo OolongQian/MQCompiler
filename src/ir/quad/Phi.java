@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static ir.Utility.inlinePrefix;
+
 /**
  * Phi function is used for tmp construction optimization.
  *
@@ -71,5 +73,14 @@ public class Phi extends Quad {
 	@Override
 	public void AcceptTranslator(AsmTranslateVisitor translator) {
 		assert false;
+	}
+	
+	// Phi's copy doesn't replace basic block, thus needing refill.
+	@Override
+	public Quad Copy(Map<String, BasicBlock> BBMap) {
+		Phi copy = new Phi((Reg) var.Copy());
+		options.keySet().forEach(x -> copy.options.put(BBMap.get(x.name + inlinePrefix), options.get(x).Copy()));
+		copy.blk = BBMap.get(blk.name + inlinePrefix);
+		return copy;
 	}
 }

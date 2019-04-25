@@ -23,7 +23,11 @@ public class CFG {
 	}
 	
 	public void JumpTo(BasicBlock from, BasicBlock to) {
-		successors.get(from).add(to);
-		predesessors.get(to).add(from);
+		try {
+			successors.get(from).add(to);
+			predesessors.get(to).add(from);
+		} catch (NullPointerException e) {
+			int a = 1;
+		}
 	}
 }

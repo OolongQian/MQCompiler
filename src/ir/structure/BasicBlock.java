@@ -8,7 +8,6 @@ import java.util.List;
 public class BasicBlock {
 	public String name;
 	public List<Quad> quads = new LinkedList<>();
-	public boolean complete = false;
 	public IrFunct parentFunct;
 	public Integer loopLevel = null;
 	

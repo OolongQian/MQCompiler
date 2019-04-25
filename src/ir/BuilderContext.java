@@ -74,12 +74,6 @@ public class BuilderContext {
 //			CompleteCurBB();
 	}
 	
-	public void CompleteCurBB() {
-//		assert !cFun.curBB.complete;
-		cFun.curBB.complete = true;
-	}
-
-	
 	/************************ Basic block, instruction, var naming ******************/
 	/**
 	 * Basic block management methods.

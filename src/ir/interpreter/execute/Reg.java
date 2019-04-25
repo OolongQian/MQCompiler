@@ -50,6 +50,8 @@ public class Reg {
 	
 	public Integer GetValue() {
 //		assert valSet;
+		if (name.equals("@null"))
+			return 0;
 		return val;
 	}
 	

@@ -3,6 +3,7 @@ package ir.structure;
 import ir.quad.Branch;
 import ir.quad.Jump;
 import ir.quad.Quad;
+import ir.quad.Ret;
 
 /**
  * This data structure manage the complexity of the linear and CFG basic blocks.
@@ -15,16 +16,22 @@ public class BBS {
 	
 	/**
 	 * Construct CFG, add default jump.
+	 * first, clean CFG.
 	 * */
 	public void AddFallThroughJump() {
-		BasicBlock cur = list.Head();
-		// note that here is cur.next because the jump target is cur.next.
-		while (cur.next != null) {
-			// add default jump if there isn't jump or branch guard the bottom.
+		
+		for (BasicBlock cur = list.Head(); cur != null; cur = cur.next) {
+			for (Quad quad : cur.quads) {
+				if (quad instanceof Ret && cur.quads.indexOf(quad) != cur.quads.size() - 1)
+					throw new RuntimeException("clean quads before CFG!");
+			}
+		}
+		
+		for (BasicBlock cur = list.Head(); cur != null; cur = cur.next) {
 			boolean skipJump = false;
 			if (!cur.quads.isEmpty()) {
 				Quad last = cur.quads.get(cur.quads.size() - 1);
-				if (last instanceof Jump || last instanceof Branch)
+				if (last instanceof Jump || last instanceof Branch || last instanceof Ret)
 					skipJump = true;
 			}
 			if (!skipJump) {
@@ -32,7 +39,6 @@ public class BBS {
 				fallThrough.blk = cur;
 				cur.quads.add(fallThrough);
 			}
-			cur = cur.next;
 		}
 	}
 

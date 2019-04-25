@@ -112,4 +112,22 @@ public class IrFunct {
 		bbNamer.put(name, index + 1);
 		return '$' + name + Integer.toString(index);
 	}
+	
+	public void LinkedListCheck () {
+		for (BasicBlock cur = bbs.list.Head(); cur != null; cur = cur.next) {
+			try {
+				if (cur.prev != null)
+					assert cur.prev.next == cur;
+				if (cur.next != null)
+					assert cur.next.prev == cur;
+				if (cur.prev == null)
+					assert cur == bbs.list.Head();
+				if (cur.next == null)
+					assert cur == bbs.list.Tail();
+			} catch (AssertionError e) {
+				int a = 1;
+			}
+			
+		}
+	}
 }

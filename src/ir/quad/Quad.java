@@ -7,6 +7,7 @@ import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
 
 import java.util.List;
+import java.util.Map;
 
 abstract public class Quad {
 	public BasicBlock blk;
@@ -29,4 +30,5 @@ abstract public class Quad {
 	
 	abstract public void AcceptTranslator (AsmTranslateVisitor translator);
 	
+	abstract public Quad Copy(Map<String, BasicBlock> BBMap);
 }

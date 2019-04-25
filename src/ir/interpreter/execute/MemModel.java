@@ -10,7 +10,7 @@ import static config.Config.INT_SIZE;
  * */
 public class MemModel {
 	static int sp = 4;
-	static int hp = 4095000;
+	static int hp = 40950000;
 	
 	Map<Integer, Byte> mem = new HashMap<>();
 	
