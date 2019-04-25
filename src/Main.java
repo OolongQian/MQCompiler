@@ -48,8 +48,9 @@ public class Main {
 		irProg.LinkedListCheck();
 		
 		ControlFlowCleaner cleaner = new ControlFlowCleaner();
+		// please!!! do append return and clear after return.
+		cleaner.ClearAfterRet(irProg);
 		cleaner.AppendReturn(irProg);
-		cleaner.ClearBeforeRet(irProg);
 		
 		irProg.LinkedListCheck();
 		
@@ -59,7 +60,7 @@ public class Main {
 		
 		// function inline depends on useless bb elimination.
 		FunctInliner inliner = new FunctInliner();
-//		inliner.FunctInline(irProg);
+		inliner.FunctInline(irProg);
 		
 		irProg.LinkedListCheck();
 		
@@ -163,14 +164,16 @@ public class Main {
 		  checker.SemanticCheck();
 		
 		  // don't output ir in test.
-//		  String irFilePath = "ir.txt";
+		  String irFilePath = "ir.txt";
 		  BuilderContext irCtx = new BuilderContext(checker.functTable);
 		  ir.Builder irBuilder = new ir.Builder(irCtx);
 		  irBuilder.Build(prog);
 		  IrProg irProg = irCtx.ir;
 		
 		  ControlFlowCleaner cleaner = new ControlFlowCleaner();
-		  cleaner.ClearBeforeRet(irProg);
+		  // please! do append return and clear after return.
+		  cleaner.ClearAfterRet(irProg);
+		  cleaner.AppendReturn(irProg);
 		
 		  irProg.LinkedListCheck();
 
@@ -178,8 +181,8 @@ public class Main {
 		  irProg.BuildCFG();
 		  cleaner.ClearUselessBB(irProg);
 		
-		  FunctInliner inliner = new FunctInliner();
-		  inliner.FunctInline(irProg);
+//		  FunctInliner inliner = new FunctInliner();
+//		  inliner.FunctInline(irProg);
 		  
 		  SSA ssaBuilder = new SSA();
 		  irProg.BuildCFG();
@@ -192,14 +195,14 @@ public class Main {
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();
 		
-		  Printer irPrinter = new Printer(null);
-		  irProg.Print(irPrinter);
+//		  Printer irPrinter = new Printer(null);
+//		  irProg.Print(irPrinter);
 		  
-//		  AsmBuilder asmer = new AsmBuilder();
-//		  asmer.TranslateIr(irProg);
-//		  AsmPrinter asmPrinter = new AsmPrinter();
-//		  asmPrinter.ConfigOutput(null);
-//		  asmer.Print(asmPrinter);
+		  AsmBuilder asmer = new AsmBuilder();
+		  asmer.TranslateIr(irProg);
+		  AsmPrinter asmPrinter = new AsmPrinter();
+		  asmPrinter.ConfigOutput(null);
+		  asmer.Print(asmPrinter);
 	  }
   }
 }

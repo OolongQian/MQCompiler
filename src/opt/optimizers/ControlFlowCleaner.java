@@ -7,7 +7,7 @@ import ir.structure.IrFunct;
 import ir.structure.Reg;
 
 public class ControlFlowCleaner {
-	public void ClearBeforeRet (IrProg ir) {
+	public void ClearAfterRet (IrProg ir) {
 		for (IrFunct funct : ir.functs.values()) {
 			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
 				for (int i = 0; i < cur.quads.size(); ++i) {
