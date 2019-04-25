@@ -20,7 +20,7 @@ public class Config {
 	
 	public static final boolean DEBUGPRINT_VREG = true;
 	
-	public static final int INLINE_LEVEL = 5;
+	public static final int INLINE_LEVEL = 3;
 	// for object null type.
 	// for primitive type, will be optimized.
 	public static final int NULL = 0;

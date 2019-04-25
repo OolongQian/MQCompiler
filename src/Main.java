@@ -194,14 +194,14 @@ public class Main {
 //		  CopyPropagator copy = new CopyPropagator();
 //		  copy.PropagateCopy();
 		
-		  Printer irPrinter = new Printer(null);
-		  irProg.Print(irPrinter);
+		  // Printer irPrinter = new Printer(null);
+		  // irProg.Print(irPrinter);
 		  
-//		  AsmBuilder asmer = new AsmBuilder();
-//		  asmer.TranslateIr(irProg);
-//		  AsmPrinter asmPrinter = new AsmPrinter();
-//		  asmPrinter.ConfigOutput(null);
-//		  asmer.Print(asmPrinter);
+		  AsmBuilder asmer = new AsmBuilder();
+		  asmer.TranslateIr(irProg);
+		  AsmPrinter asmPrinter = new AsmPrinter();
+		  asmPrinter.ConfigOutput(null);
+		  asmer.Print(asmPrinter);
 	  }
   }
 }
