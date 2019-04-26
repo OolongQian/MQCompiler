@@ -25,8 +25,9 @@ public class ListBB {
 			size = 1;
 		}
 		else {
+			assert tail.next == null;
 			bb.prev = tail;
-			bb.next = tail.next;
+			bb.next = null;
 			tail.next = bb;
 			tail = bb;
 			size++;
@@ -54,24 +55,15 @@ public class ListBB {
 		size = 0;
 	}
 	
-	// blk's prev and next are effective after deletion.
-	public void Remove (BasicBlock blk) {
-		boolean present = false;
-		for (BasicBlock cur = Head(); cur != null; cur = cur.next) {
-			if (cur == blk)  {
-				present = true;
-				break;
-			}
-		}
-		assert present;
-		if (blk.next != null)
-			blk.next.prev = blk.prev;
-		if (blk.prev != null)
-			blk.prev.next = blk.next;
+	public void Remove (BasicBlock del) {
+		assert del.parentFunct == head.parentFunct;
+		BasicBlock cursor = head;
+		while (cursor != del) cursor = cursor.next;
+		assert cursor == del && cursor != null;
 		
-		if (blk == head) head = blk.next;
-		else if (blk == tail) tail = blk.prev;
-		
+		if (del.prev != null) del.prev.next = del.next;
+		if (del.next != null) del.next.prev = del.prev;
+		del.prev = del.next = null;
 		--size;
 	}
 }

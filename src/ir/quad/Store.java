@@ -2,16 +2,12 @@ package ir.quad;
 
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
 
 import java.util.List;
-import java.util.Map;
-
-import static ir.Utility.inlinePrefix;
 
 public class Store extends Quad {
   public Reg dst;
@@ -59,12 +55,5 @@ public class Store extends Quad {
 	@Override
 	public void AcceptTranslator(AsmTranslateVisitor translator) {
 		translator.visit(this);
-	}
-	
-	@Override
-	public Quad Copy(Map<String, BasicBlock> BBMap) {
-		Store tmp = new Store ((Reg) dst.Copy(), src.Copy());
-		tmp.blk = BBMap.get(blk.name + inlinePrefix);
-		return tmp;
 	}
 }
