@@ -109,16 +109,12 @@ public class Main {
 		  InputStream is = System.in;
 		  String inputFile = null;
 		
-		  if (args.length > 0) inputFile = args[0];
-		  if (inputFile != null) is = new FileInputStream(inputFile);
-		  
 		  String arg = null;
 		  if (args.length == 1)
 		  	arg = args[0];
 		  
 		  if (arg != null && !arg.equals("semantic") && !arg.equals("codegen") && !arg.equals("optim")) {
-			  if (args.length > 0) inputFile = args[0];
-			  if (inputFile != null) is = new FileInputStream(inputFile);
+			  is = new FileInputStream(arg);
 		  }
 		  
 		  ANTLRInputStream input = new ANTLRInputStream(is);
