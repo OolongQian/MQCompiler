@@ -63,6 +63,8 @@ public class ListBB {
 		
 		if (del.prev != null) del.prev.next = del.next;
 		if (del.next != null) del.next.prev = del.prev;
+		if (del == head) head = del.next;
+		if (del == tail) tail = del.prev;
 		del.prev = del.next = null;
 		--size;
 	}

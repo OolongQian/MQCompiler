@@ -98,6 +98,7 @@ public class AsmFunct {
 			if (bb.hintName.equals(bbName))
 				return bb;
 		}
+		int a = 1;
 		assert false;
 		return null;
 	}

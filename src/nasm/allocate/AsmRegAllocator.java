@@ -60,7 +60,9 @@ public class AsmRegAllocator {
 		
 //		System.out.println(String.format("Alloca %d times. vregs number : %d\n", allocCnt++, ctx.initial.size()));
 		
+//		System.out.println("liveness starts");
 		liveAnalyzer.LivenessAnalyze(curf);
+//		System.out.println("liveness end");
 			if (DEBUGPRINT_LIVENESS)
 				liveAnalyzer.PrintLiveness();
 		BuildInterference();
@@ -68,6 +70,7 @@ public class AsmRegAllocator {
 				ctx.PrintGraph(curf);
 
 		MakeWorklists();
+//		System.out.println(ctx.initial.size());
 		
 		try {
 			if (DEBUGPRINT_INTERFERE_GRAPHVIZ)

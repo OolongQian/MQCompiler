@@ -58,19 +58,31 @@ public class BuilderContext {
 		cFun = func;
 	}
 	
+	private Map<BasicBlock, Boolean> earlyStop = new HashMap<>();
+	
+	public void EarlyStopCurBB() {
+		earlyStop.put(cFun.curBB, Boolean.TRUE);
+	}
+	
 	public void EmplaceInst(Quad quad) {
 //		assert !cFun.curBB.complete;
 		quad.blk = cFun.curBB;
 		
+		// check whether this quad comes from a valid one.
+		// refuse to emplace inst.
+		if (!earlyStop.containsKey(quad.blk))
+			earlyStop.put(quad.blk, Boolean.FALSE);
+		if (earlyStop.get(quad.blk))
+			return ;
+
+		// I believe Alloca always dominates its use.
 		if (quad instanceof Alloca) {
 			quad.blk = cFun.bbs.list.Head();
 			cFun.bbs.list.Head().quads.add(0, quad);
+//			cFun.curBB.quads.add(quad);
 		}
 		else
 			cFun.curBB.quads.add(quad);
-		
-		if (quad instanceof Ret) ;
-//			CompleteCurBB();
 	}
 	
 	/************************ Basic block, instruction, var naming ******************/
@@ -134,6 +146,4 @@ public class BuilderContext {
 			ir.stringPool.put(str, new StringLiteral(str));
 		return ir.stringPool.get(str);
 	}
-	
-
 }

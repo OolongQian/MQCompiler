@@ -34,6 +34,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		for (IrFunct funct : ctx.ir.functs.values()) {
 			funct.bbs.CleanAfterRet();
 			funct.bbs.AddFallThroughJump();
+			funct.EnsureFunctRet();
 		}
 	}
 	
@@ -64,8 +65,6 @@ public class Builder extends AstBaseVisitor<Void> {
 				}
 			}
 		}
-		// ctx.CompleteCurBB();
-		ctx.cFun.EnsureFunctRet();
 		
 		for (Dec child : node.decs) {
 			if (!(child instanceof VarDecList))
@@ -124,8 +123,6 @@ public class Builder extends AstBaseVisitor<Void> {
 		// a new function is about to be generated, set the last BB of the last function to be completed.
 //		if (!ctx.cFun.curBB.complete)
 //			ctx.CompleteCurBB();
-		
-		ctx.cFun.EnsureFunctRet();
 		
 		String renaming = node.funcTableKey;
 		IrFunct func = ctx.FuncGen(renaming);
@@ -622,6 +619,7 @@ public class Builder extends AstBaseVisitor<Void> {
 			retVal = MakeGreg("null");
 		}
 		ctx.EmplaceInst(new Ret(retVal));
+		ctx.EarlyStopCurBB();
 		return null;
 	}
 	
@@ -652,9 +650,22 @@ public class Builder extends AstBaseVisitor<Void> {
 			
 			// create merge collector block.
 			assert ctx.cFun.curBB.loopLevel != null;
-			BasicBlock merge = ctx.NewBBAfter(ctx.cFun.curBB, "merge", ctx.cFun.curBB.loopLevel);
-			node.ifTrue = merge;
-			node.ifFalse = merge;
+			BasicBlock cur = ctx.cFun.curBB;
+			BasicBlock assignTrue = ctx.NewBBAfter(ctx.cFun.curBB, "asgT", ctx.cFun.curBB.loopLevel);
+			BasicBlock assignFalse = ctx.NewBBAfter(assignTrue, "asgF", ctx.cFun.curBB.loopLevel);
+			BasicBlock merge = ctx.NewBBAfter(assignFalse, "merge", ctx.cFun.curBB.loopLevel);
+			
+			// assign logi in assignTrue and assignFalse.
+			ctx.SetCurBB(assignTrue);
+			ctx.EmplaceInst(new Store(logi, new Constant(1)));
+			ctx.EmplaceInst(new Jump(merge));
+			ctx.SetCurBB(assignFalse);
+			ctx.EmplaceInst(new Store(logi, new Constant(0)));
+			ctx.EmplaceInst(new Jump(merge));
+			ctx.SetCurBB(cur);
+			
+			node.ifTrue = assignTrue;
+			node.ifFalse = assignFalse;
 			
 			// distribute jump target.
 			assert ctx.cFun.curBB.loopLevel != null;
@@ -668,7 +679,6 @@ public class Builder extends AstBaseVisitor<Void> {
 			// for rhs
 			ctx.SetCurBB(rhsBB);
 			ChildEvaluation(node.rhs);
-			// ctx.CompleteCurBB();
 			
 			ctx.SetCurBB(merge);
 			
@@ -723,10 +733,9 @@ public class Builder extends AstBaseVisitor<Void> {
 		if (!(node instanceof LogicBinaryExp)) {
 			node.Accept(this);
 			IrValue val = GetArithResult(node);
-			Reg logi = logicVars.peek();
-			ctx.EmplaceInst(new Store(logi, val));
+//			Reg logi = logicVars.peek();
+//			ctx.EmplaceInst(new Store(logi, val));
 			ctx.EmplaceInst(new Branch(val, node.ifTrue, node.ifFalse));
-			// ctx.CompleteCurBB();
 		}
 		// next short node, set and evaluate.
 		else {
@@ -740,13 +749,38 @@ public class Builder extends AstBaseVisitor<Void> {
 		BasicBlock then = ctx.NewBBAfter(ctx.cFun.curBB, "ifThen", ctx.cFun.curBB.loopLevel);
 		BasicBlock merge = ctx.NewBBAfter(then, "ifMerge", ctx.cFun.curBB.loopLevel);
 		BasicBlock ifFalse = (node.elseBody != null) ? ctx.NewBBAfter(then, "ifElse", ctx.cFun.curBB.loopLevel) : merge;
+//	/*
+		if (node.cond instanceof LogicBinaryExp) {
+			// if for short-circuit evaluation.
+			node.cond.ifTrue = then;
+			node.cond.ifFalse = ifFalse;
+			node.cond.Accept(this);
+		}
+		else {
+			// if for ordinary cond.
+			node.cond.Accept(this);
+			IrValue brCond = GetArithResult(node.cond);
+			// cond links to then and ifFalse for CFG.
+			ctx.EmplaceInst(new Branch(brCond, then, ifFalse));
+		}
 		
+		// where I'm upon returning is not sure. do codegen.
+		ctx.SetCurBB(then);
+		node.thenBody.Accept(this);
+		if (node.elseBody != null) {
+			ctx.EmplaceInst(new Jump(merge));
+			ctx.SetCurBB(ifFalse);
+			node.elseBody.Accept(this);
+		}
+		// set BB to merge.
+		ctx.SetCurBB(merge);
+//*/
+		/*
 		// condition may set us to curBB or mergeBB, we resume to genIR.
 		node.cond.Accept(this);
 		IrValue brCond = GetArithResult(node.cond);
 		// cond links to then and ifFalse for CFG.
 		ctx.EmplaceInst(new Branch(brCond, then, ifFalse));
-		// ctx.CompleteCurBB();
 		
 		// then irGen, assume no curBB recovery.
 		ctx.SetCurBB(then);
@@ -765,7 +799,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		}
 		// set BB to merge
 		ctx.SetCurBB(merge);
-		
+		*/
 		return null;
 	}
 	
@@ -778,14 +812,21 @@ public class Builder extends AstBaseVisitor<Void> {
 		BasicBlock step = ctx.NewBBAfter(cond, "whileStep", ctx.cFun.curBB.loopLevel + 1);
 		BasicBlock after = ctx.NewBBAfter(step, "whileAfter", ctx.cFun.curBB.loopLevel);
 		ctx.RecordLoop(cond, after);
-		// ctx.CompleteCurBB();
 		
 		ctx.SetCurBB(cond);
-		node.cond.Accept(this);
-		IrValue brCond = GetArithResult(node.cond);
-		// emplace branch
-		ctx.EmplaceInst(new Branch(brCond, step, after));
-		// ctx.CompleteCurBB();
+		if (node.cond instanceof LogicBinaryExp) {
+			// while for short-circuit evaluation.
+			node.cond.ifTrue = step;
+			node.cond.ifFalse = after;
+			node.cond.Accept(this);
+		}
+		else {
+			// while for ordinary cond.
+			node.cond.Accept(this);
+			IrValue brCond = GetArithResult(node.cond);
+			// cond links to then and ifFalse for CFG.
+			ctx.EmplaceInst(new Branch(brCond, step, after));
+		}
 		
 		// record loop info for break and continue
 		ctx.SetCurBB(step);
@@ -816,9 +857,16 @@ public class Builder extends AstBaseVisitor<Void> {
 		
 		ctx.SetCurBB(check);
 		if (node.check != null) {
-			node.check.Accept(this);
-			IrValue brCond = GetArithResult(node.check);
-			ctx.EmplaceInst(new Branch(brCond, step, after));
+			if (node.check instanceof LogicBinaryExp) {
+				node.check.ifTrue = step;
+				node.check.ifFalse = after;
+				node.check.Accept(this);
+			}
+			else {
+				node.check.Accept(this);
+				IrValue brCond = GetArithResult(node.check);
+				ctx.EmplaceInst(new Branch(brCond, step, after));
+			}
 		}
 		// ctx.CompleteCurBB();
 		
@@ -836,6 +884,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(ContinueStm node) {
 		BasicBlock contin = ctx.GetContin();
 		ctx.EmplaceInst(new Jump(contin));
+		ctx.EarlyStopCurBB();
 		return null;
 	}
 	
@@ -843,6 +892,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(BreakStm node) {
 		BasicBlock after = ctx.GetBreak();
 		ctx.EmplaceInst(new Jump(after));
+		ctx.EarlyStopCurBB();
 		return null;
 	}
 	
@@ -910,7 +960,9 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(BlockStm node) {
-		node.stms.forEach(x -> x.Accept(this));
+		for (Stm stm : node.stms) {
+			stm.Accept(this);
+		}
 		return null;
 	}
 	

@@ -23,6 +23,9 @@ public class CFG {
 	}
 	
 	public void JumpTo(BasicBlock from, BasicBlock to) {
+		 if (!successors.containsKey(from) || !successors.containsKey(to)) {
+		 	int a =1 ;
+		 }
 		successors.get(from).add(to);
 		predesessors.get(to).add(from);
 	}

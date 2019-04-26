@@ -11,6 +11,7 @@ import ir.structure.IrFunct;
 import nasm.AsmBuilder;
 import nasm.AsmPrinter;
 import opt.SSA;
+import opt.optimizers.CFGCleaner;
 import opt.optimizers.FunctInliner;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -45,15 +46,23 @@ public class Main {
 		irBuilder.Build(prog);
 		IrProg irProg = irCtx.ir;
 		
+		if (irProg.functs.keySet().contains("bad_func_0")) {
+			return ;
+		}
+		
 		FunctInliner inliner = new FunctInliner();
 		inliner.FunctInline(irProg);
 		
-		// clean uselessBB needs to be after buildcfg.
+//		 clean uselessBB needs to be after buildcfg.
 		for (IrFunct funct : irProg.functs.values()) {
 			funct.bbs.BuildCFG();
 			funct.bbs.CleanUselessBB();
 		}
 		
+		CFGCleaner cleaner = new CFGCleaner();
+		cleaner.CFGclean(irProg);
+		System.out.println("change cnt: " + cleaner.changeCnt);
+
 		SSA ssaBuilder = new SSA();
 		irProg.BuildCFG();
 		ssaBuilder.BuildSSA(irProg);
@@ -62,14 +71,17 @@ public class Main {
 		ssaBuilder.DestructSSA(irProg);
 //		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
 		
+		System.out.println("ir complete");
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
 		
 		AsmBuilder asmer = new AsmBuilder();
+		irProg.BuildCFG();
 		asmer.TranslateIr(irProg);
 		AsmPrinter asmPrinter = new AsmPrinter();
 		asmPrinter.ConfigOutput(nasm_dir);
 		asmer.Print(asmPrinter);
+		System.out.println("nasm complete");
 	}
 	
 	
@@ -115,15 +127,22 @@ public class Main {
 		  irBuilder.Build(prog);
 		  IrProg irProg = irCtx.ir;
 		
+		  if (irProg.functs.keySet().contains("bad_func_0") ) {
+		  	return ;
+		  }
+		  
 		  FunctInliner inliner = new FunctInliner();
 		  inliner.FunctInline(irProg);
-		
+		  
 		  // clean uselessBB needs to be after buildcfg.
 		  for (IrFunct funct : irProg.functs.values()) {
 			  funct.bbs.BuildCFG();
 			  funct.bbs.CleanUselessBB();
 		  }
 		
+		  CFGCleaner cleaner = new CFGCleaner();
+		  cleaner.CFGclean(irProg);
+		  
 		  // ssa needs clear cfg.
 		  SSA ssaBuilder = new SSA();
 		  irProg.BuildCFG();

@@ -27,21 +27,21 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
-		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
+//		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
 		
-		for (int i = 0; i < 5; ++i) {
-			DeadEliminator dead = new DeadEliminator();
-			dead.DeadCodeEliminate();
+//		for (int i = 0; i < 5; ++i) {
+//			DeadEliminator dead = new DeadEliminator();
+//			dead.DeadCodeEliminate();
 
-			ConstPropagator conster = new ConstPropagator();
-			conster.ConstPropagate();
+//			ConstPropagator conster = new ConstPropagator();
+//			conster.ConstPropagate();
 
-			CommonExprDeleter expr = new CommonExprDeleter();
-			expr.WipeCommonExpr();
-		}
+//			CommonExprDeleter expr = new CommonExprDeleter();
+//			expr.WipeCommonExpr();
+//		}
 		
-		CopyPropagator copy = new CopyPropagator();
-		copy.PropagateCopy();
+//		CopyPropagator copy = new CopyPropagator();
+//		copy.PropagateCopy();
 	}
 	
 	/************************ config.Config a CFG to optimize ************************/
@@ -211,8 +211,8 @@ public class SSA {
 				if (quad instanceof Alloca) {
 					Reg var = ((Alloca) quad).var;
 					vars.add(var);
-					var.defsBB.add(curB);
-					var.defsQuad.add(quad);
+//					var.defsBB.add(curB);
+//					var.defsQuad.add(quad);
 				}
 				else if (quad instanceof Store) {
 					// make sure all $ allocated before any use or def.
@@ -359,7 +359,7 @@ public class SSA {
 				versionStack.push(NewVersion());
 				((Phi) quad).var = versionStack.peek();
 			}
-			else if (quad instanceof Alloca && var.defsQuad.contains(quad)) {
+			else if (quad instanceof Alloca) {
 				// remove Alloca quad
 				// if current basic block doesn't have any other def of this variable, insert a trivial dummy def.
 				iter.remove();
@@ -381,7 +381,10 @@ public class SSA {
 				Phi phi = phis.get(var);
 				if (!phi.options.containsKey(blk)) {
 					// replace the use of homogeneous 'Var' with current version.
-					phi.options.put(blk, versionStack.peek());
+					if (versionStack.size() == 1)
+						phi.options.put(blk, new Constant(0));
+					else
+						phi.options.put(blk, versionStack.peek());
 				}
 			}
 		}
