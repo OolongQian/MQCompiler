@@ -3,6 +3,7 @@ import antlr_tools.MgParser;
 import ast.Builder;
 import ast.ParserErrorHandlerStrategy;
 import ast.node.Prog;
+import com.sun.org.apache.xerces.internal.util.SynchronizedSymbolTable;
 import ir.BuilderContext;
 import ir.IrProg;
 import ir.Printer;
@@ -104,11 +105,22 @@ public class Main {
 		  IrInterp("Mx_ir.txt");
 	  }
 	  else {
+	  	
 		  InputStream is = System.in;
 		  String inputFile = null;
+		
 		  if (args.length > 0) inputFile = args[0];
 		  if (inputFile != null) is = new FileInputStream(inputFile);
-		
+		  
+		  String arg = null;
+		  if (args.length == 1)
+		  	arg = args[0];
+		  
+		  if (arg != null && !arg.equals("semantic") && !arg.equals("codegen") && !arg.equals("optim")) {
+			  if (args.length > 0) inputFile = args[0];
+			  if (inputFile != null) is = new FileInputStream(inputFile);
+		  }
+		  
 		  ANTLRInputStream input = new ANTLRInputStream(is);
 		  MgLexer lexer = new MgLexer(input);
 		  CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -130,14 +142,13 @@ public class Main {
 		  irBuilder.Build(prog);
 		  IrProg irProg = irCtx.ir;
 		
-		  if (irProg.functs.keySet().contains("bad_func_0") ) {
-		  	return ;
-		  }
+		  if (arg != null && arg.equals("semantic"))
+		  	return;
 		  
 		  FunctInliner inliner = new FunctInliner();
 		  inliner.FunctInline(irProg);
 		  
-		  // clean uselessBB needs to be after buildcfg.
+//		   clean uselessBB needs to be after buildcfg.
 		  for (IrFunct funct : irProg.functs.values()) {
 			  funct.bbs.BuildCFG();
 			  funct.bbs.CleanUselessBB();
@@ -146,11 +157,11 @@ public class Main {
 		  CFGCleaner cleaner = new CFGCleaner();
 		  cleaner.CFGclean(irProg);
 		  
-		  // ssa needs clear cfg.
+//		   ssa needs clear cfg.
 		  SSA ssaBuilder = new SSA();
 		  irProg.BuildCFG();
 		  ssaBuilder.BuildSSA(irProg);
-//		  ssaBuilder.OptimSSA(irProg);
+		  ssaBuilder.OptimSSA(irProg);
 		  irProg.BuildCFG();
 		  ssaBuilder.DestructSSA(irProg);
 		
