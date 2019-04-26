@@ -20,4 +20,9 @@ public class Constant extends IrValue {
 	public int GetConstant() {
 		return val;
 	}
+	
+	@Override
+	public IrValue Copy() {
+		return new Constant(val);
+	}
 }

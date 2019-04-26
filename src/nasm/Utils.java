@@ -37,7 +37,8 @@ public class Utils {
 	// rename basic block's name to be AsmBB, attach parentFunction to it.
 	// and again, rename Basic block name in jump.
 	public static String BasicBlockRenamer (BasicBlock bb) {
-		return String.format("_B_%s_%s", bb.name.substring(1), FunctRenamer(bb.parentFunct.name));
+		String BBname = bb.name.replace('$', '_');
+		return String.format("_B%s_%s", BBname, FunctRenamer(bb.parentFunct.name));
 	}
 	
 	// change @a to _G_a.
@@ -290,5 +291,6 @@ public class Utils {
 		regName = regName.replace("]", "");
 		return regName;
 	}
+	
 }
 

@@ -7,6 +7,10 @@ import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
 
+import java.util.Map;
+
+import static ir.Utility.inlinePrefix;
+
 public class Jump extends Quad {
   public BasicBlock target;
 
@@ -27,5 +31,17 @@ public class Jump extends Quad {
   @Override
   public void AcceptTranslator(AsmTranslateVisitor translator) {
     translator.visit(this);
+  }
+  
+  @Override
+  public Quad Copy(Map<String, BasicBlock> BBMap) {
+  	try {
+		  Jump tmp = new Jump(BBMap.get( target.name + inlinePrefix));
+		  tmp.blk = BBMap.get( blk.name + inlinePrefix);
+		  return tmp;
+	  } catch (NullPointerException e) {
+  		int a = 1;
+	  }
+	  return null;
   }
 }

@@ -62,12 +62,13 @@ public class BuilderContext {
 //		assert !cFun.curBB.complete;
 		quad.blk = cFun.curBB;
 		
-		if (quad instanceof Alloca) {
-			quad.blk = cFun.bbs.list.Head();
+		if (quad instanceof Alloca)
 			cFun.bbs.list.Head().quads.add(0, quad);
-		}
 		else
 			cFun.curBB.quads.add(quad);
+		
+//		if (quad instanceof Jump || quad instanceof Branch)
+//			cFun.brjp.add(quad);
 		
 		if (quad instanceof Ret) ;
 //			CompleteCurBB();

@@ -398,36 +398,44 @@ public class AsmRegAllocator {
 		return spilled;
 	}
 	
+	private double CalcHeuristic(String reg) {
+		// try not spill spilled register.
+		if (reg.startsWith("spl"))
+			return (ctx.heuristicUse.get(reg) + ctx.heuristicDef.get(reg)) / (Adjacent(reg).size() + 1) + 1000;
+		return (ctx.heuristicUse.get(reg) + ctx.heuristicDef.get(reg)) / (Adjacent(reg).size() + 1) ;
+	}
+	
 	private String HeuristicDefUse () {
 		double minHeur = MAX_VALUE;
-		boolean existNonSpilled = false;
+//		boolean existNonSpilled = false;
+		
 		for (String str : ctx.spillWorklist) {
-//			if (str.startsWith("spl"))
-//				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
-			minHeur = min(minHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
-			if (!str.startsWith("spl")) existNonSpilled = true;
+			minHeur = min(minHeur, CalcHeuristic(str));
+			
+//			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
 		assert minHeur != MAX_VALUE;
 		
 		List<String> spillWaitlist = new LinkedList<>();
 		for (String str : ctx.spillWorklist) {
-			if (Math.abs(minHeur - (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str))) < 1e-1)
+			if (Math.abs(minHeur - CalcHeuristic(str)) < 1e-1)
 				spillWaitlist.add(str);
 		}
-		
+
+			int badluck = spillWaitlist.size() - 1;
 //		int badluck = (int) (Math.random()*(spillWaitlist.size()));
-		int badluck = 0;
-		if (existNonSpilled) {
-			for (int i = spillWaitlist.size() - 1; i >= 0; --i)
-				if (!spillWaitlist.get(i).startsWith("spl")) {
-					badluck = i;
-					break;
-				}
-		} else {
-			badluck = spillWaitlist.size() - 1;
-		}
+//		int badluck = 0;
+//		if (existNonSpilled) {
+//			for (int i = spillWaitlist.size() - 1; i >= 0; --i)
+//				if (!spillWaitlist.get(i).startsWith("spl")) {
+//					badluck = i;
+//					break;
+//				}
+//		} else {
+//			badluck = spillWaitlist.size() - 1;
+//		}
 		return spillWaitlist.get(badluck);
 	}
 	

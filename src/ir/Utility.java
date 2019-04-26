@@ -3,6 +3,9 @@ package ir;
 import ir.structure.Constant;
 import ir.structure.Reg;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Utility {
 	
 	/**
@@ -38,5 +41,8 @@ public class Utility {
 		return sb.toString();
 	}
 	
-	public static String inlineSuffix = "";
+	public static String inlinePrefix = "";
+	
+	public static Map<String, Reg> irRegRecorder = new HashMap<>();
+	
 }

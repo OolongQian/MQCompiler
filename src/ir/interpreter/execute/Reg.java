@@ -49,9 +49,9 @@ public class Reg {
 	}
 	
 	public Integer GetValue() {
-		if (val == null)
-			return 0;
 //		assert valSet;
+		if (name.equals("@null"))
+			return 0;
 		return val;
 	}
 	

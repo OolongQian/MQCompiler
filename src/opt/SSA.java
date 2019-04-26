@@ -27,21 +27,22 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
-		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
-		
-		for (int i = 0; i < 5; ++i) {
-			DeadEliminator dead = new DeadEliminator();
-			dead.DeadCodeEliminate();
 
-			ConstPropagator conster = new ConstPropagator();
-			conster.ConstPropagate();
-
-			CommonExprDeleter expr = new CommonExprDeleter();
-			expr.WipeCommonExpr();
-		}
-		
-		CopyPropagator copy = new CopyPropagator();
-		copy.PropagateCopy();
+//		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
+//
+//		for (int i = 0; i < 5; ++i) {
+//			DeadEliminator dead = new DeadEliminator();
+//			dead.DeadCodeEliminate();
+//
+//			ConstPropagator conster = new ConstPropagator();
+//			conster.ConstPropagate();
+//
+//			CommonExprDeleter expr = new CommonExprDeleter();
+//			expr.WipeCommonExpr();
+//		}
+//
+//		CopyPropagator copy = new CopyPropagator();
+//		copy.PropagateCopy();
 	}
 	
 	/************************ config.Config a CFG to optimize ************************/
@@ -165,8 +166,11 @@ public class SSA {
 		while (curB != null) {
 			for (BasicBlock fath : Predecessors(curB)) {
 				BasicBlock t = fath;
+//				System.out.println();
+//				System.out.println(curB.name);
 				while (t != gInfos.get(curB).iDom) {
 					gInfos.get(t).domFrontier.add(curB);
+//					System.out.println(t.name);
 					t = gInfos.get(t).iDom;
 				}
 			}
@@ -215,10 +219,8 @@ public class SSA {
 					var.defsQuad.add(quad);
 				}
 				else if (quad instanceof Store) {
-					// make sure all $ allocated before any use or def.
-					if (((Store) quad).dst.name.startsWith("$"))
-						assert vars.contains(((Store) quad).dst);
-					
+					String quadDst = ((Store) quad).dst.name;
+					String quadSrc = ((Store) quad).src.getText();
 					// def. check whether an allocated quad.
 					if (vars.contains(((Store) quad).dst)) {
 						Reg var = ((Store) quad).dst;
@@ -227,10 +229,6 @@ public class SSA {
 					}
 				}
 				else if (quad instanceof Load) {
-					// make sure all $ allocated before any use or def.
-					if (((Load) quad).addr.name.startsWith("$"))
-						assert vars.contains(((Load) quad).addr);
-					
 					if (vars.contains(((Load) quad).addr)) {
 						Reg var = ((Load) quad).addr;
 						var.usesBB.add(curB);
@@ -323,6 +321,7 @@ public class SSA {
 	
 	/** Record SSA info during variable renaming. */
 	private void RenameVariable(Reg var, BasicBlock blk) {
+		String str = var.name;
 		List<Quad> quads = blk.quads;
 		// for def-use in this basic block.
 		for (ListIterator<Quad> iter = quads.listIterator(); iter.hasNext(); ) {
@@ -364,11 +363,11 @@ public class SSA {
 				// if current basic block doesn't have any other def of this variable, insert a trivial dummy def.
 				iter.remove();
 				// FIXME : don't add dummy entry def.
-//				versionStack.push(NewVersion());
-//				Mov def = new Mov(versionStack.peek(), new Constant(NULL));
+				versionStack.push(NewVersion());
+				Mov def = new Mov(versionStack.peek(), new Constant(NULL));
 				// FIXME : ugly
-//				def.blk = blk;
-//				iter.add(def);
+				def.blk = blk;
+				iter.add(def);
 			}
 		}
 		
@@ -635,6 +634,9 @@ public class SSA {
 			phiMove.blk = from;
 			// add these moves to predecessors' pcopy via 'copies' map.
 			// pcopies will be sequentialized later on.
+			if (!copies.containsKey(from)) {
+				int a = 1;
+			}
 			assert copies.containsKey(from);
 			copies.get(from).copies.add(phiMove);
 		}
@@ -660,6 +662,9 @@ public class SSA {
 	}
 	// simple lexical change
 	private void ReplaceJump(Jump jp, BasicBlock old, BasicBlock new_) {
+		if (jp.target != old) {
+			int a = 1;
+		}
 		assert jp.target == old;
 		jp.target = new_;
 	}

@@ -10,6 +10,7 @@ public class StringLiteral extends Reg {
 	// *0
 	public int id;
 	
+
 	public StringLiteral(String val) {
 		super(null);
 		this.val = val;
@@ -20,5 +21,17 @@ public class StringLiteral extends Reg {
 	@Override
 	public String getText() {
 		return '*' + Integer.toString(id);
+	}
+	
+	public StringLiteral() {
+		super(null);
+	}
+	@Override
+	public IrValue Copy() {
+		StringLiteral copy = new StringLiteral();
+		copy.id = id;
+		copy.val = val;
+		copy.name = name;
+		return copy;
 	}
 }
