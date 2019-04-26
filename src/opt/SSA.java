@@ -444,8 +444,7 @@ public class SSA {
 						found = true;
 				}
 				else {
-					Phi next = iter.next();
-					assert next.var != cur;
+					assert iter.next().var != cur;
 				}
 			}
 			assert curDef != null;

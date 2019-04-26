@@ -375,8 +375,7 @@ public class AsmRegAllocator {
 		// NOTE : avoid choosing nodes that are the tiny live ranges resulting
 		// NOTE : from the fetches of previously spilled registers.
 		String spilled = HeuristicDefUse();
-//		String spilled = HeuristicMaxDegree();
-		
+
 		assert ctx.spillWorklist.contains(spilled);
 		ctx.spillWorklist.remove(spilled);
 		ctx.simplifyWorklist.add(spilled);
