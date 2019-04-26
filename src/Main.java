@@ -62,18 +62,21 @@ public class Main {
 		CFGCleaner cleaner = new CFGCleaner();
 		cleaner.CFGclean(irProg);
 		System.out.println("change cnt: " + cleaner.changeCnt);
+		
 
+		
 		SSA ssaBuilder = new SSA();
 		irProg.BuildCFG();
 		ssaBuilder.BuildSSA(irProg);
-		ssaBuilder.OptimSSA(irProg);
+//		ssaBuilder.OptimSSA(irProg);
 		irProg.BuildCFG();
 		ssaBuilder.DestructSSA(irProg);
 //		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
 		
-		System.out.println("ir complete");
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
+		System.out.println("ir complete");
+
 		
 		AsmBuilder asmer = new AsmBuilder();
 		irProg.BuildCFG();
@@ -147,7 +150,7 @@ public class Main {
 		  SSA ssaBuilder = new SSA();
 		  irProg.BuildCFG();
 		  ssaBuilder.BuildSSA(irProg);
-		  ssaBuilder.OptimSSA(irProg);
+//		  ssaBuilder.OptimSSA(irProg);
 		  irProg.BuildCFG();
 		  ssaBuilder.DestructSSA(irProg);
 		

@@ -26,7 +26,7 @@ public class AsmAllocateContext {
 	public Map<AsmBB, Set<String>> liveOuts = new HashMap<>();
 	
 	/**************** worklists *****************/
-	public Set<String> spillWorklist = new LinkedHashSet<>();
+	public List<String> spillWorklist = new ArrayList<>();
 	public Set<String> freezeWorklist = new LinkedHashSet<>();
 	public Set<String> simplifyWorklist = new LinkedHashSet<>();
 
@@ -52,7 +52,7 @@ public class AsmAllocateContext {
 	/**************** Heuristic ****************************/
 	public Map<String, Double> heuristicUse = new HashMap<>();
 	public Map<String, Double> heuristicDef = new HashMap<>();
-	
+	public Map<String, Double> heuristic = new HashMap<>();
 	/*********************** Other data structures *************************/
 	// a map from a node to the list of moves it is associated with.
 	private Map<String, Set<Mov>> movelists = new HashMap<>();
@@ -109,7 +109,7 @@ public class AsmAllocateContext {
 }
 
 class InterfereGraph {
-	private Set<Pair> adjSet = new HashSet<>();
+	public Set<Pair> adjSet = new HashSet<>();
 	private Map<String, Set<String>> adjList = new HashMap<>();
 	private Map<String, Integer> degree = new HashMap<>();
 	

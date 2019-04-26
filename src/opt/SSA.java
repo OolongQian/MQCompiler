@@ -4,10 +4,8 @@ import ir.IrProg;
 import ir.quad.*;
 import ir.structure.*;
 import opt.optimizers.*;
-
 import java.util.*;
 
-import static config.Config.NULL;
 import static config.Config.SSALOG;
 
 // SSA transformation is done for one function at a time, let's make it compact.
@@ -23,22 +21,23 @@ public class SSA {
 			UseDefCollection();
 			PhiPlacement();
 			Renaming();
+			Prune();
 		}
 	}
 
 	public void OptimSSA(IrProg ir) {
-//		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
+		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
 		
-//		for (int i = 0; i < 5; ++i) {
-//			DeadEliminator dead = new DeadEliminator();
-//			dead.DeadCodeEliminate();
+		for (int i = 0; i < 5; ++i) {
+			DeadEliminator dead = new DeadEliminator();
+			dead.DeadCodeEliminate();
 
 //			ConstPropagator conster = new ConstPropagator();
 //			conster.ConstPropagate();
 
 //			CommonExprDeleter expr = new CommonExprDeleter();
 //			expr.WipeCommonExpr();
-//		}
+		}
 		
 //		CopyPropagator copy = new CopyPropagator();
 //		copy.PropagateCopy();
@@ -293,8 +292,8 @@ public class SSA {
 				phi.blk = curB;
 				curB.quads.add(0, phi);
 				// each phi-node is a def of var.
-//				phi.var.defsQuad.add(phi);
-//				phi.var.defsBB.add(curB);
+				phi.var.defsQuad.add(phi);
+				phi.var.defsBB.add(curB);
 			}
 			curB = curB.next;
 		}
@@ -397,6 +396,77 @@ public class SSA {
 		}
 	}
 	
+	/** Prune SSA to go from minimal ssa to pruned ssa. */
+	private void Prune () {
+		Stack<Reg> workList = new Stack<>();
+		Set<Phi> phis = new HashSet<>();
+		Set<Reg> phiDefs = new HashSet<>(); // regs defined by phi.
+		Map<Reg, Boolean> useful = new HashMap<>();
+		
+		// initial : collect info.
+		// record all phi's def
+		for (BasicBlock cur = cFun.bbs.list.Head(); cur != null; cur = cur.next) {
+			for (Quad quad : cur.quads) {
+				if (quad instanceof Phi) {
+					phis.add((Phi) quad);
+					phiDefs.add(((Phi) quad).var);
+					useful.put(((Phi) quad).var, Boolean.FALSE);
+				}
+			}
+		}
+		// initial : find all actual use.
+		for (BasicBlock cur = cFun.bbs.list.Head(); cur != null; cur = cur.next) {
+			List<Reg> uses = new LinkedList<>();
+			for (Quad quad : cur.quads) {
+				if (!(quad instanceof Phi))
+					quad.GetUseRegs(uses);
+			}
+			for (Reg use : uses) {
+				if (phiDefs.contains(use)) {
+					assert useful.containsKey(use);
+					useful.put(use, Boolean.TRUE);
+					workList.add(use);
+				}
+			}
+		}
+		
+		// usefulness propagation.
+		while (!workList.isEmpty()) {
+			Reg cur = workList.pop();
+			
+			// find phi which defines current reg.
+			Phi curDef = null;
+			boolean found = false;
+			for (Iterator<Phi> iter = phis.iterator(); iter.hasNext() ; ) {
+				if (!found) {
+					curDef = iter.next();
+					if (curDef.var == cur)
+						found = true;
+				}
+				else {
+					assert iter.next().var != cur;
+				}
+			}
+			assert curDef != null;
+			
+			List<Reg> uses = new LinkedList<>();
+			curDef.GetUseRegs(uses);
+			for (Reg src : uses) {
+				if (useful.containsKey(src) && !useful.get(src)) {
+					useful.put(src, Boolean.TRUE);
+					workList.add(src);
+				}
+			}
+		}
+		
+		// final pruning phase.
+		for (Phi phi : phis) {
+			// if dst isn't useful, remove phi.
+			if (!useful.get(phi.var)) {
+				phi.blk.quads.remove(phi);
+			}
+		}
+	}
 	
 	/*********************** SSA destruction ********************************/
 	public void DestructSSA(IrProg ir) {

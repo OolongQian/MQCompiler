@@ -68,7 +68,9 @@ public class AsmRegAllocator {
 		BuildInterference();
 			if (DEBUGPRINT_INTERFERE)
 				ctx.PrintGraph(curf);
-
+		
+		ctx.initial.forEach(x -> ctx.heuristic.put(x, GetHeuristic(x)));
+		
 		MakeWorklists();
 //		System.out.println(ctx.initial.size());
 		
@@ -79,6 +81,7 @@ public class AsmRegAllocator {
 			throw new RuntimeException();
 		}
 		
+		int i = 0;
 		do {
 			if (!ctx.simplifyWorklist.isEmpty())
 				Simplify();
@@ -89,6 +92,7 @@ public class AsmRegAllocator {
 			else if (!ctx.spillWorklist.isEmpty())
 				SelectSpill();
 			
+//			System.out.println(i++);
 		} while (!ctx.simplifyWorklist.isEmpty() ||
 						 !ctx.worklistMoves.isEmpty() ||
 						 !ctx.freezeWorklist.isEmpty() ||
@@ -219,8 +223,9 @@ public class AsmRegAllocator {
 			String vreg = iter.next();
 			
 			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
-				ctx.spillWorklist.add(vreg);
-			else if (MoveRelated(vreg))
+				AddSpillWorklist(vreg);
+//			else if (MoveRelated(vreg))
+			else if (!NodeMoves(vreg).isEmpty())
 				ctx.freezeWorklist.add(vreg);
 			else
 				ctx.simplifyWorklist.add(vreg);
@@ -301,6 +306,7 @@ public class AsmRegAllocator {
 	
 	// sub-function used by Coalesce.
 	// combine two nodes in interference graph.
+	Set<String> tmp = new HashSet<>();
 	private void Combine (String u, String v) {
 		if (ctx.freezeWorklist.contains(v))
 			ctx.freezeWorklist.remove(v);
@@ -313,7 +319,8 @@ public class AsmRegAllocator {
 		
 		ctx.GetMovelist(u).addAll(ctx.GetMovelist(v));
 		
-		Set<String> tmp = new HashSet<>(); tmp.add(v);
+		tmp.clear(); tmp.add(v);
+//		Set<String> tmp = new HashSet<>(); tmp.add(v);
 		EnableMoves(tmp);
 		
 		for (String t : Adjacent(v)) {
@@ -323,7 +330,7 @@ public class AsmRegAllocator {
 		
 		if (ctx.itfg.GetDegree(u) >= REGNUM && ctx.freezeWorklist.contains(u)) {
 			ctx.freezeWorklist.remove(u);
-			ctx.spillWorklist.add(u);
+			AddSpillWorklist(u);
 		}
 	}
 	
@@ -402,6 +409,8 @@ public class AsmRegAllocator {
 	}
 	
 	private String HeuristicDefUse () {
+		return ctx.spillWorklist.get(0);
+		/*
 		double minHeur = MAX_VALUE;
 		boolean existNonSpilled = false;
 		for (String str : ctx.spillWorklist) {
@@ -409,14 +418,14 @@ public class AsmRegAllocator {
 //				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
-			minHeur = min(minHeur, ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str));
+			minHeur = min(minHeur, (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str));
 			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
 		assert minHeur != MAX_VALUE;
 		
 		List<String> spillWaitlist = new LinkedList<>();
 		for (String str : ctx.spillWorklist) {
-			if (Math.abs(minHeur - (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str))) < 1e-1)
+			if (Math.abs(minHeur - ((ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str))) < 1e-1)
 				spillWaitlist.add(str);
 		}
 		
@@ -431,7 +440,9 @@ public class AsmRegAllocator {
 		} else {
 			badluck = spillWaitlist.size() - 1;
 		}
+		
 		return spillWaitlist.get(badluck);
+		*/
 	}
 	
 	private void AssignColors() {
@@ -548,7 +559,7 @@ public class AsmRegAllocator {
 			for (Inst inst : bb.insts) {
 				for (Reg reg : GetVregs(inst)) {
 					if (!reg.isColored()) {
-						assert ctx.colors.containsKey(reg.hintName); 
+						assert ctx.colors.containsKey(reg.hintName);
 						reg.AllocReg(new PhysicalReg(ctx.colors.get(reg.hintName)));
 					}
 				}
@@ -609,7 +620,8 @@ public class AsmRegAllocator {
 			regsMovEnable.add(vreg);
 			EnableMoves(regsMovEnable);
 			
-			if (MoveRelated(vreg))
+//			if (MoveRelated(vreg))
+			if (!NodeMoves(vreg).isEmpty())
 				ctx.freezeWorklist.add(vreg);
 			else
 				ctx.simplifyWorklist.add(vreg);
@@ -630,7 +642,7 @@ public class AsmRegAllocator {
 	// reevaluate and put back to suitable place in worklist.
 	private void AddWorklist(String vreg) {
 		if (!ctx.IsPreColored(vreg) &&
-						!MoveRelated(vreg) &&
+						NodeMoves(vreg).isEmpty() &&
 						ctx.itfg.GetDegree(vreg) < REGNUM) {
 			ctx.freezeWorklist.remove(vreg);
 			ctx.simplifyWorklist.add(vreg);
@@ -659,6 +671,24 @@ public class AsmRegAllocator {
 		if (ctx.coalescedNodes.contains(vreg))
 			return GetAlias(ctx.alias.get(vreg));
 		return vreg;
+	}
+	
+	// put small heuristic value to the front.
+	private void AddSpillWorklist (String str) {
+		for (int i = 0; i < ctx.spillWorklist.size(); ++i) {
+			if (ctx.heuristic.get(str) < ctx.heuristic.get(ctx.spillWorklist.get(i))) {
+				ctx.spillWorklist.add(i, str);
+				return;
+			}
+		}
+		ctx.spillWorklist.add(str);
+	}
+	
+	private double GetHeuristic (String str) {
+		double heur = (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str);
+		if (str.startsWith("spl"))
+			heur += 100;
+		return heur;
 	}
 }
 
