@@ -571,7 +571,7 @@ public class Interpreter {
 						case "sub": ans = binSrc1 - binSrc2; break;
 						case "mul": ans = binSrc1 * binSrc2; break;
 						case "div": ans = binSrc1 / binSrc2; break;
-						case "mod":	ans = binSrc1 % binSrc2; break;
+						case "mod": ans = binSrc1 % binSrc2; break;
 						case "shl": ans = binSrc1 << binSrc2; break;
 						case "shr": ans = binSrc1 >> binSrc2; break;
 						case "and":

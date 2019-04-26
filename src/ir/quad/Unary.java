@@ -1,15 +1,11 @@
 package ir.quad;
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
 
 import java.util.List;
-import java.util.Map;
-
-import static ir.Utility.inlinePrefix;
 
 public class Unary extends Quad {
   public enum Op {
@@ -51,12 +47,5 @@ public class Unary extends Quad {
   @Override
   public void AcceptTranslator(AsmTranslateVisitor translator) {
     translator.visit(this);
-  }
-  
-  @Override
-  public Quad Copy(Map<String, BasicBlock> BBMap) {
-  	Unary tmp = new Unary((Reg) ans.Copy(), op, src.Copy());
-	  tmp.blk = BBMap.get( blk.name + inlinePrefix);
-    return tmp;
   }
 }

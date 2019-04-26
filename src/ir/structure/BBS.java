@@ -1,9 +1,6 @@
 package ir.structure;
 
-import ir.quad.Branch;
-import ir.quad.Jump;
-import ir.quad.Quad;
-import ir.quad.Ret;
+import ir.quad.*;
 
 /**
  * This data structure manage the complexity of the linear and CFG basic blocks.
@@ -14,20 +11,24 @@ public class BBS {
 	// this is a graph model constructed based on ListBB.
 	public CFG cfg = new CFG();
 	
-	/**
-	 * Construct CFG, add default jump.
-	 * first, clean CFG.
-	 * */
-	public void AddFallThroughJump() {
-		
+	public void CleanAfterRet () {
 		for (BasicBlock cur = list.Head(); cur != null; cur = cur.next) {
-			for (Quad quad : cur.quads) {
-				if (quad instanceof Ret && cur.quads.indexOf(quad) != cur.quads.size() - 1)
-					throw new RuntimeException("clean quads before CFG!");
+			for (int i = 0; i < cur.quads.size(); ++i) {
+				if (cur.quads.get(i) instanceof Ret) {
+					++i;
+					while (i < cur.quads.size())
+						cur.quads.remove(i);
+				}
 			}
 		}
-		
-		for (BasicBlock cur = list.Head(); cur != null; cur = cur.next) {
+	}
+	/**
+	 * Construct CFG, add default jump. */
+	public void AddFallThroughJump() {
+		BasicBlock cur = list.Head();
+		// note that here is cur.next because the jump target is cur.next.
+		while (cur.next != null) {
+			// add default jump if there isn't jump or branch guard the bottom.
 			boolean skipJump = false;
 			if (!cur.quads.isEmpty()) {
 				Quad last = cur.quads.get(cur.quads.size() - 1);
@@ -39,6 +40,7 @@ public class BBS {
 				fallThrough.blk = cur;
 				cur.quads.add(fallThrough);
 			}
+			cur = cur.next;
 		}
 	}
 
@@ -59,6 +61,23 @@ public class BBS {
 				}
 			}
 			cur = cur.next;
+		}
+	}
+	
+	// need build cfg first.
+	public void CleanUselessBB () {
+		BasicBlock cur = list.Head();
+		BasicBlock deltmp;
+		
+		while (cur != null) {
+			int degree = cfg.predesessors.get(cur).size();
+			if (cur == list.Head()) ++degree;
+			
+			deltmp = (degree == 0) ? cur : null;
+			cur = cur.next;
+			
+			if (deltmp != null)
+				list.Remove(deltmp);
 		}
 	}
 }

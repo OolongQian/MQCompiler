@@ -145,7 +145,8 @@ exp
     |   <assoc=right> op=('++'|'--') exp # prefixExp // lValExp=exp /*** check ***/
     |   <assoc=right> op=('+' | '-') exp # prefixExp
     |   <assoc=right> op=('!' | '~') exp # prefixExp
-    |   lhs=exp op=('*'|'/'|'%') rhs=exp # arithBinaryExp /*** check ***/
+    |   lhs=exp op=('*'|'/') rhs=exp # arithBinaryExp /*** check ***/
+    |   lhs=exp op='%' rhs=exp # arithBinaryExp
     |   lhs=exp op=('+'|'-') rhs=exp # arithBinaryExp
     |   lhs=exp op=('<<'|'>>') rhs=exp # arithBinaryExp
     |   lhs=exp op=('>'|'>='|'<'|'<=') rhs=exp # arithBinaryExp

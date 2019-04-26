@@ -7,9 +7,6 @@ import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
 
 import java.util.List;
-import java.util.Map;
-
-import static ir.Utility.inlinePrefix;
 
 public class Branch extends Quad {
   public IrValue cond;
@@ -42,13 +39,5 @@ public class Branch extends Quad {
 	@Override
 	public void AcceptTranslator(AsmTranslateVisitor translator) {
 		translator.visit(this);
-	}
-	
-	@Override
-	public Quad Copy(Map<String, BasicBlock> BBMap) {
-  	// basic block is used by its name, except in SSA construction, thus we leave it alone.
-		Branch tmp = new Branch(cond.Copy(), BBMap.get( ifTrue.name + inlinePrefix), BBMap.get( ifFalse.name + inlinePrefix));
-		tmp.blk = BBMap.get( blk.name + inlinePrefix);
-		return tmp;
 	}
 }

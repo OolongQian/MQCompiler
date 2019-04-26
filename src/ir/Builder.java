@@ -30,6 +30,11 @@ public class Builder extends AstBaseVisitor<Void> {
 	public void Build(Prog ast) {
 		MakeClassTable(ast);
 		BuildIr(ast);
+		// clarify control flow
+		for (IrFunct funct : ctx.ir.functs.values()) {
+			funct.bbs.CleanAfterRet();
+			funct.bbs.AddFallThroughJump();
+		}
 	}
 	
 	private void MakeClassTable(Prog ast) {
