@@ -138,24 +138,26 @@ public class Main {
 		  inliner.FunctInline(irProg);
 		  
 		  // clean uselessBB needs to be after buildcfg.
-		  for (IrFunct funct : irProg.functs.values()) {
-			  funct.bbs.BuildCFG();
-			  funct.bbs.CleanUselessBB();
-		  }
+//		  for (IrFunct funct : irProg.functs.values()) {
+//			  funct.bbs.BuildCFG();
+//			  funct.bbs.CleanUselessBB();
+//		  }
 		
-		  CFGCleaner cleaner = new CFGCleaner();
-		  cleaner.CFGclean(irProg);
+//		  CFGCleaner cleaner = new CFGCleaner();
+//		  cleaner.CFGclean(irProg);
 		  
 		  // ssa needs clear cfg.
-		  SSA ssaBuilder = new SSA();
-		  irProg.BuildCFG();
-		  ssaBuilder.BuildSSA(irProg);
+//		  SSA ssaBuilder = new SSA();
+//		  irProg.BuildCFG();
+//		  ssaBuilder.BuildSSA(irProg);
 //		  ssaBuilder.OptimSSA(irProg);
-		  irProg.BuildCFG();
-		  ssaBuilder.DestructSSA(irProg);
+//		  irProg.BuildCFG();
+//		  ssaBuilder.DestructSSA(irProg);
 		
 //		   Printer irPrinter = new Printer(null);
 //		   irProg.Print(irPrinter);
+		  
+		  System.out.println("haha");
 		  
 		  AsmBuilder asmer = new AsmBuilder();
 		  asmer.TranslateIr(irProg);
