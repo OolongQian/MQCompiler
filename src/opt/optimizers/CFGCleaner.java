@@ -20,16 +20,9 @@ public class CFGCleaner {
 		CheckCodeCFG(ir);
 		ir.BuildCFG();
 		
-		Printer printer = new Printer(null);
-		
 		for (IrFunct funct : ir.functs.values()) {
 			do {
 				change = false;
-				
-				if (funct.name .equals("func")) {
-					System.out.println("Print ir");
-					printer.print(funct);
-				}
 				
 				BasicBlock cur = funct.bbs.list.Head();
 				while (cur != null) {
