@@ -3,7 +3,6 @@ import antlr_tools.MgParser;
 import ast.Builder;
 import ast.ParserErrorHandlerStrategy;
 import ast.node.Prog;
-import com.sun.org.apache.xerces.internal.util.SynchronizedSymbolTable;
 import ir.BuilderContext;
 import ir.IrProg;
 import ir.Printer;
@@ -59,28 +58,27 @@ public class Main {
 			funct.bbs.BuildCFG();
 			funct.bbs.CleanUselessBB();
 		}
-		
+
 		CFGCleaner cleaner = new CFGCleaner();
 		cleaner.CFGclean(irProg);
 		System.out.println("change cnt: " + cleaner.changeCnt);
 		
-
-		
 		SSA ssaBuilder = new SSA();
 		irProg.BuildCFG();
 		ssaBuilder.BuildSSA(irProg);
-//		ssaBuilder.OptimSSA(irProg);
+		ssaBuilder.OptimSSA(irProg);
 		irProg.BuildCFG();
 		ssaBuilder.DestructSSA(irProg);
 //		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
+		irProg.BuildCFG();
 		
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
 		System.out.println("ir complete");
-
 		
-		AsmBuilder asmer = new AsmBuilder();
+		// asm builder uses cfg info.
 		irProg.BuildCFG();
+		AsmBuilder asmer = new AsmBuilder();
 		asmer.TranslateIr(irProg);
 		AsmPrinter asmPrinter = new AsmPrinter();
 		asmPrinter.ConfigOutput(nasm_dir);
@@ -98,16 +96,16 @@ public class Main {
 	
   public static void main(String[] args) throws Exception {
 	  if (!TEST) {
+	  	// during untest, input is not test type, instead, it's test filename. 
 	  	if (DEBUGPRINT_VIRTUAL)
-		    IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm_virtual.asm");
+		    IrBuild(args[0], "Mx_ir.txt", "Mx_nasm_virtual.asm");
 		  else
-		  	IrBuild("Mx_src.txt", "Mx_ir.txt", "Mx_nasm.asm");
+		  	IrBuild(args[0], "Mx_ir.txt", "Mx_nasm.asm");
 		  IrInterp("Mx_ir.txt");
 	  }
 	  else {
 	  	
 		  InputStream is = System.in;
-		  String inputFile = null;
 		
 		  String arg = null;
 		  if (args.length == 1)
@@ -157,14 +155,15 @@ public class Main {
 		  SSA ssaBuilder = new SSA();
 		  irProg.BuildCFG();
 		  ssaBuilder.BuildSSA(irProg);
-		  ssaBuilder.OptimSSA(irProg);
-		  irProg.BuildCFG();
+//		  ssaBuilder.OptimSSA(irProg);
 		  ssaBuilder.DestructSSA(irProg);
 		
 //		   Printer irPrinter = new Printer(null);
 //		   irProg.Print(irPrinter);
 		  
+		  // asm builder uses cfg info.
 		  AsmBuilder asmer = new AsmBuilder();
+		  irProg.BuildCFG();
 		  asmer.TranslateIr(irProg);
 		  AsmPrinter asmPrinter = new AsmPrinter();
 		  asmPrinter.ConfigOutput(null);

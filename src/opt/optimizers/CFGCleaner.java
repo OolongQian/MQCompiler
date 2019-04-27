@@ -31,8 +31,8 @@ public class CFGCleaner {
 					printer.print(funct);
 				}
 				
-				for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
-					
+				BasicBlock cur = funct.bbs.list.Head();
+				while (cur != null) {
 					assert !cur.quads.isEmpty();
 					Quad cntl = cur.quads.get(cur.quads.size() - 1);
 					// combine redundant branch
@@ -45,27 +45,27 @@ public class CFGCleaner {
 							cur.quads.add(jmp);
 							change = true;
 							++changeCnt;
-							break;
 						}
 					}
 					else if (cntl instanceof Jump && ((Jump) cntl).target != cur) {
 						// if current bb contains only one jump.
-						if (cur.quads.size() == 1) {
-							DeleteEmptyBB(cur);
+						if (cur != funct.bbs.list.Head() && cur.quads.size() == 1) {
+							cur = DeleteEmptyBB(cur);
 							change = true;
 							++changeCnt;
-							break;
+							continue;
 						}
 						CFG cfg = cur.parentFunct.bbs.cfg;
 						BasicBlock target = ((Jump) cntl).target;
 						assert cfg.successors.get(cur).size() == 1 && cfg.successors.get(cur).iterator().next() == target;
-						if (cfg.predesessors.get(target).size() == 1) {
-							CombineBB(cur);
+						if (target != funct.bbs.list.Head() && cfg.predesessors.get(target).size() == 1) {
+							cur = CombineBB(cur);
 							change = true;
 							++changeCnt;
-							break;
+							continue;
 						}
 					}
+					cur = cur.next;
 				}
 			} while (change);
 		}
@@ -73,7 +73,7 @@ public class CFGCleaner {
 	
 	// return blk's prev in bblist.
 	private BasicBlock DeleteEmptyBB(BasicBlock blk) {
-		BasicBlock ret = blk.prev;
+		BasicBlock ret = blk.next;
 		// transfer control from predecessor to next.
 		Jump jmp = (Jump) blk.quads.get(0);
 		BasicBlock target = jmp.target;
