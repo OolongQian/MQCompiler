@@ -79,7 +79,21 @@ public class AsmAllocateContext {
 	public boolean IsPreColored(String reg) {
 		return precolored.containsKey(reg);
 	}
-	
+
+	public int GetDegree(String u) {
+		if (IsPreColored(u))
+			return Integer.MAX_VALUE;
+		else
+			return itfg.GetDegree(u);
+	}
+
+	public void DecDegreeUtil(String u) {
+		if (IsPreColored(u))
+			return ;
+		else
+			itfg.DecDegreeUtil(u);
+	}
+
 	/************** temp virtual register generator *****************/
 	private Map<String, Integer> tmpCnt = new HashMap<>();
 	// new temps are named in independent namespace of asmFunctions.
@@ -149,14 +163,18 @@ class InterfereGraph {
 			adjList.put(u, new HashSet<>());
 		return adjList.get(u);
 	}
-	
+
+	// won't be invoked for pre-colored vregs.
 	void IncDegree(String u) {
 		if (!degree.containsKey(u))
 			degree.put(u, 0);
 		
 		degree.put(u, degree.get(u) + 1);
 	}
-	
+
+	// assume infinite degree for pre-colored vregs.
+	// will be used in conservative.
+	// pre-colored regs cannot be got here.
 	int GetDegree(String u) {
 		if (!degree.containsKey(u))
 			degree.put(u, 0);

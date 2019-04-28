@@ -228,7 +228,7 @@ public class AsmRegAllocator {
 		for (Iterator<String> iter = ctx.initial.iterator(); iter.hasNext(); ) {
 			String vreg = iter.next();
 			
-			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
+			if (ctx.GetDegree(vreg) >= REGNUM)
 				ctx.spillWorklist.add(vreg);
 //				AddSpillWorklist(vreg);
 			else if (MoveRelated(vreg))
@@ -333,7 +333,7 @@ public class AsmRegAllocator {
 			DecrementDegree(t);
 		}
 		
-		if (ctx.itfg.GetDegree(u) >= REGNUM && ctx.freezeWorklist.contains(u)) {
+		if (ctx.GetDegree(u) >= REGNUM && ctx.freezeWorklist.contains(u)) {
 			ctx.freezeWorklist.remove(u);
 			ctx.spillWorklist.add(u);
 //			AddSpillWorklist(u);
@@ -407,8 +407,8 @@ public class AsmRegAllocator {
 		int maxDegree = 0;
 		for (Iterator<String> iter = ctx.spillWorklist.iterator(); iter.hasNext() ; ) {
 			String str = iter.next();
-			if (maxDegree < ctx.itfg.GetDegree(str)) {
-				maxDegree = ctx.itfg.GetDegree(str);
+			if (maxDegree < ctx.GetDegree(str)) {
+				maxDegree = ctx.GetDegree(str);
 				spilled = str;
 			}
 		}
@@ -425,14 +425,14 @@ public class AsmRegAllocator {
 //				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
-			minHeur = min(minHeur, (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str));
+			minHeur = min(minHeur, (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.GetDegree(str));
 			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
 		assert minHeur != MAX_VALUE;
 		
 		List<String> spillWaitlist = new LinkedList<>();
 		for (String str : ctx.spillWorklist) {
-			if (Math.abs(minHeur - ((ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str))) < 1e-1)
+			if (Math.abs(minHeur - ((ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.GetDegree(str))) < 1e-1)
 				spillWaitlist.add(str);
 		}
 		
@@ -613,8 +613,8 @@ public class AsmRegAllocator {
 	
 	// decrement node's degree, and do something when degree drops from K to K-1.
 	private void DecrementDegree(String vreg) {
-		int deg = ctx.itfg.GetDegree(vreg);
-		ctx.itfg.DecDegreeUtil(vreg);
+		int deg = ctx.GetDegree(vreg);
+		ctx.DecDegreeUtil(vreg);
 		
 		if (deg == REGNUM) {
 			// enable moves for current vreg and all its neighbors.
@@ -645,14 +645,14 @@ public class AsmRegAllocator {
 	private void AddWorklist(String vreg) {
 		if (!ctx.IsPreColored(vreg) &&
 						!MoveRelated(vreg) &&
-						ctx.itfg.GetDegree(vreg) < REGNUM) {
+						ctx.GetDegree(vreg) < REGNUM) {
 			ctx.freezeWorklist.remove(vreg);
 			ctx.simplifyWorklist.add(vreg);
 		}
 	}
 	
 	private boolean OK (String t, String r) {
-		return ctx.itfg.GetDegree(t) < REGNUM ||
+		return ctx.GetDegree(t) < REGNUM ||
 						ctx.IsPreColored(t) ||
 						ctx.itfg.HasAdjSet(t, r);
 	}
@@ -662,9 +662,10 @@ public class AsmRegAllocator {
 	private boolean Conservative(Set<String> vregs) {
 //		return vregs.size() < REGNUM;
 		int k = 0;
-		for (String vreg : vregs)
-			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
+		for (String vreg : vregs) {
+			if (ctx.GetDegree(vreg) >= REGNUM)
 				++k;
+		}
 		return k < REGNUM;
 	}
 	
@@ -687,7 +688,7 @@ public class AsmRegAllocator {
 	}
 	
 	private double GetHeuristic (String str) {
-		double heur = (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.itfg.GetDegree(str);
+		double heur = (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.GetDegree(str);
 		if (str.startsWith("spl"))
 			heur += 100;
 		return heur;
