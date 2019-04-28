@@ -28,10 +28,13 @@ public class DeadEliminator {
 					// keep critical quads alive.
 					// iteratively add var's def quad, where the vars are used to
 					// define other alive vars.
+
 					if (!(inst instanceof Unary) &&
 							!(inst instanceof Binary) &&
 							!(inst instanceof Phi) &&
-							!(inst instanceof Mov)) {
+							!(inst instanceof Mov) &&
+							!(inst instanceof Load)) {
+//						 note : store must be maintained, but load can be optimized.
 						worklist.add(inst);
 					}
 					alive.addAll(worklist);

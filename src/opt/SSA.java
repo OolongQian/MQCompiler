@@ -30,6 +30,9 @@ public class SSA {
 		GlobalValueNumbering GVN = new GlobalValueNumbering();
 		GVN.LocalValueNumbering(ir);
 
+		CopyPropagator copier = new CopyPropagator();
+		copier.PropagateCopy(ir);
+
 		DeadEliminator eliminator = new DeadEliminator();
 		eliminator.EliminateDeadCode(ir);
 

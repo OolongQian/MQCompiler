@@ -30,7 +30,6 @@ public class Load extends Quad {
 	public void ReplaceUse(Reg v, IrValue c) {
 		assert addr == v;
 		addr = v;
-		throw new RuntimeException("I think programmer cannot load a constant address.");
 	}
 	
 	@Override
