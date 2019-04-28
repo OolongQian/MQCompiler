@@ -69,6 +69,7 @@ public class Main {
 		SSA ssaBuilder = new SSA();
 		irProg.BuildCFG();
 		ssaBuilder.BuildSSA(irProg);
+		irProg.BuildCFG();
 		ssaBuilder.OptimSSA(irProg);
 		irProg.BuildCFG();
 		ssaBuilder.DestructSSA(irProg);
@@ -78,7 +79,7 @@ public class Main {
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
 		System.out.println("ir complete");
-		
+
 		// asm builder uses cfg info.
 		irProg.BuildCFG();
 		AsmBuilder asmer = new AsmBuilder();
@@ -106,7 +107,7 @@ public class Main {
 				IrBuild(args[0], "Mx_ir.txt", "Mx_nasm_virtual.asm");
 			else
 				IrBuild(args[0], "Mx_ir.txt", "Mx_nasm.asm");
-//			IrInterp("Mx_ir.txt");
+			IrInterp("Mx_ir.txt");
 		} else {
 			
 			InputStream is = System.in;
@@ -159,7 +160,9 @@ public class Main {
 			SSA ssaBuilder = new SSA();
 			irProg.BuildCFG();
 			ssaBuilder.BuildSSA(irProg);
-//		  ssaBuilder.OptimSSA(irProg);
+			irProg.BuildCFG();
+		  ssaBuilder.OptimSSA(irProg);
+		  irProg.BuildCFG();
 			ssaBuilder.DestructSSA(irProg);
 
 //		   Printer irPrinter = new Printer(null);

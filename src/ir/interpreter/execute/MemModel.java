@@ -21,8 +21,12 @@ public class MemModel {
 	public int LoadInt(int addr) {
 		int ret = 0;
 		for (int i = 0; i < 4; ++i) {
-			byte b = LoadMem(addr + i);
-			ret = ret | ((b & 0xFF) << 8 * i);
+			try {
+				byte b = LoadMem(addr + i);
+				ret = ret | ((b & 0xFF) << 8 * i);
+			} catch (NullPointerException e) {
+				int a = 1;
+			}
 		}
 		return ret;
 	}

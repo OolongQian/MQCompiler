@@ -2,12 +2,11 @@ package config;
 
 public class Config {
 	public static final int INT_SIZE = 8;
-	public static final boolean TEST = false;
+	public static final boolean TEST = true;
 	public static final boolean LOG = false;
 	public static final boolean LINENO = false;
 	public static final boolean SSALOG = false;
-	public static final boolean DEADLOG = false;
-	
+
 	public static final boolean ALLOCAREGS = true;
 	public static final boolean CALLERSAVE = false;
 	public static final boolean CALLEESAVE = false;
@@ -24,5 +23,7 @@ public class Config {
 	// for primitive type, will be optimized.
 	public static final int NULL = 0;
 	
-	public static final int INLINE_LEVEL = 1;
+	public static final int INLINE_LEVEL = 3;
+
+	public static final boolean INTERP_LOG = false;
 }

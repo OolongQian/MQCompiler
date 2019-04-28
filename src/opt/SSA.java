@@ -3,6 +3,7 @@ package opt;
 import ir.IrProg;
 import ir.quad.*;
 import ir.structure.*;
+import jdk.nashorn.internal.objects.Global;
 import opt.optimizers.*;
 import java.util.*;
 
@@ -26,19 +27,19 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
-		ir.functs.values().forEach(Defuse::CollectFunctDefuse);
-		
-		for (int i = 0; i < 5; ++i) {
-			DeadEliminator dead = new DeadEliminator();
-			dead.DeadCodeEliminate();
+		GlobalValueNumbering GVN = new GlobalValueNumbering();
+		GVN.LocalValueNumbering(ir);
 
-//			ConstPropagator conster = new ConstPropagator();
-//			conster.ConstPropagate();
+		DeadEliminator eliminator = new DeadEliminator();
+		eliminator.EliminateDeadCode(ir);
 
-//			CommonExprDeleter expr = new CommonExprDeleter();
-//			expr.WipeCommonExpr();
-		}
-		
+//		for (IrFunct funct : ir.functs.values()) {
+//			BuildConfig(funct);
+//			BuildDominance();
+//			BuildImmediateDominance();
+//			GVN.DominanceValueNumbering(funct, gInfos);
+//		}
+
 //		CopyPropagator copy = new CopyPropagator();
 //		copy.PropagateCopy();
 	}
@@ -46,8 +47,6 @@ public class SSA {
 	/************************ config.Config a CFG to optimize ************************/
 	private IrFunct cFun;
 	private HashMap<BasicBlock, GraphInfo> gInfos = new HashMap<>();
-	
-
 	
 	public void BuildConfig(IrFunct funct) {
 		this.cFun = funct;
@@ -318,7 +317,6 @@ public class SSA {
 			System.err.println();
 		}
 	}
-	
 	
 	/** Record SSA info during variable renaming. */
 	private void RenameVariable(Reg var, BasicBlock blk) {

@@ -31,6 +31,7 @@ public class Inst {
 	
 	public Inst(int lineNo) {
 		this.lineNo = lineNo;
+		this.operator = this.dst = this.src1 = this.src2 = "";
 	}
 }
 

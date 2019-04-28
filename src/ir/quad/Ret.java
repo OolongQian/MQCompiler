@@ -17,7 +17,7 @@ public class Ret extends Quad {
 	
 	@Override
 	public void GetUseRegs(List<Reg> list_) {
-		if (val instanceof Reg)
+		if (val instanceof Reg && !((Reg) val).name.equals("@null"))
 			list_.add((Reg) val);
 	}
 	@Override

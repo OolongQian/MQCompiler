@@ -13,6 +13,7 @@ public class Defuse {
 	
 	/*************************** info collect methods ***********************/
 	public static void CollectFunctDefuse(IrFunct funct) {
+		ssaVars.clear();
 		entry = funct.bbs.list.Head();
 		BasicBlock curBB = entry;
 		while (curBB != null) {

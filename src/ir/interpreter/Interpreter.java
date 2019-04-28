@@ -12,9 +12,7 @@ import ir.structure.StringLiteral;
 import java.io.*;
 import java.util.*;
 
-import static config.Config.INT_SIZE;
-import static config.Config.LINENO;
-import static config.Config.LOG;
+import static config.Config.*;
 import static ir.Utility.unescape;
 
 public class Interpreter {
@@ -39,7 +37,11 @@ public class Interpreter {
 	 * */
 	private Scanner stdScanner;
 	private PrintStream stdout;
-	
+
+	/**
+	 * Log stream
+	 * */
+	private PrintStream logout;
 	/**
 	 * printStream for log
 	 * */
@@ -81,7 +83,13 @@ public class Interpreter {
 		
 		// output
 		stdout = System.out;
-		
+		try {
+			logout = new PrintStream(new FileOutputStream("interp_log.txt"));
+		} catch (FileNotFoundException e) {
+			System.err.println("interpreter log path cannot be found");
+			System.exit(1);
+		}
+
 		// logger
 		if (logFilename != null) {
 			try {
@@ -345,6 +353,8 @@ public class Interpreter {
 		}
 		
 		Inst inst = ctx.func.insts.get(ctx.curInst++);
+		if (INTERP_LOG) logout.print(String.format("%s %s %s %s \t\t\t", inst.operator, inst.dst, inst.src1, inst.src2));
+
 		if(LINENO) System.err.println(inst.lineNo);
 		if (LOG) {
 			System.err.println(inst.lineNo);
@@ -369,6 +379,7 @@ public class Interpreter {
 				local.SetValue(addr);
 				local.SetAllocd();
 				if(LOG) System.err.println("alloc, space 8, addr " + addr + ", name " + name);
+				if (INTERP_LOG) logout.println(String.format("alloca address %d", addr));
 				break;
 			
 			case "malloc":
@@ -381,6 +392,7 @@ public class Interpreter {
 								"space " + mallocByte.GetValue() +
 								", addr " + hpAddr +
 								", name " + inst.dst);
+				if (INTERP_LOG) logout.println(String.format("malloca size %d addr %d", mallocByte.GetValue(), mallocAddr.GetValue()));
 				break;
 			
 			case "store":
@@ -397,12 +409,14 @@ public class Interpreter {
 								", name " + inst.dst +
 								", content " + storeVal.GetValue() +
 								", name " + inst.src1);
+				if (INTERP_LOG) logout.println(String.format("store addr %d value %d", storeAddr.GetValue(), storeVal.GetValue()));
 				break;
 				
 			case "move":
 				Reg dstVar = GetReg(ctx, inst.dst);
 				Reg srcVal = GetReg(ctx, inst.src1);
 				dstVar.SetValue(srcVal.GetValue());
+				if (INTERP_LOG) logout.println(String.format("move value %d", srcVal.GetValue()));
 				break;
 				
 			case "load":
@@ -438,6 +452,7 @@ public class Interpreter {
 								", name " + inst.src1 +
 								", content " + loaded +
 								", name " + inst.dst);
+				if (INTERP_LOG) logout.println(String.format("head address %d load content %d", headAddr, loaded));
 				break;
 				
 			/**
@@ -481,6 +496,7 @@ public class Interpreter {
 					// otherwise, calleeCtx.GetRetVal will be nullptr, which throws out nullPointerException.
 					ret.SetValue(calleeCtx.GetRetVal().GetValue());
 				}
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			// binary operations are reserved for default
@@ -492,12 +508,14 @@ public class Interpreter {
 				if (LOG) logger.println("return " + ctx.func.name +
 								" ret: " + retVal.GetValue() +
 								", name " + retVal.name);
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			case "jump":
 				String jLabel = inst.dst;
 				JumpToBlock(ctx, jLabel);
 				if(LOG) System.err.println("jump, " + jLabel);
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			case "branch":
@@ -517,7 +535,7 @@ public class Interpreter {
 					if(LOG) System.err.println("branch to " + ifFalse);
 					JumpToBlock(ctx, ifFalse);
 				}
-				
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			case "phi":
@@ -529,11 +547,12 @@ public class Interpreter {
 				phiParalCache.put(phiReg, phiChoice);
 				
 				if(LOG) System.err.println("phi, choose " + ctx.GetJumpFrom() + " val " + phiChoice.GetValue() + " name " + opts.get(ctx.GetJumpFrom()));
-				
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			case "<BasicBlock>":
 				ctx.JumpToBB(inst.dst);
+				if (INTERP_LOG) logout.println();
 				break;
 			
 			case "neg": case "bitnot":
@@ -546,20 +565,9 @@ public class Interpreter {
 				}
 				if (LOG)
 					System.err.println(inst.operator + ", src " + uniSrc + ", ans " + uniAns.GetValue());
+				if (INTERP_LOG) logout.println(String.format("ans %d", uniSrc));
 				break;
-//			case "concat":
-//				int str1Addr = GetReg(ctx, inst.src1).GetValue();
-//				int str2Addr = GetReg(ctx, inst.src2).GetValue();
-//				String str1 = mem.LoadStr(str1Addr);
-//				String str2 = mem.LoadStr(str2Addr);
-//				String catStr = str1 + str2;
-//				int catStrAddr = mem.MallocMem(catStr.length() + 8);
-//				Reg catStrAns = GetReg(ctx, inst.dst);
-//				catStrAns.SetAllocd();
-//				catStrAns.SetValue(catStrAddr);
-//				mem.StoreInt(catStrAddr, catStr.length());
-//				mem.StoreStr(catStrAddr + 8, catStr);
-//				break;
+
 			default:
 				Reg binAns = GetReg(ctx, inst.dst);
 				Integer binSrc1 = GetReg(ctx, inst.src1).GetValue();
@@ -596,11 +604,9 @@ public class Interpreter {
 							break;
 					}
 				}
-				if (ans == null) {
-					int a = 1;
-				}
 				assert ans != null;
 				binAns.SetValue(ans);
+				if (INTERP_LOG) logout.println(String.format("%d %d -> %d", binSrc1, binSrc2, ans));
 		}
 	}
 	

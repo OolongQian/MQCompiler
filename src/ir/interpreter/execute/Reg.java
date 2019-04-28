@@ -24,8 +24,11 @@ public class Reg {
 		valSet = false;
 		alloc_d = false;
 		// for immediate value.
-		if (isNumeric(name)) {
-			SetValue(Integer.parseInt(name));
+		if (isNumeric(name) || (name.startsWith("-") && isNumeric(name.substring(1)))) {
+			if (name.startsWith("-"))
+				SetValue(- Integer.parseInt(name.substring(1)));
+			else
+				SetValue(Integer.parseInt(name));
 		}
 		// set fow null value.
 		else if (name.equals("@null")) {

@@ -1,6 +1,8 @@
 package nasm.allocate;
 
 import ir.Printer;
+import ir.structure.BasicBlock;
+import ir.structure.IrFunct;
 import nasm.AsmBB;
 import nasm.AsmFunct;
 import nasm.AsmPrinter;
@@ -46,8 +48,7 @@ public class AsmRegAllocator {
 	private int allocCnt = 0;
 	
 	public void AllocateRegister(AsmFunct asmFunct) {
-		
-		
+
 //		AsmPrinter printer = new AsmPrinter();
 //		printer.Print(asmFunct);
 		
@@ -69,7 +70,7 @@ public class AsmRegAllocator {
 			if (DEBUGPRINT_INTERFERE)
 				ctx.PrintGraph(curf);
 		
-		ctx.initial.forEach(x -> ctx.heuristic.put(x, GetHeuristic(x)));
+//		ctx.initial.forEach(x -> ctx.heuristic.put(x, GetHeuristic(x)));
 		
 		MakeWorklists();
 //		System.out.println(ctx.initial.size());
@@ -81,7 +82,6 @@ public class AsmRegAllocator {
 			throw new RuntimeException();
 		}
 		
-		int i = 0;
 		do {
 			if (!ctx.simplifyWorklist.isEmpty())
 				Simplify();
@@ -115,8 +115,20 @@ public class AsmRegAllocator {
 		
 		// attach color map in allocateContext to Reg in nasm instructions.
 		AttachColor2Reg();
+
+		// eliminate coalesced move.
+		CleanDeadMov(asmFunct);
 	}
-	
+
+	private void CleanDeadMov (AsmFunct funct) {
+		for (AsmBB bb : funct.bbs) {
+			bb.insts.removeIf(inst ->
+					inst instanceof Mov &&
+							inst.dst instanceof Reg && inst.src instanceof Reg &&
+							((Reg) inst.dst).color.phyReg == ((Reg) inst.src).color.phyReg);
+		}
+	}
+
 	// scan pre-colored virtual register and record them into context.
 	// collect all temporary registers, not pre-colored and not yet processed.
 	private void ScanPreColored_Initial_Heuristic() {
@@ -135,11 +147,11 @@ public class AsmRegAllocator {
 				}
 			}
 		}
-		
+
 		ctx.heuristicUse.clear();
 		ctx.heuristicDef.clear();
 		for (String vreg : ctx.initial) {
-			// smooth term
+//			 smooth term
 			ctx.heuristicDef.put(vreg, 0.0);
 			ctx.heuristicUse.put(vreg, 0.0);
 		}
@@ -189,15 +201,12 @@ public class AsmRegAllocator {
 				
 				if (inst instanceof Mov) {
 					// remove use(inst) if this is a virtual register.
-					live.removeIf(use::contains);
 					// add dst and src to movelist.
-					if (inst.dst instanceof Reg)
+					if (inst.dst instanceof Reg && inst.src instanceof Reg) {
 						ctx.AddMovelist(((Reg) inst.dst).hintName, (Mov) inst);
-					if (inst.src instanceof Reg)
 						ctx.AddMovelist(((Reg) inst.src).hintName, (Mov) inst);
-					// add current move to moves enabled for possible coalescing.
-					if (inst.dst instanceof Reg && inst.src instanceof Reg)
 						ctx.worklistMoves.add((Mov) inst);
+					}
 				}
 				// add defined virtual register into live, it's just for interfere consistency.
 				live.addAll(def);
@@ -205,9 +214,6 @@ public class AsmRegAllocator {
 				// defined virtual register interferes with all living virtual register.
 				for (String d : def)
 					for (String l : live) {
-						if (d.startsWith("spl_") || l.startsWith("spl_")) {
-							int a =1;
-						}
 						AddInterEdge(d, l);
 					}
 				
@@ -223,9 +229,10 @@ public class AsmRegAllocator {
 			String vreg = iter.next();
 			
 			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
-				AddSpillWorklist(vreg);
-//			else if (MoveRelated(vreg))
-			else if (!NodeMoves(vreg).isEmpty())
+				ctx.spillWorklist.add(vreg);
+//				AddSpillWorklist(vreg);
+			else if (MoveRelated(vreg))
+//			else if (!NodeMoves(vreg).isEmpty())
 				ctx.freezeWorklist.add(vreg);
 			else
 				ctx.simplifyWorklist.add(vreg);
@@ -237,7 +244,6 @@ public class AsmRegAllocator {
 		assert iter.hasNext();
 		// pick a virtual register from simplify worklist.
 		String vreg = iter.next();
-		
 		
 		iter.remove();
 		// push it to stack.
@@ -289,8 +295,9 @@ public class AsmRegAllocator {
 			forall_true = !exist_false;
 			cond_1 = ctx.IsPreColored(u) && forall_true;
 			// second 'and'
+			boolean cond_2;
 			Set<String> unionAdj = Adjacent(u); unionAdj.addAll(Adjacent(v));
-			boolean cond_2 = !ctx.IsPreColored(u) && Conservative(unionAdj);
+			cond_2 = !ctx.IsPreColored(u) && Conservative(unionAdj);
 			
 			boolean flag = cond_1 || cond_2;
 			if (flag) {
@@ -306,7 +313,6 @@ public class AsmRegAllocator {
 	
 	// sub-function used by Coalesce.
 	// combine two nodes in interference graph.
-	Set<String> tmp = new HashSet<>();
 	private void Combine (String u, String v) {
 		if (ctx.freezeWorklist.contains(v))
 			ctx.freezeWorklist.remove(v);
@@ -318,9 +324,8 @@ public class AsmRegAllocator {
 		ctx.alias.put(v, u);
 		
 		ctx.GetMovelist(u).addAll(ctx.GetMovelist(v));
-		
-		tmp.clear(); tmp.add(v);
-//		Set<String> tmp = new HashSet<>(); tmp.add(v);
+
+		Set<String> tmp = new HashSet<>(); tmp.add(v);
 		EnableMoves(tmp);
 		
 		for (String t : Adjacent(v)) {
@@ -330,17 +335,18 @@ public class AsmRegAllocator {
 		
 		if (ctx.itfg.GetDegree(u) >= REGNUM && ctx.freezeWorklist.contains(u)) {
 			ctx.freezeWorklist.remove(u);
-			AddSpillWorklist(u);
+			ctx.spillWorklist.add(u);
+//			AddSpillWorklist(u);
 		}
 	}
 	
 	private void Freeze() {
 		Iterator<String> iter = ctx.freezeWorklist.iterator();
 		assert iter.hasNext();
-		
+
 		String vreg = iter.next();
 		iter.remove();
-		
+
 		ctx.simplifyWorklist.add(vreg);
 		FreezeMoves(vreg);
 	}
@@ -356,7 +362,7 @@ public class AsmRegAllocator {
 			if (GetAlias(y).equals(u))
 				v = GetAlias(x);
 			else {
-				assert u.equals(GetAlias(x));
+//				assert u.equals(GetAlias(x));
 				v = GetAlias(y);
 			}
 			
@@ -410,8 +416,8 @@ public class AsmRegAllocator {
 	}
 	
 	private String HeuristicDefUse () {
-		return ctx.spillWorklist.get(0);
-		/*
+//		return ctx.spillWorklist.get(0);
+//		/*
 		double minHeur = MAX_VALUE;
 		boolean existNonSpilled = false;
 		for (String str : ctx.spillWorklist) {
@@ -443,7 +449,7 @@ public class AsmRegAllocator {
 		}
 		
 		return spillWaitlist.get(badluck);
-		*/
+//		*/
 	}
 	
 	private void AssignColors() {
@@ -575,22 +581,17 @@ public class AsmRegAllocator {
 	
 	// available moves associated with current virtual registers.
 	private Set<Mov> NodeMoves (String vreg) {
-		Set<Mov> moves = new LinkedHashSet<>();
-
-		for (Mov mov : ctx.GetMovelist(vreg))
-			if (ctx.activeMoves.contains(mov) || ctx.worklistMoves.contains(mov))
-				moves.add(mov);
-
+		Set<Mov> moves = new LinkedHashSet<>(ctx.activeMoves);
+		moves.addAll(ctx.worklistMoves);
+		moves.retainAll(ctx.GetMovelist(vreg));
 		return moves;
 	}
 	
 	private Set<String> Adjacent(String vreg) {
-		Set<String> adjs = new HashSet<>();
-		for (String adj : ctx.itfg.GetAdjList(vreg)) {
-			if (!ctx.selectStack.contains(adj) && !ctx.coalescedNodes.contains(adj))
-				adjs.add(adj);
-		}
-		return adjs; 
+		Set<String> adjs = new HashSet<>(ctx.itfg.GetAdjList(vreg));
+		adjs.removeAll(ctx.selectStack);
+		adjs.removeAll(ctx.coloredNodes);
+		return adjs;
 	}
 	
 	// NOTE : in tiger book, adjList and degree are only for non-pre-colored virtual registers.
@@ -620,9 +621,9 @@ public class AsmRegAllocator {
 			Set<String> regsMovEnable = new HashSet<>(Adjacent(vreg));
 			regsMovEnable.add(vreg);
 			EnableMoves(regsMovEnable);
+			ctx.spillWorklist.remove(vreg);
 			
-//			if (MoveRelated(vreg))
-			if (!NodeMoves(vreg).isEmpty())
+			if (MoveRelated(vreg))
 				ctx.freezeWorklist.add(vreg);
 			else
 				ctx.simplifyWorklist.add(vreg);
@@ -643,7 +644,7 @@ public class AsmRegAllocator {
 	// reevaluate and put back to suitable place in worklist.
 	private void AddWorklist(String vreg) {
 		if (!ctx.IsPreColored(vreg) &&
-						NodeMoves(vreg).isEmpty() &&
+						!MoveRelated(vreg) &&
 						ctx.itfg.GetDegree(vreg) < REGNUM) {
 			ctx.freezeWorklist.remove(vreg);
 			ctx.simplifyWorklist.add(vreg);
@@ -659,12 +660,12 @@ public class AsmRegAllocator {
 	// FIXME !!!
 	// use conservative coalesce strategy.
 	private boolean Conservative(Set<String> vregs) {
-		return vregs.size() < REGNUM;
-//		int k = 0;
-//		for (String vreg : vregs)
-//			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
-//				++k;
-//		return k < REGNUM;
+//		return vregs.size() < REGNUM;
+		int k = 0;
+		for (String vreg : vregs)
+			if (ctx.itfg.GetDegree(vreg) >= REGNUM)
+				++k;
+		return k < REGNUM;
 	}
 	
 	// simple union-find set

@@ -44,9 +44,6 @@ public class LivenessAnalysis {
 	// note : think about pre-colored registers and non-registers.
 	// note : think about all different use cases in isntructions.
 	private void CollectInfo (AsmBB asmBB) {
-		if (asmBB.hintName.equals("_B_split0_main")) {
-			int a = 0;
-		}
 		Set<String> ueVar = new HashSet<>();
 		Set<String> varKill = new HashSet<>();
 		
@@ -67,9 +64,6 @@ public class LivenessAnalysis {
 	}
 	
 	private boolean RecomputeLiveOut (AsmBB asmBB) {
-		if (asmBB.hintName.equals("_B_split0_main")) {
-			int a = 0;
-		}
 		AsmCFG cfg = asmBB.parentFunct.cfg;
 		Set<String> liveOut = liveOuts.get(asmBB);
 		

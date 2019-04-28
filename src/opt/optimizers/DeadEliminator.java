@@ -1,72 +1,65 @@
 package opt.optimizers;
 
-import ir.Printer;
-import ir.quad.Call;
-import ir.quad.Quad;
+import ir.IrProg;
+import ir.quad.*;
+import ir.structure.BasicBlock;
+import ir.structure.IrFunct;
 import ir.structure.Reg;
 
 import java.util.*;
 
-import static config.Config.DEADLOG;
-
-/******************************** CFG unchange ************************************/
-/**
- * Dead code eliminator depends on the def-use info in Defuse.java class.
- *
- * It maintains def-use chain.
- * */
+// a complicated but comprehensive dead code elimination method in EaC.
+// build def use chain from scratch.
+// we don't do dead control flow elimination.
 public class DeadEliminator {
-	
-	public void DeadCodeEliminate() {
-//		PrintDefUse();
-		Eliminate();
-	}
-	
-	// for debug
-	private void PrintDefUse() {
-		Printer printer = new Printer(null);
-		for (Reg reg : Defuse.ssaVars.keySet()) {
-			System.err.print(reg.name + ": ");
-			Defuse.GetDefQuad(reg).AcceptPrint(printer);
-			Defuse.GetUseQuads(reg).forEach(x -> x.AcceptPrint(printer));
-			System.err.println();
-		}
-	}
-	
-	private void Eliminate() {
-		Queue<Reg> workList = new ArrayDeque<>();
-		workList.addAll(Defuse.ssaVars.keySet());
-		
-		while (!workList.isEmpty()) {
-			Reg var = workList.remove();
-			
-			// if this var isn't used, eliminate its def.
-			// if this var is a function argument, it doesn't have a def explicitly, thus we do nothing.
-			if (Defuse.GetUseQuads(var).isEmpty()) {
-				Quad def = Defuse.GetDefQuad(var);
-				// if this is a function argument.
-				if (def == null) break;
-				// FIXME : function call will have side effects, we cannot eliminate them.
-				if (!(def instanceof Call)) {
-					// remove this quad from current program.
-					def.blk.quads.remove(def);
-					
-					if (DEADLOG) {
-						Printer printer = new Printer(null);
-						System.out.println("remove ");
-						def.AcceptPrint(printer);
-						
+
+	// mark live code, refuse to eliminate them.
+	private HashSet<Quad> alive = new HashSet<>();
+
+	public void EliminateDeadCode (IrProg ir) {
+		for (IrFunct funct : ir.functs.values()) {
+			Defuse.CollectFunctDefuse(funct);
+
+			// mark.
+			Queue<Quad> worklist = new ArrayDeque<>();
+			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+				for (Quad inst : cur.quads) {
+					// push all useful quads into worklist.
+					// keep critical quads alive.
+					// iteratively add var's def quad, where the vars are used to
+					// define other alive vars.
+					if (!(inst instanceof Unary) &&
+							!(inst instanceof Binary) &&
+							!(inst instanceof Phi) &&
+							!(inst instanceof Mov)) {
+						worklist.add(inst);
 					}
-					
-					List<Reg> uses = new LinkedList<>();
-					def.GetUseRegs(uses);
-					// these regs aren't used in this quad anymore, because this quad has been eliminated.
+					alive.addAll(worklist);
+				}
+
+				List<Reg> uses = new LinkedList<>();
+				while (!worklist.isEmpty()) {
+					// get all its uses, iteratively mark them as alive.
+					Quad liveq = worklist.remove();
+					liveq.GetUseRegs(uses);
+
 					for (Reg use : uses) {
-						Defuse.GetUseQuads(use).remove(def);
-						if (!workList.contains(use))
-							workList.add(use);
+						Quad def = Defuse.GetDefQuad(use);
+						// if this use is a function parameter or global or string. it has no def.
+						if (def == null)
+							continue;
+
+						if (!alive.contains(def)) {
+							alive.add(def);
+							worklist.add(def);
+						}
 					}
 				}
+			}
+
+			// sweep. Eliminate unmarked quads.
+			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+				cur.quads.removeIf(x -> !alive.contains(x));
 			}
 		}
 	}
