@@ -165,16 +165,16 @@ public class Main {
 		  irProg.BuildCFG();
 			ssaBuilder.DestructSSA(irProg);
 
-		   Printer irPrinter = new Printer(null);
-		   irProg.Print(irPrinter);
+//		   Printer irPrinter = new Printer(null);
+//		   irProg.Print(irPrinter);
 			
-			// asm builder uses cfg info.
-//			AsmBuilder asmer = new AsmBuilder();
-//			irProg.BuildCFG();
-//			asmer.TranslateIr(irProg);
-//			AsmPrinter asmPrinter = new AsmPrinter();
-//			asmPrinter.ConfigOutput(null);
-//			asmer.Print(asmPrinter);
+//			 asm builder uses cfg info.
+			AsmBuilder asmer = new AsmBuilder();
+			irProg.BuildCFG();
+			asmer.TranslateIr(irProg);
+			AsmPrinter asmPrinter = new AsmPrinter();
+			asmPrinter.ConfigOutput(null);
+			asmer.Print(asmPrinter);
 		}
 	}
 }
