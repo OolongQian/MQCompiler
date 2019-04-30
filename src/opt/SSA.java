@@ -12,7 +12,7 @@ import static config.Config.SSALOG;
 // SSA transformation is done for one function at a time, let's make it compact.
 // transformation consists of a series of passes, we have to config the IrFunct.
 public class SSA {
-	
+
 	public void BuildSSA(IrProg ir) {
 		for (IrFunct funct : ir.functs.values()) {
 			BuildConfig(funct);
@@ -36,6 +36,9 @@ public class SSA {
 		DeadEliminator eliminator = new DeadEliminator();
 		eliminator.EliminateDeadCode(ir);
 
+		LoopInvariantPorter loopInvariant = new LoopInvariantPorter();
+		loopInvariant.MoveLoopInvariant(ir, gInfos);
+
 //		for (IrFunct funct : ir.functs.values()) {
 //			BuildConfig(funct);
 //			BuildDominance();
@@ -46,44 +49,44 @@ public class SSA {
 //		CopyPropagator copy = new CopyPropagator();
 //		copy.PropagateCopy();
 	}
-	
+
 	/************************ config.Config a CFG to optimize ************************/
 	private IrFunct cFun;
 	private HashMap<BasicBlock, GraphInfo> gInfos = new HashMap<>();
-	
+
 	public void BuildConfig(IrFunct funct) {
 		this.cFun = funct;
-		
+
 		gInfos.clear();
 		vars.clear();
-		
+
 		BasicBlock curB = cFun.bbs.list.Head();
 		while (curB != null) {
 			gInfos.put(curB, new GraphInfo());
 			curB = curB.next;
 		}
 	}
-	
+
 	/**
 	 * ************************* DOMINANT TREE **********************************
 	 * Build dominant tree for a List_ of basic blocks.
 	 */
 	public void BuildDominance() {
 		Set<BasicBlock> empty = new HashSet<>();
-		
+
 		BasicBlock entry = cFun.bbs.list.Head();
 		BasicBlock curB = entry;
 		while (curB != null) {
 			// clear each BB.
 			Set<BasicBlock> in = Predecessors(curB);
 			Set<BasicBlock> out = Successors(curB);
-			
+
 			SetPredecessors(curB, empty);
 			SetSuccessors(curB, empty);
-			
+
 			// reset marker.
 			gInfos.values().forEach(x -> x.vis = false);
-			
+
 			// check connectivity.
 			DfsDT(entry);
 			// those cannot be reached BBs are dominated by curB.
@@ -98,26 +101,26 @@ public class SSA {
 					gInfos.get(blk).inferiorTo.add(curB);
 				}
 			}
-			
+
 			SetPredecessors(curB, in);
 			SetSuccessors(curB, out);
 			curB = curB.next;
 		}
 	}
-	
+
 	private void DfsDT(BasicBlock curB) {
 		if (gInfos.get(curB).vis) return;
 		gInfos.get(curB).vis = true;
 		Successors(curB).forEach(this::DfsDT);
 	}
-	
-	
+
+
 	/**
 	 * ************************* IMMEDIATE DOMINANCE ***********************************/
 	public void BuildImmediateDominance() {
 		gInfos.values().forEach(x -> x.iDom = null);
 		gInfos.values().forEach(x -> x.domTree.clear());
-		
+
 		BasicBlock curB = cFun.bbs.list.Head();
 		while (curB != null) {
 			// pick one idom out of a list of dominance.
@@ -147,7 +150,7 @@ public class SSA {
 			// update current BB cursor.
 			curB = curB.next;
 		}
-		
+
 		if (SSALOG) {
 			System.err.println(cFun.name);
 			print(gInfos, "iDom");
@@ -156,13 +159,13 @@ public class SSA {
 			System.err.println();
 		}
 	}
-	
+
 	/**
 	 * ************************* DOMINANT FRONTIER ***********************************/
 	public void DominanceFrontier() {
 		gInfos.values().forEach(x -> x.domFrontier.clear());
 		BasicBlock curB = cFun.bbs.list.Head();
-		
+
 		while (curB != null) {
 			for (BasicBlock fath : Predecessors(curB)) {
 				BasicBlock t = fath;
@@ -179,7 +182,7 @@ public class SSA {
 			System.err.println();
 		}
 	}
-	
+
 	/**
 	 * ************************* Var Use-Def collection ************
 	 * Attach use-def information on Reg.
@@ -745,9 +748,9 @@ public class SSA {
 		if (br.ifFalse == old)
 			br.ifFalse = new_;
 	}
-	
-	
-	
+
+
+
 	/************************* Utilities for simplicity *************************/
 	public Set<BasicBlock> Predecessors(BasicBlock blk) {
 		return cFun.bbs.cfg.predesessors.get(blk);
@@ -761,7 +764,7 @@ public class SSA {
 	public void SetSuccessors(BasicBlock blk, Set<BasicBlock> sucses) {
 		cFun.bbs.cfg.successors.put(blk, sucses);
 	}
-	
+
 	private void print(HashMap<BasicBlock, GraphInfo> infos, String mode) {
 		switch (mode) {
 			case "inferiorTo":

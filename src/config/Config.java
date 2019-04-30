@@ -23,7 +23,7 @@ public class Config {
 	// for primitive type, will be optimized.
 	public static final int NULL = 0;
 	
-	public static final int INLINE_LEVEL = 0;
+	public static final int INLINE_LEVEL = 4;
 
 	public static final boolean INTERP_LOG = false;
 }
