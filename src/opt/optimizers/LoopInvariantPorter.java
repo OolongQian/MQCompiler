@@ -83,8 +83,11 @@ public class LoopInvariantPorter {
       for (Quad quad : loopBB.quads) {
         if (quad instanceof Store)
           invarRegs.remove(((Store) quad).dst);
-        else if (quad instanceof Call && gvarDefsMap.containsKey(((Call) quad).funcName))
+        else if (quad instanceof Call && gvarDefsMap.containsKey(((Call) quad).funcName)) {
           invarRegs.removeAll(gvarDefsMap.get(((Call) quad).funcName));
+          if (!((Call) quad).ret.name.equals("@null"))
+            invarRegs.remove(((Call) quad).ret);
+        }
         else if (quad.GetDefReg() != null)
           invarRegs.remove(quad.GetDefReg());
       }

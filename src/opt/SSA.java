@@ -43,7 +43,7 @@ public class SSA {
 			BuildConfig(funct);
 			BuildDominance();
 			BuildImmediateDominance();
-			loopInvariant.MoveLoopInvariant(funct, gInfos);
+//			loopInvariant.MoveLoopInvariant(funct, gInfos);
 		}
 
 //		for (IrFunct funct : ir.functs.values()) {

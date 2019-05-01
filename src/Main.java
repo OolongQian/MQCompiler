@@ -87,7 +87,7 @@ public class Main {
 			funct.bbs.BuildCFG();
 			funct.bbs.CleanUselessBB(false);
 		}
-		
+
 //		Printer irPrinter = new Printer(ir_dir);
 //		irProg.Print(irPrinter);
 		System.out.println("ir complete");
@@ -174,24 +174,21 @@ public class Main {
 			irProg.BuildCFG();
 			ssaBuilder.BuildSSA(irProg);
 			irProg.BuildCFG();
+		  ssaBuilder.OptimSSA(irProg);
+		  irProg.BuildCFG();
+			ssaBuilder.DestructSSA(irProg);
+
+//			cleaner.CFGclean(irProg, false);
+//			for (IrFunct funct : irProg.functs.values()) {
+//				funct.bbs.BuildCFG();
+//				funct.bbs.CleanUselessBB(false);
+//			}
+
 
 //			Printer irPrinter = new Printer("Mx_ir.txt");
 		   Printer irPrinter = new Printer(null);
 			irProg.Print(irPrinter);
 
-		  ssaBuilder.OptimSSA(irProg);
-		  irProg.BuildCFG();
-			ssaBuilder.DestructSSA(irProg);
-
-			cleaner.CFGclean(irProg, false);
-
-//		   clean uselessBB needs to be after buildcfg.
-			// must not do it inside SSA form, because it doesn't handle phi node.
-			for (IrFunct funct : irProg.functs.values()) {
-				funct.bbs.BuildCFG();
-				funct.bbs.CleanUselessBB(false);
-			}
-			
 //			 asm builder uses cfg info.
 //			AsmBuilder asmer = new AsmBuilder();
 //			irProg.BuildCFG();
