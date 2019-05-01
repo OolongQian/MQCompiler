@@ -37,7 +37,14 @@ public class SSA {
 		eliminator.EliminateDeadCode(ir);
 
 		LoopInvariantPorter loopInvariant = new LoopInvariantPorter();
-		loopInvariant.MoveLoopInvariant(ir, gInfos);
+		loopInvariant.ConfigGvarCallDef(ir);
+		for (IrFunct funct : ir.functs.values()) {
+			// build dominance tree first.
+			BuildConfig(funct);
+			BuildDominance();
+			BuildImmediateDominance();
+			loopInvariant.MoveLoopInvariant(funct, gInfos);
+		}
 
 //		for (IrFunct funct : ir.functs.values()) {
 //			BuildConfig(funct);

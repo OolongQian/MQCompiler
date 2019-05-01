@@ -2,6 +2,7 @@ package opt.optimizers;
 
 import ir.IrProg;
 import ir.quad.Mov;
+import ir.quad.Phi;
 import ir.quad.Quad;
 import ir.structure.BasicBlock;
 import ir.structure.IrFunct;

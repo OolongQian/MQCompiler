@@ -10,7 +10,7 @@ public class BasicBlock {
 	public List<Quad> quads = new LinkedList<>();
 	public IrFunct parentFunct;
 	public Integer loopLevel = null;
-	
+
 	public BasicBlock prev, next;
 	
 	public BasicBlock(String name, IrFunct parentFunct, Integer loopLevel) {

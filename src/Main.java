@@ -56,28 +56,40 @@ public class Main {
 		FunctInliner inliner = new FunctInliner();
 		inliner.FunctInline(irProg);
 
-//		 clean uselessBB needs to be after buildcfg.
+		CFGCleaner cleaner = new CFGCleaner();
+		cleaner.CFGclean(irProg, true);
+		System.out.println("change cnt: " + cleaner.changeCnt);
+
+		// clean uselessBB needs to be after buildcfg.
 		for (IrFunct funct : irProg.functs.values()) {
 			funct.bbs.BuildCFG();
-			funct.bbs.CleanUselessBB();
+			funct.bbs.CleanUselessBB(true);
 		}
-		
-		CFGCleaner cleaner = new CFGCleaner();
-		cleaner.CFGclean(irProg);
-		System.out.println("change cnt: " + cleaner.changeCnt);
-		
+
 		SSA ssaBuilder = new SSA();
 		irProg.BuildCFG();
 		ssaBuilder.BuildSSA(irProg);
 		irProg.BuildCFG();
-		ssaBuilder.OptimSSA(irProg);
-		irProg.BuildCFG();
-//		ssaBuilder.DestructSSA(irProg);
-//		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
-		irProg.BuildCFG();
-		
+
 		Printer irPrinter = new Printer(ir_dir);
 		irProg.Print(irPrinter);
+
+		ssaBuilder.OptimSSA(irProg);
+		irProg.BuildCFG();
+		ssaBuilder.DestructSSA(irProg);
+//		 because split and copy is used in SSA destruction, reanalyze CFG is needed.
+
+		cleaner.CFGclean(irProg, false);
+
+//		   clean uselessBB needs to be after buildcfg.
+		// must not do it inside SSA form, because it doesn't handle phi node.
+		for (IrFunct funct : irProg.functs.values()) {
+			funct.bbs.BuildCFG();
+			funct.bbs.CleanUselessBB(false);
+		}
+		
+//		Printer irPrinter = new Printer(ir_dir);
+//		irProg.Print(irPrinter);
 		System.out.println("ir complete");
 
 		// asm builder uses cfg info.
@@ -147,34 +159,48 @@ public class Main {
 			FunctInliner inliner = new FunctInliner();
 			inliner.FunctInline(irProg);
 
+			CFGCleaner cleaner = new CFGCleaner();
+			cleaner.CFGclean(irProg, true);
+
 //		   clean uselessBB needs to be after buildcfg.
+			// must not do it inside SSA form, because it doesn't handle phi node.
 			for (IrFunct funct : irProg.functs.values()) {
 				funct.bbs.BuildCFG();
-				funct.bbs.CleanUselessBB();
+				funct.bbs.CleanUselessBB(true);
 			}
-			
-			CFGCleaner cleaner = new CFGCleaner();
-			cleaner.CFGclean(irProg);
 
-//		   ssa needs clear cfg.
+			// ssa needs clear cfg.
 			SSA ssaBuilder = new SSA();
 			irProg.BuildCFG();
 			ssaBuilder.BuildSSA(irProg);
 			irProg.BuildCFG();
+
+//			Printer irPrinter = new Printer("Mx_ir.txt");
+		   Printer irPrinter = new Printer(null);
+			irProg.Print(irPrinter);
+
 		  ssaBuilder.OptimSSA(irProg);
 		  irProg.BuildCFG();
 			ssaBuilder.DestructSSA(irProg);
 
-//		   Printer irPrinter = new Printer(null);
-//		   irProg.Print(irPrinter);
+			cleaner.CFGclean(irProg, false);
+
+//		   clean uselessBB needs to be after buildcfg.
+			// must not do it inside SSA form, because it doesn't handle phi node.
+			for (IrFunct funct : irProg.functs.values()) {
+				funct.bbs.BuildCFG();
+				funct.bbs.CleanUselessBB(false);
+			}
 			
 //			 asm builder uses cfg info.
-			AsmBuilder asmer = new AsmBuilder();
-			irProg.BuildCFG();
-			asmer.TranslateIr(irProg);
-			AsmPrinter asmPrinter = new AsmPrinter();
-			asmPrinter.ConfigOutput(null);
-			asmer.Print(asmPrinter);
+//			AsmBuilder asmer = new AsmBuilder();
+//			irProg.BuildCFG();
+//			asmer.TranslateIr(irProg);
+//			AsmPrinter asmPrinter = new AsmPrinter();
+//			asmPrinter.ConfigOutput(null);
+//			asmer.Print(asmPrinter);
+
+//			IrInterp("Mx_ir.txt");
 		}
 	}
 }

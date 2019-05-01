@@ -65,11 +65,16 @@ public class BBS {
 	}
 	
 	// need build cfg first.
-	public void CleanUselessBB () {
+	public void CleanUselessBB (boolean skipPreheader) {
 		BasicBlock cur = list.Head();
 		BasicBlock deltmp;
 		
 		while (cur != null) {
+			// leave preheader's alone.
+			if (cur.name.startsWith("$pre") && skipPreheader) {
+				cur = cur.next;
+				continue;
+			}
 			int degree = cfg.predesessors.get(cur).size();
 			if (cur == list.Head()) ++degree;
 			

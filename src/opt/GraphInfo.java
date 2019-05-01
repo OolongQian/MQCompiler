@@ -17,6 +17,7 @@ public class GraphInfo {
 	
 	public Boolean vis = true;
 	public BasicBlock iDom = null;
+	// direct children in dominant tree.
 	public Set<BasicBlock> domTree = new HashSet<>();
 	public Set<BasicBlock> domFrontier = new HashSet<>();
 	public Map<Reg, Phi> phis = new HashMap<>();

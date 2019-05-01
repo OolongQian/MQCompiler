@@ -24,10 +24,10 @@ public class Printer {
 	private PrintStream fout;
 	
 	public Printer(String path) {
-		if (TEST) {
-			fout = System.out;
-			return;
-		}
+//		if (TEST) {
+//			fout = System.out;
+//			return;
+//		}
 		if (path == null) {
 			this.fout = System.out;
 			return;

@@ -424,7 +424,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		// ctx.CompleteCurBB();
 		
 		assert ctx.cFun.curBB.loopLevel != null;
-		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "arrCond_n", ctx.cFun.curBB.loopLevel);
+		BasicBlock preheader = ctx.NewBBAfter(ctx.cFun.curBB, "pre_arrCond_n", ctx.cFun.curBB.loopLevel);
+		BasicBlock cond = ctx.NewBBAfter(preheader, "arrCond_n", ctx.cFun.curBB.loopLevel);
 		BasicBlock then = ctx.NewBBAfter(cond, "arrThen_n", ctx.cFun.curBB.loopLevel + 1);
 		BasicBlock after = ctx.NewBBAfter(then, "arrAfter_n", ctx.cFun.curBB.loopLevel);
 		
@@ -808,7 +809,8 @@ public class Builder extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(WhileStm node) {
 		assert ctx.cFun.curBB.loopLevel != null;
-		BasicBlock cond = ctx.NewBBAfter(ctx.cFun.curBB, "whileCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock preheader = ctx.NewBBAfter(ctx.cFun.curBB, "pre_whileCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock cond = ctx.NewBBAfter(preheader, "whileCond", ctx.cFun.curBB.loopLevel);
 		BasicBlock step = ctx.NewBBAfter(cond, "whileStep", ctx.cFun.curBB.loopLevel + 1);
 		BasicBlock after = ctx.NewBBAfter(step, "whileAfter", ctx.cFun.curBB.loopLevel);
 		ctx.RecordLoop(cond, after);
@@ -841,20 +843,21 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(ForStm node) {
+		assert ctx.cFun.curBB.loopLevel != null;
+		BasicBlock preheader = ctx.NewBBAfter(ctx.cFun.curBB, "pre_forCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock check = ctx.NewBBAfter(preheader, "forCond", ctx.cFun.curBB.loopLevel);
+		BasicBlock step = ctx.NewBBAfter(check, "forStep", ctx.cFun.curBB.loopLevel + 1);
+		BasicBlock after = ctx.NewBBAfter(step, "forAfter", ctx.cFun.curBB.loopLevel);
+		ctx.RecordLoop(check, after);
+
+		ctx.SetCurBB(preheader);
 		// forInit is executed before loop BB
 		if (node.initIsDec) {
 			if (node.initDec != null) node.initDec.Accept(this);
 		} else {
 			if (node.initExps != null) node.initExps.forEach(x -> x.Accept(this));
 		}
-		// ctx.CompleteCurBB();
-		
-		assert ctx.cFun.curBB.loopLevel != null;
-		BasicBlock check = ctx.NewBBAfter(ctx.cFun.curBB, "forCond", ctx.cFun.curBB.loopLevel);
-		BasicBlock step = ctx.NewBBAfter(check, "forStep", ctx.cFun.curBB.loopLevel + 1);
-		BasicBlock after = ctx.NewBBAfter(step, "forAfter", ctx.cFun.curBB.loopLevel);
-		ctx.RecordLoop(check, after);
-		
+
 		ctx.SetCurBB(check);
 		if (node.check != null) {
 			if (node.check instanceof LogicBinaryExp) {

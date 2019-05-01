@@ -38,14 +38,14 @@ public class Phi extends Quad {
 	}
 	@Override
 	public void ReplaceUse(Reg v, IrValue c) {
-		boolean replace = false;
+//		boolean replace = false;
 		for (BasicBlock key : options.keySet()) {
 			if (options.get(key) == v) {
 				options.put(key, c);
-				replace = true;
+//				replace = true;
 			}
 		}
-		assert replace;
+//		assert replace;
 	}
 	
 	/**

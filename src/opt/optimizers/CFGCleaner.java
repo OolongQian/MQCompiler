@@ -16,7 +16,7 @@ public class CFGCleaner {
 	
 	public int changeCnt = 0;
 	
-	public void CFGclean(IrProg ir) {
+	public void CFGclean(IrProg ir, boolean skipPreheader) {
 		CheckCodeCFG(ir);
 		ir.BuildCFG();
 		
@@ -27,6 +27,13 @@ public class CFGCleaner {
 				BasicBlock cur = funct.bbs.list.Head();
 				while (cur != null) {
 					assert !cur.quads.isEmpty();
+
+					// don't move preheaders.
+					if (cur.name.startsWith("$pre") && skipPreheader) {
+						cur = cur.next;
+						continue;
+					}
+
 					Quad cntl = cur.quads.get(cur.quads.size() - 1);
 					// combine redundant branch
 					if (cntl instanceof Branch) {
@@ -50,6 +57,10 @@ public class CFGCleaner {
 						}
 						CFG cfg = cur.parentFunct.bbs.cfg;
 						BasicBlock target = ((Jump) cntl).target;
+						if (target.name.startsWith("$pre")) {
+							cur = cur.next;
+							continue;
+						}
 						assert cfg.successors.get(cur).size() == 1 && cfg.successors.get(cur).iterator().next() == target;
 						if (target != funct.bbs.list.Head() && cfg.predesessors.get(target).size() == 1) {
 							cur = CombineBB(cur);
