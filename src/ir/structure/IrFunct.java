@@ -62,6 +62,9 @@ public class IrFunct {
 		bbs.BuildCFG();
 	}
 	
+	public void ReverseCFG () {
+		bbs.ReverseCFG();
+	}
 	/******************** Utility *******************/
 	/**
 	 * IrFunct is a namespace itself.
@@ -110,5 +113,14 @@ public class IrFunct {
 		int index = bbNamer.get(name);
 		bbNamer.put(name, index + 1);
 		return '$' + name + Integer.toString(index);
+	}
+	
+	public void CheckQuadsBlk() {
+		for (BasicBlock cur = bbs.list.Head(); cur != null; cur = cur.next) {
+			for (Quad quad : cur.quads) {
+				if (quad.blk != cur)
+					throw new RuntimeException("quad's block not maintained.\n");
+			}
+		}
 	}
 }

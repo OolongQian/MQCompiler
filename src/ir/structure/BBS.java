@@ -64,6 +64,27 @@ public class BBS {
 		}
 	}
 	
+	public void ReverseCFG () {
+		CFG rcfg = new CFG();
+		rcfg.ConfigBasicBlock(list);
+		
+		for (BasicBlock key : cfg.successors.keySet()) {
+			for (BasicBlock scs : cfg.successors.get(key)) {
+				rcfg.successors.get(scs).add(key);
+				rcfg.predesessors.get(key).add(scs); 
+			}
+		}
+		
+		for (BasicBlock key : cfg.predesessors.keySet()) {
+			for (BasicBlock pre : cfg.predesessors.get(key)) {
+				rcfg.successors.get(key).add(pre);
+				rcfg.predesessors.get(pre).add(key);
+			}
+		}
+		
+		cfg = rcfg;
+	}
+	
 	// need build cfg first.
 	public void CleanUselessBB (boolean skipPreheader) {
 		BasicBlock cur = list.Head();

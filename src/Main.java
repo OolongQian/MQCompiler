@@ -10,8 +10,10 @@ import ir.interpreter.Interpreter;
 import ir.structure.IrFunct;
 import nasm.AsmBuilder;
 import nasm.AsmPrinter;
+import opt.DominanceBuilder;
 import opt.SSA;
 import opt.optimizers.CFGCleaner;
+import opt.optimizers.DeadEliminator;
 import opt.optimizers.FunctInliner;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -158,17 +160,21 @@ public class Main {
 			
 			FunctInliner inliner = new FunctInliner();
 			inliner.FunctInline(irProg);
+//			irProg.functs.values().forEach(IrFunct::CheckQuadsBlk);
+			
 
-			CFGCleaner cleaner = new CFGCleaner();
-			cleaner.CFGclean(irProg, true);
+//			CFGCleaner cleaner = new CFGCleaner();
+//			cleaner.CFGclean(irProg, true);
+			
 
 //		   clean uselessBB needs to be after buildcfg.
 			// must not do it inside SSA form, because it doesn't handle phi node.
-			for (IrFunct funct : irProg.functs.values()) {
-				funct.bbs.BuildCFG();
-				funct.bbs.CleanUselessBB(true);
-			}
-
+//			for (IrFunct funct : irProg.functs.values()) {
+//				funct.bbs.BuildCFG();
+//				funct.bbs.CleanUselessBB(true);
+//			}
+			
+			
 			// ssa needs clear cfg.
 			SSA ssaBuilder = new SSA();
 			irProg.BuildCFG();
@@ -177,24 +183,40 @@ public class Main {
 		  ssaBuilder.OptimSSA(irProg);
 		  irProg.BuildCFG();
 			ssaBuilder.DestructSSA(irProg);
+			
+			
+//			Printer irPrinter = new Printer("Mx_ir.txt");
+		   Printer irPrinter = new Printer(null);
+			
+			DominanceBuilder domBuilder = new DominanceBuilder();
+			DeadEliminator eliminator = new DeadEliminator();
+			for (IrFunct funct : irProg.functs.values()) {
+				// I need reverse dominance frontier to help eliminate dead loop.
+				funct.BuildCFG();
+				funct.ReverseCFG();
+				domBuilder.BuildConfig(funct.bbs.list, funct.bbs.cfg);
+				domBuilder.BuildDominance();
+				domBuilder.BuildImmediateDominance();
+				domBuilder.DominanceFrontier();
+				eliminator.EliminateDeadCode(funct, domBuilder.getgInfos());
+			}
+			irProg.Print(irPrinter);
+
 
 //			cleaner.CFGclean(irProg, false);
 //			for (IrFunct funct : irProg.functs.values()) {
 //				funct.bbs.BuildCFG();
 //				funct.bbs.CleanUselessBB(false);
 //			}
+			
 
-
-//			Printer irPrinter = new Printer("Mx_ir.txt");
-		   Printer irPrinter = new Printer(null);
-			irProg.Print(irPrinter);
 
 //			 asm builder uses cfg info.
 //			AsmBuilder asmer = new AsmBuilder();
 //			irProg.BuildCFG();
 //			asmer.TranslateIr(irProg);
 //			AsmPrinter asmPrinter = new AsmPrinter();
-//			asmPrinter.ConfigOutput(null);
+//			asmPrinter.ConfigOutput("Mx_nasm.txt");
 //			asmer.Print(asmPrinter);
 
 //			IrInterp("Mx_ir.txt");
