@@ -109,6 +109,7 @@ public class CFGCleaner {
 		
 		// copy code.
 		blk.quads.remove(jmp);
+		next.quads.forEach(x -> x.blk = blk);
 		blk.quads.addAll(next.quads);
 		// maintain cfg.
 		CFG cfg = blk.parentFunct.bbs.cfg;

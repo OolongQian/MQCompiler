@@ -163,17 +163,15 @@ public class Main {
 //			irProg.functs.values().forEach(IrFunct::CheckQuadsBlk);
 			
 
-//			CFGCleaner cleaner = new CFGCleaner();
-//			cleaner.CFGclean(irProg, true);
-			
-
+			CFGCleaner cleaner = new CFGCleaner();
+			cleaner.CFGclean(irProg, true);
+		
 //		   clean uselessBB needs to be after buildcfg.
-			// must not do it inside SSA form, because it doesn't handle phi node.
-//			for (IrFunct funct : irProg.functs.values()) {
-//				funct.bbs.BuildCFG();
-//				funct.bbs.CleanUselessBB(true);
-//			}
-			
+//			 must not do it inside SSA form, because it doesn't handle phi node.
+			for (IrFunct funct : irProg.functs.values()) {
+				funct.bbs.BuildCFG();
+				funct.bbs.CleanUselessBB(true);
+			}
 			
 			// ssa needs clear cfg.
 			SSA ssaBuilder = new SSA();
@@ -184,10 +182,7 @@ public class Main {
 		  irProg.BuildCFG();
 			ssaBuilder.DestructSSA(irProg);
 			
-			
-//			Printer irPrinter = new Printer("Mx_ir.txt");
-		   Printer irPrinter = new Printer(null);
-			
+			// do dead code elimination when out of SSA form.
 			DominanceBuilder domBuilder = new DominanceBuilder();
 			DeadEliminator eliminator = new DeadEliminator();
 			for (IrFunct funct : irProg.functs.values()) {
@@ -200,15 +195,16 @@ public class Main {
 				domBuilder.DominanceFrontier();
 				eliminator.EliminateDeadCode(funct, domBuilder.getgInfos());
 			}
-			irProg.Print(irPrinter);
 
-
-//			cleaner.CFGclean(irProg, false);
-//			for (IrFunct funct : irProg.functs.values()) {
-//				funct.bbs.BuildCFG();
-//				funct.bbs.CleanUselessBB(false);
-//			}
+			cleaner.CFGclean(irProg, false);
+			for (IrFunct funct : irProg.functs.values()) {
+				funct.bbs.BuildCFG();
+				funct.bbs.CleanUselessBB(false);
+			}
 			
+			//			Printer irPrinter = new Printer("Mx_ir.txt");
+			Printer irPrinter = new Printer(null);
+			irProg.Print(irPrinter);
 
 
 //			 asm builder uses cfg info.
