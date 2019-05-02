@@ -203,17 +203,17 @@ public class Main {
 			}
 			
 			//			Printer irPrinter = new Printer("Mx_ir.txt");
-			Printer irPrinter = new Printer(null);
-			irProg.Print(irPrinter);
+//			Printer irPrinter = new Printer(null);
+//			irProg.Print(irPrinter);
 
 
 //			 asm builder uses cfg info.
-//			AsmBuilder asmer = new AsmBuilder();
-//			irProg.BuildCFG();
-//			asmer.TranslateIr(irProg);
-//			AsmPrinter asmPrinter = new AsmPrinter();
-//			asmPrinter.ConfigOutput("Mx_nasm.txt");
-//			asmer.Print(asmPrinter);
+			AsmBuilder asmer = new AsmBuilder();
+			irProg.BuildCFG();
+			asmer.TranslateIr(irProg);
+			AsmPrinter asmPrinter = new AsmPrinter();
+			asmPrinter.ConfigOutput(null);
+			asmer.Print(asmPrinter);
 
 //			IrInterp("Mx_ir.txt");
 		}
