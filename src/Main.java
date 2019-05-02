@@ -148,6 +148,9 @@ public class Main {
 			checker.Config(prog);
 			checker.SemanticCheck();
 			
+			if (arg != null && arg.equals("semantic"))
+				return;
+			
 			// don't output ir in test.
 //		  String irFilePath = "ir.txt";
 			BuilderContext irCtx = new BuilderContext(checker.functTable);
@@ -155,12 +158,8 @@ public class Main {
 			irBuilder.Build(prog);
 			IrProg irProg = irCtx.ir;
 			
-			if (arg != null && arg.equals("semantic"))
-				return;
-			
 			FunctInliner inliner = new FunctInliner();
 			inliner.FunctInline(irProg);
-//			irProg.functs.values().forEach(IrFunct::CheckQuadsBlk);
 			
 
 			CFGCleaner cleaner = new CFGCleaner();
