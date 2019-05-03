@@ -52,10 +52,30 @@ public class LoopInvariantPorter {
 //      outsideLoop.forEach(x -> System.out.println(x.name));
       assert outsideLoop.size() == 1;
       BasicBlock preheader = outsideLoop.get(0);
-
+	
+	    funct.BuildCFG();
+	    CFG cfg = funct.bbs.cfg;
+	    // find dominant loop body.
+	    Set<BasicBlock> mandatoryLoopBody = new HashSet<>();
+	    assert cfg.successors.get(cond).size() == 2;
+	    Iterator<BasicBlock> iter = cfg.successors.get(cond).iterator();
+	    BasicBlock iterNext = iter.next();
+	    BasicBlock step = (loop.contains(iterNext)) ? iterNext : iter.next();
+	
+	    BasicBlock cur = step;
+	    mandatoryLoopBody.add(cur);
+	    while (cfg.successors.get(cur).size() == 1) {
+		    cur = cfg.successors.get(cur).iterator().next();
+		    mandatoryLoopBody.add(cur);
+	    }
+	    
       int ipos = preheader.quads.size() - 1;
-      for (Quad idef : invariantDefs)
-        preheader.quads.add(ipos++, idef);
+      for (Quad idef : invariantDefs) {
+				if (mandatoryLoopBody.contains(idef.blk)) {
+					idef.blk.quads.remove(idef);
+					preheader.quads.add(ipos++, idef);
+				}
+      }
     }
   }
 
@@ -64,13 +84,12 @@ public class LoopInvariantPorter {
   // initial invariant : global variable, constant, string, variables defined outside the loop.
   // note : invariant quads have been deleted during invariant code detection.
   private List<Quad> ComputeInvariant(Set<BasicBlock> loop) {
-    List<Quad> invarDefs = new LinkedList<>();
-
+	  List<Quad> invarDefs = new LinkedList<>();
     // first, find all variables defined outside the loop.
     Set<Reg> invarRegs = new HashSet<>();
-
     // -- add all uses.
     List<Reg> uses = new ArrayList<>();
+    
     for (BasicBlock loopBB : loop) {
       for (Quad quad : loopBB.quads) {
         quad.GetUseRegs(uses);
@@ -120,8 +139,6 @@ public class LoopInvariantPorter {
               assert !invarDefs.contains(quad);
               invarDefs.add(quad);
               change = true;
-              // we need i-- to stay here, in order to access the next quad in for loop.
-              loopBB.quads.remove(i--);
             }
           }
         }

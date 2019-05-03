@@ -157,8 +157,11 @@ public class Main {
 				System.err.println("arg is " + arg);
 			}
 			
-			if (arg != null && arg.equals("semantic"))
-				return;
+			if (arg != null && arg.equals("semantic")) {
+				System.err.println("early return");
+				System.exit(233);
+			}
+			System.err.println("continue to codegen");
 			
 			// don't output ir in test.
 //		  String irFilePath = "ir.txt";
