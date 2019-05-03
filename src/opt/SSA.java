@@ -32,10 +32,16 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
+		GlobalVariablePromotion promotion = new GlobalVariablePromotion();
+		promotion.PromoteGlobalVariable(ir);
+		
+		CopyPropagator copier = new CopyPropagator();
+		copier.PropagateCopy(ir);
+		
 		GlobalValueNumbering GVN = new GlobalValueNumbering();
 		GVN.LocalValueNumbering(ir);
 
-		CopyPropagator copier = new CopyPropagator();
+//		CopyPropagator copier = new CopyPropagator();
 		copier.PropagateCopy(ir);
 		
 		LoopInvariantPorter loopInvariant = new LoopInvariantPorter();

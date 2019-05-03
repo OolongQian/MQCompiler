@@ -225,11 +225,21 @@ public class FunctInliner {
 		for (IrFunct func : ir.functs.values()) {
 			BasicBlock cur = func.bbs.list.Head();
 			while (cur != null) {
+				Set<Reg> args = new HashSet<>();
+				List<Reg> uses = new LinkedList<>();
+				for (Quad quad : cur.quads) {
+					if (quad instanceof Call) {
+						quad.GetUseRegs(uses);
+						args.addAll(uses);
+					}
+				}
 				for (Quad quad : cur.quads) {
 					if (quad instanceof Call &&
 									originFuncts.containsKey(((Call) quad).funcName) &&
-									inlineInfo.get(((Call) quad).funcName).HeuristicInline())
+									inlineInfo.get(((Call) quad).funcName).HeuristicInline() &&
+									!args.contains(((Call) quad).ret)) {
 						inlineCall.add((Call) quad);
+					}
 				}
 				cur = cur.next;
 			}

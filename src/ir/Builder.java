@@ -373,7 +373,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	}
 	
 	private Reg MakeNewArray(Queue<IrValue> dims) {
-		// recursion stoper.
+		// recursion stopper.
 		if (dims.isEmpty()) {
 			return MakeGreg("null");
 		}

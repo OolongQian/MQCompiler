@@ -34,10 +34,12 @@ public class GlobalValueNumbering {
             Binary bin = (Binary) inst;
             IrValue vn1 = GetValueNo(bin.src1);
             IrValue vn2 = GetValueNo(bin.src2);
-
+					
             if (vn1 instanceof Constant && vn2 instanceof Constant) {
               // change binary into an assign.
-              Constant eval = ConstFolding(bin.ans, bin.op, (Constant) vn1, (Constant) vn2);
+	            if (bin.op == Binary.Op.DIV && ((Constant) vn2).GetConstant() == 0)
+	            	continue;
+              Constant eval = ConstFolding(bin.op, (Constant) vn1, (Constant) vn2);
               Mov mov = new Mov (bin.ans, eval);
               mov.blk = bb;
               bb.quads.add(++i, mov);
@@ -109,7 +111,7 @@ public class GlobalValueNumbering {
     val2vn.put(key, val);
   }
 
-  private Constant ConstFolding(Reg ans, Binary.Op op, Constant const1, Constant const2) {
+  private Constant ConstFolding(Binary.Op op, Constant const1, Constant const2) {
     int c1 = const1.GetConstant();
     int c2 = const2.GetConstant();
     Integer eval = null;

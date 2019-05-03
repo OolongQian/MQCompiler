@@ -124,6 +124,8 @@ public class Main {
 			IrInterp("Mx_ir.txt");
 		} else {
 			
+			long ts = System.currentTimeMillis();
+			
 			InputStream is = System.in;
 			
 			String arg = null;
@@ -160,7 +162,6 @@ public class Main {
 			
 			FunctInliner inliner = new FunctInliner();
 			inliner.FunctInline(irProg);
-			
 
 			CFGCleaner cleaner = new CFGCleaner();
 			cleaner.CFGclean(irProg, true);
@@ -201,7 +202,7 @@ public class Main {
 				funct.bbs.CleanUselessBB(false);
 			}
 			
-			//			Printer irPrinter = new Printer("Mx_ir.txt");
+//				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
 //			irProg.Print(irPrinter);
 
@@ -215,6 +216,8 @@ public class Main {
 			asmer.Print(asmPrinter);
 
 //			IrInterp("Mx_ir.txt");
+			
+//			System.out.println("\r<br> exe_time : " + (System.currentTimeMillis() - ts) / 1000f + " s ");
 		}
 	}
 }
