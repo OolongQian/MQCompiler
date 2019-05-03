@@ -150,6 +150,13 @@ public class Main {
 			checker.Config(prog);
 			checker.SemanticCheck();
 			
+			if (arg == null) {
+				System.err.println("arg is null");
+			}
+			else {
+				System.err.println("arg is " + arg);
+			}
+			
 			if (arg != null && arg.equals("semantic"))
 				return;
 			

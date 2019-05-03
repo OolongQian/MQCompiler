@@ -231,7 +231,10 @@ public class SSA {
 				iter.remove();
 				var.usesQuad.remove(quad);
 				// update move in both data structures.
-				assert versionStack.size() != 1;
+//				if (versionStack.size() == 1) {
+//					int a = 1;
+//				}
+//				assert versionStack.size() != 1;
 				Mov use = new Mov(loaded, versionStack.peek());
 				// FIXME : ugly
 				use.blk = blk;

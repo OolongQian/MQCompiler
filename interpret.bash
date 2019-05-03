@@ -7,4 +7,5 @@
 # $2 is the path to the target file.
 
 set -e
-java -cp /Users/qiansucheng/Desktop/ACM/2019Spring/CompilerConstruction/MQCompiler1/lib/*:/Users/qiansucheng/Desktop/ACM/2019Spring/CompilerConstruction/MQCompiler1/bin ir.Interpreter.Interpreter $1
+java -cp /Users/qiansucheng/Downloads/ACM/2019Spring/CompilerConstruction/MQCompiler/lib/*:/Users/qiansucheng/Downloads/ACM/2019Spring/CompilerConstruction/MQCompiler/bin ir.interpreter.Interpreter $1
+

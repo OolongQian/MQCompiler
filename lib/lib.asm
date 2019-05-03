@@ -36,8 +36,6 @@ getString:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 32800
-
-
         mov     rax, qword [fs:abs 28H]
         mov     qword [rbp-8H], rax
         xor     eax, eax
@@ -79,8 +77,6 @@ getInt:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 16
-
-
         mov     rax, qword [fs:abs 28H]
         mov     qword [rbp-8H], rax
         xor     eax, eax
@@ -91,8 +87,6 @@ getInt:
         call    __isoc99_scanf
         mov     rax, qword [rbp-10H]
         mov     rdx, qword [rbp-8H]
-
-
         xor     rdx, qword [fs:abs 28H]
         jz      L_002
         call    __stack_chk_fail
