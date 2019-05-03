@@ -161,73 +161,76 @@ public class Main {
 				System.err.println("early return");
 				System.exit(0);
 			}
-			System.err.println("continue to codegen");
 			
 			// don't output ir in test.
 //		  String irFilePath = "ir.txt";
-			BuilderContext irCtx = new BuilderContext(checker.functTable);
-			ir.Builder irBuilder = new ir.Builder(irCtx);
-			irBuilder.Build(prog);
-			IrProg irProg = irCtx.ir;
-			
-			FunctInliner inliner = new FunctInliner();
-			inliner.FunctInline(irProg);
+			if (arg != null && !arg.equals("semantic")) {
+				System.err.println("continue to codegen");
+				
+				BuilderContext irCtx = new BuilderContext(checker.functTable);
+				ir.Builder irBuilder = new ir.Builder(irCtx);
+				irBuilder.Build(prog);
+				IrProg irProg = irCtx.ir;
+				
+				FunctInliner inliner = new FunctInliner();
+				inliner.FunctInline(irProg);
+				
+				CFGCleaner cleaner = new CFGCleaner();
+				cleaner.CFGclean(irProg, true);
 
-			CFGCleaner cleaner = new CFGCleaner();
-			cleaner.CFGclean(irProg, true);
-		
 //		   clean uselessBB needs to be after buildcfg.
 //			 must not do it inside SSA form, because it doesn't handle phi node.
-			for (IrFunct funct : irProg.functs.values()) {
-				funct.bbs.BuildCFG();
-				funct.bbs.CleanUselessBB(true);
-			}
-			
-			// ssa needs clear cfg.
-			SSA ssaBuilder = new SSA();
-			irProg.BuildCFG();
-			ssaBuilder.BuildSSA(irProg);
-			irProg.BuildCFG();
-		  ssaBuilder.OptimSSA(irProg);
-		  irProg.BuildCFG();
-			ssaBuilder.DestructSSA(irProg);
-			
-			// do dead code elimination when out of SSA form.
-			DominanceBuilder domBuilder = new DominanceBuilder();
-			DeadEliminator eliminator = new DeadEliminator();
-			for (IrFunct funct : irProg.functs.values()) {
-				// I need reverse dominance frontier to help eliminate dead loop.
-				funct.BuildCFG();
-				funct.ReverseCFG();
-				domBuilder.BuildConfig(funct.bbs.list, funct.bbs.cfg);
-				domBuilder.BuildDominance();
-				domBuilder.BuildImmediateDominance();
-				domBuilder.DominanceFrontier();
-				eliminator.EliminateDeadCode(funct, domBuilder.getgInfos());
-			}
+				for (IrFunct funct : irProg.functs.values()) {
+					funct.bbs.BuildCFG();
+					funct.bbs.CleanUselessBB(true);
+				}
+				
+				// ssa needs clear cfg.
+				SSA ssaBuilder = new SSA();
+				irProg.BuildCFG();
+				ssaBuilder.BuildSSA(irProg);
+				irProg.BuildCFG();
+				ssaBuilder.OptimSSA(irProg);
+				irProg.BuildCFG();
+				ssaBuilder.DestructSSA(irProg);
+				
+				// do dead code elimination when out of SSA form.
+				DominanceBuilder domBuilder = new DominanceBuilder();
+				DeadEliminator eliminator = new DeadEliminator();
+				for (IrFunct funct : irProg.functs.values()) {
+					// I need reverse dominance frontier to help eliminate dead loop.
+					funct.BuildCFG();
+					funct.ReverseCFG();
+					domBuilder.BuildConfig(funct.bbs.list, funct.bbs.cfg);
+					domBuilder.BuildDominance();
+					domBuilder.BuildImmediateDominance();
+					domBuilder.DominanceFrontier();
+					eliminator.EliminateDeadCode(funct, domBuilder.getgInfos());
+				}
+				
+				cleaner.CFGclean(irProg, false);
+				for (IrFunct funct : irProg.functs.values()) {
+					funct.bbs.BuildCFG();
+					funct.bbs.CleanUselessBB(false);
+				}
 
-			cleaner.CFGclean(irProg, false);
-			for (IrFunct funct : irProg.functs.values()) {
-				funct.bbs.BuildCFG();
-				funct.bbs.CleanUselessBB(false);
-			}
-			
 //				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
 //			irProg.Print(irPrinter);
 
 
 //			 asm builder uses cfg info.
-			AsmBuilder asmer = new AsmBuilder();
-			irProg.BuildCFG();
-			asmer.TranslateIr(irProg);
-			AsmPrinter asmPrinter = new AsmPrinter();
-			asmPrinter.ConfigOutput(null);
-			asmer.Print(asmPrinter);
+				AsmBuilder asmer = new AsmBuilder();
+				irProg.BuildCFG();
+				asmer.TranslateIr(irProg);
+				AsmPrinter asmPrinter = new AsmPrinter();
+				asmPrinter.ConfigOutput(null);
+				asmer.Print(asmPrinter);
 
 //			IrInterp("Mx_ir.txt");
-			
+
 //			System.out.println("\r<br> exe_time : " + (System.currentTimeMillis() - ts) / 1000f + " s ");
+			}
 		}
 	}
 }
