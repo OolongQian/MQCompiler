@@ -159,7 +159,7 @@ public class Main {
 			
 			if (arg != null && arg.equals("semantic")) {
 				System.err.println("early return");
-				System.exit(233);
+				System.exit(0);
 			}
 			System.err.println("continue to codegen");
 			
