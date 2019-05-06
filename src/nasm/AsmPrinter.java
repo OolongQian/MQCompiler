@@ -73,10 +73,13 @@ public class AsmPrinter {
 		fout.println("extern strcpy");
 		fout.println("extern malloc");
 		fout.println("extern strlen");
+		fout.println("extern memcpy");
 		fout.println("extern __isoc99_scanf");
 		fout.println("extern puts");
 		fout.println("extern strcmp");
 		fout.println("extern printf");
+		fout.println("extern __sprintf_chk");
+		fout.println("extern __printf_chk");
 		fout.println();
 	}
 	
@@ -239,7 +242,7 @@ public class AsmPrinter {
 	
 	
 	public void pasteLibFunction() throws IOException {
-		File file = new File("lib/lib.asm");
+		File file = new File("lib/libO3.asm");
 		BufferedReader br = new BufferedReader(new FileReader(file));
 		String line;
 		while ((line = br.readLine()) != null) {

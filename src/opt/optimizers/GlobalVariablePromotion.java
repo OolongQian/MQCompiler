@@ -6,99 +6,177 @@ import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-// do global variable promotion within a basic block.
-// if in a basic block, a global variable is used more than once, then create a virtual register to hold it.
-// since basic block executes linearly, no need to worry about being interrupted before saving global var's copy.
-// except 'call'. But if we know a call won't redefine the global variable in our interest, we don't have to
-// store and reload it.
-// if the global virtual register is redefined, then a store should be added at the end of the basic block.
 public class GlobalVariablePromotion {
 	
-	private Map<Reg, Reg> gCache = new HashMap<>();
-	private Map<Reg, Boolean> dirty = new HashMap<>();
+	private enum CacheState {
+		COLD, DIRTY, VALID
+	}
 	
-	public void PromoteGlobalVariable(IrProg ir) {
-		CollectFunctDefGvar(ir);
-		for (IrFunct funct : ir.functs.values()) {
-			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
-				gCache.clear();
-				dirty.clear();
-				for (int i = 0; i < cur.quads.size(); ++i) {
-					Quad quad = cur.quads.get(i);
-					if (quad instanceof Load && ((Load) quad).addr.name.startsWith("@")) {
-						Load gload = (Load) quad;
-						if (!gCache.containsKey(gload.addr)) {
-							gCache.put(gload.addr, gload.val);
-							dirty.put(gload.addr, Boolean.FALSE);
-						}
-						else {
-							// replace load with a move
-							Mov movLoad = new Mov (gload.val, gCache.get(gload.addr));
-							movLoad.blk = cur;
-							cur.quads.remove(i);
-							cur.quads.add(i, movLoad);
-						}
-					}
-					else if (quad instanceof Store && ((Store) quad).dst.name.startsWith("@")) {
-						Store gStore = (Store) quad;
-						if (gCache.containsKey(gStore.dst)) {
-							assert dirty.containsKey(gStore.dst);
-							dirty.put(gStore.dst, Boolean.TRUE);
-							// replace store with a move
-							Reg cacheTmp = funct.GetTmpReg();
-							gCache.put(gStore.dst, cacheTmp);
-							Mov movStore = new Mov (cacheTmp, gStore.src);
-							movStore.blk = cur;
-							cur.quads.remove(i);
-							cur.quads.add(i, movStore);
-						}
-					}
-					else if (quad instanceof Call) {
-						Call call = (Call) quad;
-						if (funct2gvar.containsKey(call.funcName)) {
-							Set<Reg> callGdefs = funct2gvar.get(call.funcName);
-							for (Reg callDef : callGdefs) {
-								if (gCache.containsKey(callDef) && dirty.get(callDef)) {
-									// if the greg to be defined is in cache, and it is dirty, write back.
-									Store wb = new Store (callDef, gCache.get(callDef));
-									wb.blk = cur;
-									// add store before call.
-									cur.quads.add(i++, wb);
-									// remove them from cache.
-									dirty.remove(callDef);
-									gCache.remove(callDef);
-								}
-							}
-						}
+	private Map<Reg, CacheState> gvarStates = new HashMap<>();
+	private Map<Reg, Reg> gvar2greg = new HashMap<>();
+	
+	// load gvar to a tmp register, and then store the tmp register to greg.
+	private int LoadGvar2Greg(Reg gvar, Reg greg, BasicBlock bb, int idx) {
+		IrFunct funct = bb.parentFunct;
+		Reg tmp = funct.GetTmpReg();
+		Load load = new Load(tmp, gvar);
+		Store store = new Store(greg, tmp);
+		load.blk = store.blk = bb;
+		bb.quads.add(idx++, load);
+		bb.quads.add(idx++, store);
+		return idx;
+	}
+	
+	private int StoreGreg2Gvar(Reg gvar, Reg greg, BasicBlock bb, int idx) {
+		IrFunct funct = bb.parentFunct;
+		Reg tmp = funct.GetTmpReg();
+		Load load = new Load(tmp, greg);
+		Store store = new Store(gvar, tmp);
+		load.blk = store.blk = bb;
+		bb.quads.add(idx++, load);
+		bb.quads.add(idx++, store);
+		return idx;
+	}
+	
+	private Set<Reg> FindUEgvars(IrFunct funct) {
+		Set<Reg> ue = new HashSet<>();
+		Set<Reg> defed = new HashSet<>();
+		for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+			for (int i = 0; i < cur.quads.size(); ++i) {
+				Quad quad = cur.quads.get(i);
+				if (IsGstore(quad)) {
+					defed.add(((Store) quad).dst);
+				}
+				else if (IsGload(quad)) {
+					Load load = (Load) quad;
+					if (!defed.contains(load.addr)) {
+						ue.add(load.addr);
 					}
 				}
-				int wbPos = cur.quads.size() - 1;
-				for (Reg greg : gCache.keySet()) {
-					assert dirty.containsKey(greg);
-					if (dirty.get(greg)) {
-						Store wbStore = new Store (greg, gCache.get(greg));
-						wbStore.blk = cur;
-						cur.quads.add(wbPos++, wbStore);
+				else if (quad instanceof Call) {
+					Call call = (Call) quad;
+					if (funct2guse.containsKey(call.funcName)) {
+						for (Reg use : funct2guse.get(call.funcName)) {
+							if (!defed.contains(use))
+								ue.add(use);
+						}
 					}
 				}
 			}
 		}
-		
+		return ue;
 	}
 	
-	private Map<String, Set<Reg>> funct2gvar = new HashMap<>();
+	public void PromoteGlobalVariables(IrProg ir) {
+		CollectFunctGdefuse(ir);
+		
+		for (IrFunct funct : ir.functs.values()) {
+			// initial setup.
+			Set<Reg> gvars = new HashSet<>();
+			gvars.addAll(funct2gdef.get(funct.name));
+			gvars.addAll(funct2guse.get(funct.name));
+			gvarStates.clear();
+			gvar2greg.clear();
+			
+			// gregs input.
+			for (Reg gvar : gvars) {
+				gvarStates.put(gvar, CacheState.VALID);
+				gvar2greg.put(gvar, new Reg("$" + gvar.name.substring(1) + "che"));
+			}
+			
+			// do alloca
+			int idx = 0;
+			for (Reg greg : gvar2greg.values()) {
+				Alloca allocaPromote = new Alloca(greg);
+				allocaPromote.blk = funct.bbs.list.Head();
+				funct.bbs.list.Head().quads.add(idx++, allocaPromote);
+			}
+			
+			// find UE gvars, initialize them.
+			Set<Reg> ue = FindUEgvars(funct);
+			for (Reg init : ue) {
+				idx = LoadGvar2Greg(init, gvar2greg.get(init), funct.bbs.list.Head(), idx);
+			}
+			
+			// do promotion.
+			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+				for (int i = 0; i < cur.quads.size(); ++i) {
+					if (cur == funct.bbs.list.Head() && i < idx)
+						continue;
+					Quad quad = cur.quads.get(i);
+					if (IsGstore(quad)) {
+						Store store = (Store) quad;
+						Reg gvar = store.dst;
+						assert gvars.contains(gvar);
+						assert gvarStates.containsKey(gvar);
+						// store greg, set dirty.
+						store.dst = gvar2greg.get(gvar);
+						gvarStates.put(gvar, CacheState.DIRTY);
+					}
+					else if (IsGload(quad)) {
+						Load load = (Load) quad;
+						Reg gvar = load.addr;
+						assert gvars.contains(gvar);
+						assert gvarStates.containsKey(gvar);
+						// load greg, load if cold.
+						if (gvarStates.get(gvar) == CacheState.COLD) {
+							i = LoadGvar2Greg(gvar, gvar2greg.get(gvar), cur, i);
+							gvarStates.put(gvar, CacheState.VALID);
+						}
+						load.addr = gvar2greg.get(gvar);
+					}
+					else if (quad instanceof Call) {
+						Call call = (Call) quad;
+						if (funct2gdef.containsKey(call.funcName)) {
+							for (Reg guse : funct2guse.get(call.funcName)) {
+								// store before call if dirty.
+								if (gvarStates.get(guse) == CacheState.DIRTY) {
+									i = StoreGreg2Gvar(guse, gvar2greg.get(guse), cur, i);
+									gvarStates.put(guse, CacheState.VALID);
+								}
+							}
+							for (Reg gdef : funct2gdef.get(call.funcName)) {
+								gvarStates.put(gdef, CacheState.COLD);
+							}
+						}
+					}
+				}
+			}
+			// at the end of the function.
+			if (!funct.name.equals("main")) {
+				BasicBlock tail = funct.bbs.list.Tail();
+				int appendPos = tail.quads.size() - 1;
+				for (Reg gvar : gvarStates.keySet()) {
+					if (gvarStates.get(gvar) == CacheState.DIRTY) {
+						appendPos = StoreGreg2Gvar(gvar, gvar2greg.get(gvar), tail, appendPos);
+					}
+				}
+			}
+		}
+	}
+	
+	private Map<String, Set<Reg>> funct2guse = new HashMap<>();
+	private Map<String, Set<Reg>> funct2gdef = new HashMap<>();
 	private Map<String, Set<String>> funct2calls = new HashMap<>();
-	private void CollectFunctDefGvar(IrProg ir) {
-		ir.functs.keySet().forEach(x -> funct2gvar.put(x, new HashSet<>()));
+	
+	private void CollectFunctGdefuse(IrProg ir) {
+		ir.functs.keySet().forEach(x -> funct2gdef.put(x, new HashSet<>()));
+		ir.functs.keySet().forEach(x -> funct2guse.put(x, new HashSet<>()));
 		ir.functs.keySet().forEach(x -> funct2calls.put(x, new HashSet<>()));
 		
 		for (IrFunct funct : ir.functs.values()) {
-			for(BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
 				for (Quad quad : cur.quads) {
-					if (quad instanceof Store && ((Store) quad).dst.name.startsWith("@")) {
-						funct2gvar.get(funct.name).add(((Store) quad).dst);
+					if (IsGstore(quad)) {
+						funct2gdef.get(funct.name).add(((Store) quad).dst);
+					}
+					else if (IsGload(quad)) {
+						funct2guse.get(funct.name).add(((Load) quad).addr);
 					}
 					else if (quad instanceof Call) {
 						funct2calls.get(funct.name).add(((Call) quad).funcName);
@@ -112,12 +190,21 @@ public class GlobalVariablePromotion {
 			change = false;
 			for (String caller : funct2calls.keySet()) {
 				for (String callee : funct2calls.get(caller)) {
-					if (funct2gvar.containsKey(callee)) {
-						Set<Reg> calleegReg = funct2gvar.get(callee);
-						for (Reg greg : calleegReg) {
-							Set<Reg> callergReg = funct2gvar.get(caller);
-							if (!callergReg.contains(greg)) {
-								callergReg.add(greg);
+					assert funct2guse.containsKey(callee) == funct2gdef.containsKey(callee);
+					if (funct2guse.containsKey(callee)) {
+						Set<Reg> calleeUse = funct2guse.get(callee);
+						Set<Reg> calleeDef = funct2gdef.get(callee);
+						for (Reg greg : calleeUse) {
+							Set<Reg> callerUse = funct2guse.get(caller);
+							if (!callerUse.contains(greg)) {
+								callerUse.add(greg);
+								change = true;
+							}
+						}
+						for (Reg greg : calleeDef) {
+							Set<Reg> callerDef = funct2gdef.get(caller);
+							if (!callerDef.contains(greg)) {
+								callerDef.add(greg);
 								change = true;
 							}
 						}
@@ -125,5 +212,17 @@ public class GlobalVariablePromotion {
 				}
 			}
 		} while (change);
+	}
+	
+	private boolean IsGstore(Quad quad) {
+		return quad instanceof Store &&
+						((Store) quad).dst.name.startsWith("@") &&
+						!((Store) quad).dst.name.equals("@null");
+	}
+	
+	private boolean IsGload(Quad quad) {
+		return quad instanceof Load &&
+						((Load) quad).addr.name.startsWith("@") &&
+						!((Load) quad).addr.name.equals("@null");
 	}
 }

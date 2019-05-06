@@ -386,7 +386,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Binary(exDim, ADD, dim, MakeInt(1)));
 		// multiply INT_SIZE to get the actual offset, use << for efficiency.
 		Reg exDimByte = ctx.cFun.GetTmpReg();
-		ctx.EmplaceInst(new Binary(exDimByte, MUL, exDim, MakeInt(8)));
+		ctx.EmplaceInst(new Binary(exDimByte, SHL, exDim, MakeInt(3)));
+//		ctx.EmplaceInst(new Binary(exDimByte, MUL, exDim, MakeInt(8)));
 		// malloc mem space, let arrAddr take on the address.
 		ctx.EmplaceInst(new Malloc(arrTmp, exDimByte));
 		
@@ -513,7 +514,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		Reg offsetWithLen = ctx.cFun.GetTmpReg();
 		
 		// calculate array member access and reserve for length shift, add them up.
-		ctx.EmplaceInst(new Binary(offsetNoLen, MUL, acsIndex, elemSize));
+		ctx.EmplaceInst(new Binary(offsetNoLen, SHL, acsIndex, MakeInt(3)));
+//		ctx.EmplaceInst(new Binary(offsetNoLen, MUL, acsIndex, elemSize));
 		ctx.EmplaceInst(new Binary(offsetWithLen, ADD, offsetNoLen, lenSpare));
 		ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offsetWithLen));
 		node.setIrAddr(elemAddr);

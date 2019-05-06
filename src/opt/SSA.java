@@ -32,8 +32,6 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
-		GlobalVariablePromotion promotion = new GlobalVariablePromotion();
-		promotion.PromoteGlobalVariable(ir);
 		
 		CopyPropagator copier = new CopyPropagator();
 		copier.PropagateCopy(ir);
