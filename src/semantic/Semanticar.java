@@ -512,6 +512,11 @@ public class Semanticar extends AstBaseVisitor<Void> {
 		Type lhs = node.lhs.type;
 		Type rhs = node.rhs.type;
 		
+		if (node.op.equals("/"))
+			node.weile = true;
+		else
+			node.weile = (node.lhs.weile || node.rhs.weile);
+		
 		switch (node.op) {
 			// arithmetic
 			case "*": case "/":
@@ -552,6 +557,9 @@ public class Semanticar extends AstBaseVisitor<Void> {
 	public Void visit(LogicBinaryExp node) {
 		node.lhs.Accept(this);
 		node.rhs.Accept(this);
+		
+		node.weile = (node.lhs.weile || node.rhs.weile);
+		
 		Type lhs = node.lhs.type;
 		Type rhs = node.rhs.type;
 		
@@ -564,6 +572,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(PrefixExp node) {
 		node.obj.Accept(this);
+		node.weile = node.obj.weile;
+		
 		switch (node.op) {
 			case "!":
 				if (!node.obj.type.isBool())
@@ -595,6 +605,8 @@ public class Semanticar extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(SuffixExp node) {
 		node.obj.Accept(this);
+		node.weile = node.obj.weile;
+		
 		if (!node.obj.type.isInt())
 			throw new RuntimeException("node type error...\n" + node.LocationToString());
 		if (!node.obj.lValue)

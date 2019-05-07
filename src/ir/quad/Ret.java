@@ -2,6 +2,7 @@ package ir.quad;
 
 
 import ir.Printer;
+import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -14,6 +15,11 @@ public class Ret extends Quad {
   public Ret(IrValue val) {
     this.val = val;
   }
+  
+	public Ret(BasicBlock blk, IrValue val) {
+		this.blk = blk;
+  	this.val = val;
+	}
 	
 	@Override
 	public void GetUseRegs(List<Reg> list_) {

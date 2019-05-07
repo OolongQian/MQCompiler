@@ -17,7 +17,6 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import semantic.Semanticar;
-
 import java.io.FileInputStream;
 import java.io.InputStream;
 
@@ -183,6 +182,9 @@ public class Main {
 					funct.bbs.CleanUselessBB(true);
 				}
 				
+				Memorization memorize = new Memorization();
+				memorize.Memorize(irProg);
+				
 				GlobalVariablePromotion promotion = new GlobalVariablePromotion();
 				promotion.PromoteGlobalVariables(irProg);
 				
@@ -215,19 +217,19 @@ public class Main {
 					funct.bbs.CleanUselessBB(false);
 				}
 
-				Printer irPrinter = new Printer("Mx_ir.txt");
+//				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
-			irProg.Print(irPrinter);
+//			irProg.Print(irPrinter);
 
 
 //			 asm builder uses cfg info.
-//				AsmBuilder asmer = new AsmBuilder();
-//				irProg.BuildCFG();
-//				asmer.TranslateIr(irProg);
-//				AsmPrinter asmPrinter = new AsmPrinter();
-//				asmPrinter.ConfigOutput(null);
+				AsmBuilder asmer = new AsmBuilder();
+				irProg.BuildCFG();
+				asmer.TranslateIr(irProg);
+				AsmPrinter asmPrinter = new AsmPrinter();
+				asmPrinter.ConfigOutput(null);
 //				asmPrinter.ConfigOutput("Mx_nasm.asm");
-//				asmer.Print(asmPrinter);
+				asmer.Print(asmPrinter);
 
 //			IrInterp("Mx_ir.txt");
 

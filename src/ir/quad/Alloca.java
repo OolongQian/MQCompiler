@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -11,6 +12,11 @@ public class Alloca extends Quad {
 	public Reg var;
 	
 	public Alloca(Reg var) {
+		this.var = var;
+	}
+	
+	public Alloca(BasicBlock blk, Reg var) {
+		this.blk = blk;
 		this.var = var;
 	}
 	

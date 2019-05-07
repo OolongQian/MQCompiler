@@ -468,6 +468,10 @@ public class Interpreter {
 					args.add(GetReg(ctx, arg));
 				}
 				
+				if (INTERP_LOG) {
+					logout.println("call" + funcName);
+				}
+				
 				if (LOG) {
 					System.err.print("call, name " + funcName + ", args");
 					args.forEach(x -> System.err.print(" " + x.name + ":" + x.GetValue()));

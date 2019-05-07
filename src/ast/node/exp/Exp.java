@@ -10,7 +10,7 @@ abstract public class Exp extends Ast {
   public Type type;
   
   public boolean lValue = false;
-  
+  public boolean weile = false;
   // NOTE : for IR logic short evaluation
   public BasicBlock ifTrue;
   public BasicBlock ifFalse;

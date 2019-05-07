@@ -2,6 +2,7 @@ package ir.quad;
 
 
 import ir.Printer;
+import ir.structure.BasicBlock;
 import ir.structure.Constant;
 import ir.structure.IrValue;
 import ir.structure.Reg;
@@ -17,6 +18,12 @@ public class Store extends Quad {
     this.dst = dst;
     this.src = src;
   }
+	
+	public Store(BasicBlock blk, Reg dst, IrValue src) {
+  	this.blk = blk;
+		this.dst = dst;
+		this.src = src;
+	}
   
   @Override
   public Reg GetDefReg() {

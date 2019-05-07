@@ -97,7 +97,9 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.AddGlobalVar(node, var);
 			
 			if (node.inital != null) {
+				noJumpLogic = node.inital.weile;
 				node.inital.Accept(this);
+				noJumpLogic = false;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -109,7 +111,9 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Alloca(var));
 //			ctx.cFun.AddLocalVar(var);
 			if (node.inital != null && !node.inital.type.isNull()) {
+				noJumpLogic = !node.inital.weile;
 				node.inital.Accept(this);
+				noJumpLogic = false;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -127,6 +131,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		String renaming = node.funcTableKey;
 		IrFunct func = ctx.FuncGen(renaming);
 		ctx.SetCurFunc(func);
+		if (node.retType.isInt())
+			ctx.cFun.retInt = true;
 		
 		// do renaming directly on Ast.
 		node.args.forEach(x -> x.name = ctx.cFun.RenameLocal(x.name));
@@ -523,10 +529,17 @@ public class Builder extends AstBaseVisitor<Void> {
 		return null;
 	}
 	
+	private boolean noJumpLogic = false;
 	@Override
 	public Void visit(AssignExp node) {
 		node.dst.Accept(this);
+		
+		// refuse to do short circuit evaluation if it's on the right
+		// handside of an assignment.
+		
+		noJumpLogic = !node.src.weile;
 		node.src.Accept(this);
+		noJumpLogic = false;
 		
 		Reg dstPtr = node.dst.getIrAddr();
 		IrValue srcVal = GetArithResult(node.src);
@@ -641,6 +654,18 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(LogicBinaryExp node) {
+		if (noJumpLogic) {
+			Reg ans = ctx.cFun.GetTmpReg();
+			node.lhs.Accept(this);
+			node.rhs.Accept(this);
+			IrValue lVal = GetArithResult(node.lhs);
+			IrValue rVal = GetArithResult(node.rhs);
+			Binary.Op op = (node.op.equals("||")) ? OR : AND;
+			ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
+			node.setIrValue(ans);
+			return null;
+		}
+		
 		assert (node.ifTrue == null) == (node.ifFalse == null);
 		
 		boolean startLogic = node.ifFalse == null;

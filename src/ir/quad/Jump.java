@@ -14,6 +14,11 @@ public class Jump extends Quad {
     this.target = target;
   }
   
+  public Jump(BasicBlock blk, BasicBlock target) {
+    this.blk = blk;
+    this.target = target;
+  }
+  
   @Override
   public void ReplaceUse(Reg v, IrValue val) {
     ;
