@@ -150,7 +150,9 @@ exp
     |   lhs=exp op=('<<'|'>>') rhs=exp # arithBinaryExp
     |   lhs=exp op=('>'|'>='|'<'|'<=') rhs=exp # arithBinaryExp
     |   lhs=exp op=('=='|'!=') rhs=exp # arithBinaryExp
-    |   lhs=exp op=('&'|'^'|'|') rhs=exp # arithBinaryExp
+    |   lhs=exp op='&' rhs=exp # arithBinaryExp
+    |   lhs=exp op='^' rhs=exp # arithBinaryExp
+    |   lhs=exp op='|' rhs=exp # arithBinaryExp
     |   lhs=exp op=('&&'|'||') rhs=exp # logicBinaryExp /*** check ***/
     |   lhs=exp '=' rhs=exp # assignExp /*** check ***/
     |   Null # nullExp /*** check ***/

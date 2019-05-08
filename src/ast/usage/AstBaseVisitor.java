@@ -38,9 +38,7 @@ public class AstBaseVisitor<T> implements AstVisitor<T> {
   @Override
   public T visit(Stm stm) {
     return stm.Accept(this);
-    
   }
-  
   
   @Override
   public T visit(Prog prog) {

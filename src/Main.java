@@ -18,7 +18,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import semantic.Semanticar;
 
-import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
@@ -168,7 +167,6 @@ public class Main {
 				
 				ForIfMover forIfMover = new ForIfMover();
 				forIfMover.MoveForIf(prog);
-				
 				
 				BuilderContext irCtx = new BuilderContext(checker.functTable);
 				ir.Builder irBuilder = new ir.Builder(irCtx);

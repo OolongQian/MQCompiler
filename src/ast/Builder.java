@@ -9,6 +9,8 @@ import ast.node.exp.*;
 import ast.node.stm.*;
 import ast.type.Type;
 
+import java.util.Map;
+
 /**
  * Constructor's return type is null.
  * */
