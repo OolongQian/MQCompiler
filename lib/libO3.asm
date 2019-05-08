@@ -438,7 +438,8 @@ _stringGe:
 
 ALIGN   16
 _arraySize:
-        mov     rax, qword [rdi-8H]
+        ;mov     rax, qword [rdi-8H]
+        mov     rax, qword [rdi]
         ret
 
 

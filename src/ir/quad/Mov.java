@@ -1,6 +1,7 @@
 package ir.quad;
 
 import ir.Printer;
+import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -15,6 +16,12 @@ public class Mov extends Quad {
 	public IrValue src;
 	
 	public Mov(Reg dst, IrValue src) {
+		this.dst = dst;
+		this.src = src;
+	}
+	
+	public Mov(BasicBlock blk, Reg dst, IrValue src) {
+		this.blk = blk;
 		this.dst = dst;
 		this.src = src;
 	}

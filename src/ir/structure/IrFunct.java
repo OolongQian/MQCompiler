@@ -16,6 +16,8 @@ public class IrFunct {
 	
 	public BasicBlock curBB;
 	
+	public boolean retInt = false;
+	
 	// for later optimization. redundant.
 //	public Set<Quad> brjp = new HashSet<>();
 	

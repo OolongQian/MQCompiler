@@ -59,12 +59,12 @@ public class Utils {
 		builtin2Extern.put("~-string#ord", "_stringOrd");
 		builtin2Extern.put("~-string#add", "_stringAdd");
 		builtin2Extern.put("~--array#size", "_arraySize");
-		builtin2Extern.put("~-string#lt", "_stringEq");
-		builtin2Extern.put("~-string#gt", "_stringNeq");
-		builtin2Extern.put("~-string#le", "_stringLt");
-		builtin2Extern.put("~-string#ge", "_stringGt");
-		builtin2Extern.put("~-string#eq", "_stringLe");
-		builtin2Extern.put("~-string#ne", "_stringGe");
+		builtin2Extern.put("~-string#lt", "_stringLt");
+		builtin2Extern.put("~-string#gt", "_stringGt");
+		builtin2Extern.put("~-string#le", "_stringLe");
+		builtin2Extern.put("~-string#ge", "_stringGe");
+		builtin2Extern.put("~-string#eq", "_stringEq");
+		builtin2Extern.put("~-string#neq", "_stringNeq");
 	}
 	public static String FunctRenamer (String fName) {
 		if (fName.startsWith("~")) {

@@ -12,9 +12,7 @@ import nasm.AsmBuilder;
 import nasm.AsmPrinter;
 import opt.DominanceBuilder;
 import opt.SSA;
-import opt.optimizers.CFGCleaner;
-import opt.optimizers.DeadEliminator;
-import opt.optimizers.FunctInliner;
+import opt.optimizers.*;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -185,6 +183,14 @@ public class Main {
 					funct.bbs.CleanUselessBB(true);
 				}
 				
+				Memorization memorize = new Memorization();
+				memorize.Memorize(irProg);
+			
+				GlobalVariablePromotion promotion = new GlobalVariablePromotion();
+				promotion.PromoteGlobalVariables(irProg);
+				
+
+				
 				// ssa needs clear cfg.
 				SSA ssaBuilder = new SSA();
 				irProg.BuildCFG();
@@ -213,12 +219,13 @@ public class Main {
 					funct.bbs.BuildCFG();
 					funct.bbs.CleanUselessBB(false);
 				}
-
+				
+				
 				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
-//			irProg.Print(irPrinter);
+//				irProg.Print(irPrinter);
 
-
+				
 //			 asm builder uses cfg info.
 				AsmBuilder asmer = new AsmBuilder();
 				irProg.BuildCFG();

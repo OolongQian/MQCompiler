@@ -148,55 +148,54 @@ _stringLength:
 
 
 _stringSubstring:
-        push    rbp
-        mov     rbp, rsp
-        sub     rsp, 64
-        mov     qword [rbp-28H], rdi
-        mov     qword [rbp-30H], rsi
-        mov     qword [rbp-38H], rdx
-        mov     rax, qword [rbp-38H]
-        sub     rax, qword [rbp-30H]
-        mov     qword [rbp-10H], rax
-        mov     rax, qword [rbp-10H]
-        add     rax, 9
-        mov     rdi, rax
-        call    malloc
-        mov     qword [rbp-8H], rax
-        mov     rax, qword [rbp-8H]
-        mov     rdx, qword [rbp-10H]
-        mov     qword [rax], rdx
-        mov     dword [rbp-14H], 0
-        jmp     L_004
-
+       push    rbp
+       mov     rbp, rsp
+       sub     rsp, 64
+       mov     qword [rbp-28H], rdi
+       mov     qword [rbp-30H], rsi
+       mov     qword [rbp-38H], rdx
+       mov     rax, qword [rbp-38H]
+       sub     rax, qword [rbp-30H]
+       mov     qword [rbp-10H], rax
+       mov     rax, qword [rbp-10H]
+       add     rax, 9
+       mov     rdi, rax
+       call    malloc
+       mov     qword [rbp-8H], rax
+       mov     rax, qword [rbp-8H]
+       mov     rdx, qword [rbp-10H]
+       mov     qword [rax], rdx
+       mov     dword [rbp-14H], 0
 L_003:  mov     eax, dword [rbp-14H]
-        add     eax, 8
-        movsxd  rdx, eax
-        mov     rax, qword [rbp-8H]
-        add     rdx, rax
-        mov     rax, qword [rbp-30H]
-        lea     rcx, [rax+8H]
-        mov     eax, dword [rbp-14H]
-        cdqe
-        add     rax, rcx
-        mov     rcx, rax
-        mov     rax, qword [rbp-28H]
-        add     rax, rcx
-        movzx   eax, byte [rax]
-        mov     byte [rdx], al
-        add     dword [rbp-14H], 1
-L_004:  mov     eax, dword [rbp-14H]
-        cdqe
-        cmp     rax, qword [rbp-10H]
-        jl      L_003
-        mov     rax, qword [rbp-10H]
-        add     rax, 8
-        mov     rdx, rax
-        mov     rax, qword [rbp-8H]
-        add     rax, rdx
-        mov     byte [rax], 0
-        mov     rax, qword [rbp-8H]
-        leave
-        ret
+       cdqe
+       cmp     rax, qword [rbp-10H]
+       jge     L_004
+       mov     eax, dword [rbp-14H]
+       cdqe
+       lea     rdx, [rax+8H]
+       mov     rax, qword [rbp-8H]
+       add     rdx, rax
+       mov     rax, qword [rbp-30H]
+       lea     rcx, [rax+8H]
+       mov     eax, dword [rbp-14H]
+       cdqe
+       add     rax, rcx
+       mov     rcx, rax
+       mov     rax, qword [rbp-28H]
+       add     rax, rcx
+       movzx   eax, byte [rax]
+       mov     byte [rdx], al
+       add     dword [rbp-14H], 1
+       jmp     L_003
+
+L_004:  mov     rax, qword [rbp-10H]
+       lea     rdx, [rax+8H]
+       mov     rax, qword [rbp-8H]
+       add     rax, rdx
+       mov     byte [rax], 0
+       mov     rax, qword [rbp-8H]
+       leave
+       ret
 
 
 _stringParseInt:

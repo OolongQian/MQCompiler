@@ -126,6 +126,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		
 		String renaming = node.funcTableKey;
 		IrFunct func = ctx.FuncGen(renaming);
+		if (node.retType.isInt())
+			func.retInt = true;
 		ctx.SetCurFunc(func);
 		
 		// do renaming directly on Ast.

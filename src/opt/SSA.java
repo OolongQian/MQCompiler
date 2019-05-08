@@ -3,7 +3,6 @@ package opt;
 import ir.IrProg;
 import ir.quad.*;
 import ir.structure.*;
-import jdk.nashorn.internal.objects.Global;
 import opt.optimizers.*;
 import java.util.*;
 
@@ -32,9 +31,6 @@ public class SSA {
 	}
 
 	public void OptimSSA(IrProg ir) {
-		GlobalVariablePromotion promotion = new GlobalVariablePromotion();
-		promotion.PromoteGlobalVariable(ir);
-		
 		CopyPropagator copier = new CopyPropagator();
 		copier.PropagateCopy(ir);
 		
