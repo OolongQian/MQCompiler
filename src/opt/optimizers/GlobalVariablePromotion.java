@@ -79,7 +79,6 @@ public class GlobalVariablePromotion {
 				idx = LoadGvar2Greg(gvar, global2local.get(gvar), entry, idx);
 			}
 			
-			Printer printer = new Printer(null);
 			for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
 				for (int i = 0; i < cur.quads.size(); ++i) {
 					if (cur == funct.bbs.list.Head() && i < idx)
@@ -87,29 +86,28 @@ public class GlobalVariablePromotion {
 					Quad quad = cur.quads.get(i);
 					if (IsGload(quad)) {
 						Load load = (Load) quad;
-						assert global2local.keySet().contains(load.addr);
-						load.addr = global2local.get(load.addr);
+						if (validDirectRegSet.contains(load.addr)) {
+							assert global2local.keySet().contains(load.addr);
+							load.addr = global2local.get(load.addr);
+						}
 					}
 					else if (IsGstore(quad)) {
 						Store store = (Store) quad;
-						assert global2local.keySet().contains(store.dst);
-						store.dst = global2local.get(store.dst);
+						if (validDirectRegSet.contains(store.dst)) {
+							assert global2local.keySet().contains(store.dst);
+							store.dst = global2local.get(store.dst);
+						}
 					}
 					else if (quad instanceof Call) {
 						Call call = (Call) quad;
 						
-						if (call.funcName.equals("dfs") && funct.name.equals("main")) {
-							printer.print(cur);
-						}
 						if (callMap.keySet().contains(call.funcName)) {
+							// global2local contains only valid regs.
 							for (Reg gvar : global2local.keySet()) {
 								Reg greg = global2local.get(gvar);
 								// store before call.
 								if (directDirtyMap.get(funct.name).contains(gvar) &&
 												closureRegMap.get(call.funcName).contains(gvar)) {
-									if (call.funcName.equals("dfs") && funct.name.equals("main")) {
-										System.out.println("store reg : " + gvar.name);
-									}
 									i = StoreGreg2Gvar(gvar, greg, cur, i);
 								}
 								
@@ -124,9 +122,6 @@ public class GlobalVariablePromotion {
 							}
 							--i;
 							
-						}
-						if (call.funcName.equals("dfs") && funct.name.equals("main")) {
-							printer.print(cur);
 						}
 					}
 					else if (quad instanceof Ret && !funct.name.equals("main")) {

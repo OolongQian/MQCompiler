@@ -18,6 +18,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import semantic.Semanticar;
 
+import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
@@ -165,6 +166,10 @@ public class Main {
 			if (arg != null && !arg.equals("semantic")) {
 				System.err.println("continue to codegen");
 				
+				ForIfMover forIfMover = new ForIfMover();
+				forIfMover.MoveForIf(prog);
+				
+				
 				BuilderContext irCtx = new BuilderContext(checker.functTable);
 				ir.Builder irBuilder = new ir.Builder(irCtx);
 				irBuilder.Build(prog);
@@ -218,11 +223,9 @@ public class Main {
 					funct.bbs.CleanUselessBB(false);
 				}
 				
-				
 				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
 //				irProg.Print(irPrinter);
-
 				
 //			 asm builder uses cfg info.
 				AsmBuilder asmer = new AsmBuilder();
