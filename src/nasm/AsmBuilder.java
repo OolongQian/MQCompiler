@@ -1,21 +1,17 @@
 package nasm;
 
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 import ir.IrProg;
 import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
 import ir.structure.StringLiteral;
 import nasm.allocate.AsmRegAllocator;
-import nasm.inst.Call;
-import nasm.inst.Msg;
-import nasm.inst.Oprt;
+import nasm.inst.*;
 import nasm.reg.GlobalMem;
 import nasm.reg.Imm;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static config.Config.ALLOCAREGS;
 import static config.Config.COMMENTNASM;
@@ -103,5 +99,59 @@ public class AsmBuilder {
 		printer.PrintSection(AsmPrinter.SECTION.bss);
 		printer.PrintGVar(globalMems);
 		printer.pasteLibFunction();
+	}
+	
+	public void FallAndSweep() {
+		for (AsmFunct asmFunct : asmFuncts.values()) {
+			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
+				AsmBB bb = asmFunct.bbs.get(i);
+				Inst last = bb.insts.get(bb.insts.size() - 1);
+				assert last instanceof Jmp || last instanceof Ret;
+				if (last instanceof Jmp) {
+					// clear fall through jump
+					Jmp jmp = (Jmp) last;
+					if (i + 1 < asmFunct.bbs.size() &&
+									asmFunct.bbs.get(i + 1).hintName.equals(jmp.label)) {
+						bb.insts.remove(last);
+					}
+					
+					// consider trying to eliminate current basic block.
+					String oldLabel = bb.hintName;
+					String newLabel = null;
+					if (bb.insts.isEmpty()) {
+						assert i + 1 < asmFunct.bbs.size();
+						newLabel = asmFunct.bbs.get(i + 1).hintName;
+					}
+					else if (bb.insts.size() == 1 && bb.insts.get(0) instanceof Jmp) {
+						Jmp jump = (Jmp) bb.insts.get(0);
+						newLabel = jump.label;
+						bb.insts.remove(0);
+					}
+					if (newLabel != null)
+						ReplaceLabel(asmFunct, oldLabel, newLabel);
+				}
+			}
+			
+			// scan once to get rid of all empty bb
+			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
+				if (asmFunct.bbs.get(i).insts.isEmpty())
+					asmFunct.bbs.remove(i--);
+			}
+		}
+	}
+	
+	private void ReplaceLabel(AsmFunct asmFunct, String oldLabel, String newLabel) {
+		for (AsmBB asmBB : asmFunct.bbs) {
+			List<Jmp> jmps = new LinkedList<>();
+			
+			int j = asmBB.insts.size() - 1;
+			while (j >= 0 && asmBB.insts.get(j) instanceof Jmp)
+				jmps.add((Jmp) asmBB.insts.get(j--));
+			
+			for (Jmp jp : jmps) {
+				if (jp.label.equals(oldLabel))
+					jp.label = newLabel;
+			}
+		}
 	}
 }

@@ -349,7 +349,7 @@ class CondInvariantChecker extends AstBaseVisitor<Void> {
 	// we don't worry about function call. since global variable in condition has already been baned.
 	@Override
 	public Void visit(FunctCallExp node) {
-//		invarCond = false;
+		node.args.forEach(this::visit);
 		return null;
 	}
 	

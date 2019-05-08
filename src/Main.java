@@ -229,6 +229,7 @@ public class Main {
 				AsmBuilder asmer = new AsmBuilder();
 				irProg.BuildCFG();
 				asmer.TranslateIr(irProg);
+				asmer.FallAndSweep();
 				AsmPrinter asmPrinter = new AsmPrinter();
 				asmPrinter.ConfigOutput(null);
 //				asmPrinter.ConfigOutput("Mx_nasm.asm");

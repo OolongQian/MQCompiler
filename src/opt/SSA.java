@@ -50,7 +50,7 @@ public class SSA {
 			domBuilder.BuildDominance();
 			domBuilder.BuildImmediateDominance();
 			gInfos = domBuilder.getgInfos();
-			loopInvariant.MoveLoopInvariant(funct, gInfos);
+//			loopInvariant.MoveLoopInvariant(funct, gInfos);
 		}
 
 //		for (IrFunct funct : ir.functs.values()) {
@@ -415,7 +415,8 @@ public class SSA {
 				if (suces.size() > 1) {
 					BasicBlock split = CreateSplit(pred, cur, splitsCopies);
 					// maintain list structure.
-					cFun.bbs.list.InsertAfter(pred, split);
+					cFun.bbs.list.PushBack(split);
+//					cFun.bbs.list.InsertAfter(pred, split);
 					// maintain cfg.
 					preds.remove(pred);
 					preds.add(split);

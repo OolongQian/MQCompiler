@@ -203,13 +203,14 @@ public class AsmTranslateVisitor {
 			stackArgsOffset += 8;
 		} else {
 			// NOTE : for clarity.
-			cur.insts.add(subRspPos, new Oprt (GetPReg(rsp), new Imm(0), cur, SUB));
+//			cur.insts.add(subRspPos, new Oprt (GetPReg(rsp), new Imm(0), cur, SUB));
 		}
 		// if is built-in function, do translation.
 		String asmFunctName = FunctRenamer(quad.funcName);
 		cur.insts.add(new Call(cur, asmFunctName, !quad.ret.name.equals("@null")));
 		// add rsp for reset.
-		cur.insts.add(new Oprt (GetPReg(rsp), new Imm(stackArgsOffset), cur, ADD));
+		if (stackArgsOffset != 0)
+			cur.insts.add(new Oprt (GetPReg(rsp), new Imm(stackArgsOffset), cur, ADD));
 		
 		// move rax result back into the return register.
 		if (!quad.ret.name.equals("@null"))
@@ -227,9 +228,9 @@ public class AsmTranslateVisitor {
 		}
 		cur.insts.add(new Cmp(asmCond, new Imm(0), cur));
 		// jump if cond isn't 0.
-		cur.insts.add(new Jmp(cur, Jmp.JmpOption.JNE, BasicBlockRenamer(quad.ifTrue)));
+		cur.insts.add(new Jmp(cur, Jmp.JmpOption.JE, BasicBlockRenamer(quad.ifFalse)));
 		// else jump to ifFalse.
-		cur.insts.add(new Jmp(cur, Jmp.JmpOption.JMP, BasicBlockRenamer(quad.ifFalse)));
+		cur.insts.add(new Jmp(cur, Jmp.JmpOption.JMP, BasicBlockRenamer(quad.ifTrue)));
 	}
 	
 	public void visit (Jump quad) {
@@ -296,7 +297,8 @@ public class AsmTranslateVisitor {
 					if (curf.stackLocalOffset != null) {
 						// align stack frame by adding offset divisible by 16.
 						assert curf.stackLocalOffset % 16 == 0;
-						bb.insts.add(i++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), bb, Oprt.Op.ADD));
+						if (curf.stackLocalOffset != 0)
+							bb.insts.add(i++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), bb, Oprt.Op.ADD));
 					} else {
 						// to print nasm before register allocation.
 						bb.insts.add(i++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), bb, Oprt.Op.ADD));
@@ -587,7 +589,8 @@ public class AsmTranslateVisitor {
 		if (curf.stackLocalOffset != null) {
 			// after register allocation, and backfill rewriting, rspOffset shouldn't be null
 			curf.stackLocalOffset = (curf.stackLocalOffset + 15) / 16 * 16;
-			head.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), head, Oprt.Op.SUB));
+			if (curf.stackLocalOffset != 0)
+				head.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), head, Oprt.Op.SUB));
 		}
 		else {
 			// to print nasm before register allocation.
