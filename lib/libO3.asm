@@ -437,7 +437,7 @@ _stringGe:
         nop
 
 ALIGN   16
-__arraySize:
+_arraySize:
         mov     rax, qword [rdi-8H]
         ret
 
