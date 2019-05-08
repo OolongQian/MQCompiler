@@ -221,7 +221,7 @@ public class Main {
 					funct.bbs.CleanUselessBB(false);
 				}
 				
-				Printer irPrinter = new Printer("Mx_ir.txt");
+//				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
 //				irProg.Print(irPrinter);
 				

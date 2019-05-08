@@ -102,6 +102,20 @@ public class AsmBuilder {
 	}
 	
 	public void FallAndSweep() {
+		// clear all unnecessary bb.
+		for (AsmFunct asmFunct : asmFuncts.values()) {
+			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
+				AsmBB bb = asmFunct.bbs.get(i);
+				
+				if (bb.insts.size() == 1 && bb.insts.get(0) instanceof Jmp) {
+					Jmp last = (Jmp) bb.insts.get(0);
+					asmFunct.bbs.remove(i--);
+					ReplaceLabel(asmFunct, bb.hintName, last.label);
+				}
+			}
+		}
+		
+		// add fall through.
 		for (AsmFunct asmFunct : asmFuncts.values()) {
 			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
 				AsmBB bb = asmFunct.bbs.get(i);
@@ -114,28 +128,7 @@ public class AsmBuilder {
 									asmFunct.bbs.get(i + 1).hintName.equals(jmp.label)) {
 						bb.insts.remove(last);
 					}
-					
-					// consider trying to eliminate current basic block.
-					String oldLabel = bb.hintName;
-					String newLabel = null;
-					if (bb.insts.isEmpty()) {
-						assert i + 1 < asmFunct.bbs.size();
-						newLabel = asmFunct.bbs.get(i + 1).hintName;
-					}
-					else if (bb.insts.size() == 1 && bb.insts.get(0) instanceof Jmp) {
-						Jmp jump = (Jmp) bb.insts.get(0);
-						newLabel = jump.label;
-						bb.insts.remove(0);
-					}
-					if (newLabel != null)
-						ReplaceLabel(asmFunct, oldLabel, newLabel);
 				}
-			}
-			
-			// scan once to get rid of all empty bb
-			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
-				if (asmFunct.bbs.get(i).insts.isEmpty())
-					asmFunct.bbs.remove(i--);
 			}
 		}
 	}
