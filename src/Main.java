@@ -187,9 +187,7 @@ public class Main {
 				memorize.Memorize(irProg);
 			
 				GlobalVariablePromotion promotion = new GlobalVariablePromotion();
-				promotion.PromoteGlobalVariables(irProg);
-				
-
+//				promotion.PromoteGlobalVariables(irProg);
 				
 				// ssa needs clear cfg.
 				SSA ssaBuilder = new SSA();

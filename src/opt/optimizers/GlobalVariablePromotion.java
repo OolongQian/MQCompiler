@@ -55,17 +55,27 @@ public class GlobalVariablePromotion {
 //		PrintMap(directDirtyMap, "directDirtyMap");
 //		PrintMap(closureDirtyMap, "closureDirtyMap");
 		
+		
 		// create alloca for all directRegs.
 		for (IrFunct funct : ir.functs.values()) {
+			Map<Reg, Integer> directRegNo = GetDirectRegNo(funct);
+			Set<Reg> validDirectRegSet = new HashSet<>();
+			for (Reg reg : directRegMap.get(funct.name)) {
+				assert directRegNo.containsKey(reg);
+				if (directRegNo.get(reg) < 30) {
+					validDirectRegSet.add(reg);
+				}
+			}
+			
 			Map<Reg, Reg> global2local = new HashMap<>();
 			int idx = 0;
 			BasicBlock entry = funct.bbs.list.Head();
-			for (Reg gvar : directRegMap.get(funct.name)) {
+			for (Reg gvar : validDirectRegSet) {
 				Reg glocal = new Reg("$" + gvar.name.substring(1) + "che");
 				global2local.put(gvar, glocal);
 				entry.quads.add(idx++, new Alloca(entry, glocal));
 			}
-			for (Reg gvar : directRegMap.get(funct.name)) {
+			for (Reg gvar : validDirectRegSet) {
 				idx = LoadGvar2Greg(gvar, global2local.get(gvar), entry, idx);
 			}
 			
@@ -129,6 +139,30 @@ public class GlobalVariablePromotion {
 				}
 			}
 		}
+	}
+	
+	// record global variable usage in this function, if function is used so frequently, refuse to do promotion
+	// to reduce the burden on register allocator.
+	private Map<Reg, Integer> GetDirectRegNo(IrFunct funct) {
+		Map<Reg, Integer> directRegNo = new HashMap<>();
+		directRegMap.get(funct.name).forEach(x -> directRegNo.put(x, 0));
+		
+		for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
+			for (int i = 0; i < cur.quads.size(); ++i) {
+				Quad quad = cur.quads.get(i);
+				if (IsGstore(quad)) {
+					Reg greg = ((Store) quad).dst;
+					assert directRegNo.containsKey(greg);
+					directRegNo.put(greg, directRegNo.get(greg) + 1);
+				}
+				else if (IsGload(quad)) {
+					Reg greg = ((Load) quad).addr;
+					assert directRegNo.containsKey(greg);
+					directRegNo.put(greg, directRegNo.get(greg) + 1);
+				}
+			}
+		}
+		return directRegNo;
 	}
 	
 	private void CollectFunctGdefuse(IrProg ir) {

@@ -425,7 +425,11 @@ public class AsmRegAllocator {
 //				continue;
 			assert ctx.heuristicUse.containsKey(str);
 			assert ctx.heuristicDef.containsKey(str);
-			minHeur = min(minHeur, (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.GetDegree(str));
+			double curHeur = (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str)) / ctx.GetDegree(str);
+//			 refuse to spill if use and def is so large.
+//			if (ctx.heuristicUse.get(str) + ctx.heuristicDef.get(str) > 25)
+//				curHeur = MAX_VALUE - 1;
+			minHeur = min(minHeur, curHeur);
 			if (!str.startsWith("spl")) existNonSpilled = true;
 		}
 		assert minHeur != MAX_VALUE;
