@@ -722,7 +722,7 @@ public class Interpreter {
 				assert args.size() == 1;
 				int arrAddr = args.get(0).GetValue();
 				// load arrayLen from headAddr
-				int arrSize = mem.LoadInt(arrAddr);
+				int arrSize = mem.LoadInt(arrAddr - 8);
 				return arrSize;
 			
 //			assert args.size() == 2;

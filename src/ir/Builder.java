@@ -397,6 +397,8 @@ public class Builder extends AstBaseVisitor<Void> {
 		// malloc mem space, let arrAddr take on the address.
 		ctx.EmplaceInst(new Malloc(arrTmp, exDimByte));
 		
+		Reg arrContentAddr = ctx.cFun.GetTmpReg();
+		
 		if (dims.isEmpty()) {
 			// if there's no other dimensions to create, stop and return.
 			// clear currently created array to all zero.
@@ -405,9 +407,12 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Call("~memset", MakeGreg("null"), args));
 			// remember to record the array length.
 			ctx.EmplaceInst(new Store(arrTmp, dim));
-			return arrTmp;
+//			return arrTmp;
+			ctx.EmplaceInst(new Binary(arrContentAddr, ADD, arrTmp, MakeInt(INT_SIZE)));
+			return arrContentAddr;
 		}
 		
+		ctx.EmplaceInst(new Binary(arrContentAddr, ADD, arrTmp, MakeInt(INT_SIZE)));
 		// record array dimension after recording, right at the head of malloc_ed mem.
 		ctx.EmplaceInst(new Store(arrTmp, dim));
 		
@@ -496,34 +501,15 @@ public class Builder extends AstBaseVisitor<Void> {
 		// NOTE : These are simple tricks, later we do it.
 		// NOTE : if no offset, no need to get element.
 		Reg elemAddr = ctx.cFun.GetTmpReg();
-//		IrValue acsIndex = GetArithResult(node.subscript);
-//		List<IrValue> args = new LinkedList<>();
-//		args.add(baseAddr);
-//		args.add(acsIndex);
-//		 size per index
-//		args.add(MakeInt(8));
-//		 offset
-//		args.add(MakeInt(8));
-//		ctx.EmplaceInst(new Call("~getElementPointer", elemAddr, args));
-//		node.setIrAddr(elemAddr);
-
-		// FIXME : when we use java convention, all array type element is a pointer or built-in type.
-//		VarTypeRef arrElemType = node.arrInstance.varTypeRef.innerType;
-//		IrValue elemSize = MakeInt(arrElemType.GetTypeSpace());
-		IrValue elemSize = MakeInt(8);
 		
 		// now we need a MUL quad for offset calculation
 		// shift index, because the first one is reserved to be array size.
-		IrValue lenSpare = MakeInt(8);
 		IrValue acsIndex = GetArithResult(node.subscript);
-		Reg offsetNoLen = ctx.cFun.GetTmpReg();
-		Reg offsetWithLen = ctx.cFun.GetTmpReg();
+		Reg offset = ctx.cFun.GetTmpReg();
 		
 		// calculate array member access and reserve for length shift, add them up.
-		ctx.EmplaceInst(new Binary(offsetNoLen, SHL, acsIndex, MakeInt(3)));
-//		ctx.EmplaceInst(new Binary(offsetNoLen, MUL, acsIndex, elemSize));
-		ctx.EmplaceInst(new Binary(offsetWithLen, ADD, offsetNoLen, lenSpare));
-		ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offsetWithLen));
+		ctx.EmplaceInst(new Binary(offset, SHL, acsIndex, MakeInt(3)));
+		ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offset));
 		node.setIrAddr(elemAddr);
 		
 		return null;

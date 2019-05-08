@@ -218,7 +218,7 @@ public class Main {
 				}
 
 //				Printer irPrinter = new Printer("Mx_ir.txt");
-//			Printer irPrinter = new Printer(null);
+			Printer irPrinter = new Printer(null);
 //			irProg.Print(irPrinter);
 
 
