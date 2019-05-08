@@ -97,9 +97,7 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.AddGlobalVar(node, var);
 			
 			if (node.inital != null) {
-				noJumpLogic = node.inital.weile;
 				node.inital.Accept(this);
-				noJumpLogic = false;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -111,9 +109,7 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Alloca(var));
 //			ctx.cFun.AddLocalVar(var);
 			if (node.inital != null && !node.inital.type.isNull()) {
-				noJumpLogic = !node.inital.weile;
 				node.inital.Accept(this);
-				noJumpLogic = false;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -131,8 +127,6 @@ public class Builder extends AstBaseVisitor<Void> {
 		String renaming = node.funcTableKey;
 		IrFunct func = ctx.FuncGen(renaming);
 		ctx.SetCurFunc(func);
-		if (node.retType.isInt())
-			ctx.cFun.retInt = true;
 		
 		// do renaming directly on Ast.
 		node.args.forEach(x -> x.name = ctx.cFun.RenameLocal(x.name));
@@ -392,12 +386,9 @@ public class Builder extends AstBaseVisitor<Void> {
 		ctx.EmplaceInst(new Binary(exDim, ADD, dim, MakeInt(1)));
 		// multiply INT_SIZE to get the actual offset, use << for efficiency.
 		Reg exDimByte = ctx.cFun.GetTmpReg();
-		ctx.EmplaceInst(new Binary(exDimByte, SHL, exDim, MakeInt(3)));
-//		ctx.EmplaceInst(new Binary(exDimByte, MUL, exDim, MakeInt(8)));
+		ctx.EmplaceInst(new Binary(exDimByte, MUL, exDim, MakeInt(8)));
 		// malloc mem space, let arrAddr take on the address.
 		ctx.EmplaceInst(new Malloc(arrTmp, exDimByte));
-		
-		Reg arrContentAddr = ctx.cFun.GetTmpReg();
 		
 		if (dims.isEmpty()) {
 			// if there's no other dimensions to create, stop and return.
@@ -407,12 +398,9 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Call("~memset", MakeGreg("null"), args));
 			// remember to record the array length.
 			ctx.EmplaceInst(new Store(arrTmp, dim));
-//			return arrTmp;
-			ctx.EmplaceInst(new Binary(arrContentAddr, ADD, arrTmp, MakeInt(INT_SIZE)));
-			return arrContentAddr;
+			return arrTmp;
 		}
 		
-		ctx.EmplaceInst(new Binary(arrContentAddr, ADD, arrTmp, MakeInt(INT_SIZE)));
 		// record array dimension after recording, right at the head of malloc_ed mem.
 		ctx.EmplaceInst(new Store(arrTmp, dim));
 		
@@ -501,31 +489,42 @@ public class Builder extends AstBaseVisitor<Void> {
 		// NOTE : These are simple tricks, later we do it.
 		// NOTE : if no offset, no need to get element.
 		Reg elemAddr = ctx.cFun.GetTmpReg();
+//		IrValue acsIndex = GetArithResult(node.subscript);
+//		List<IrValue> args = new LinkedList<>();
+//		args.add(baseAddr);
+//		args.add(acsIndex);
+//		 size per index
+//		args.add(MakeInt(8));
+//		 offset
+//		args.add(MakeInt(8));
+//		ctx.EmplaceInst(new Call("~getElementPointer", elemAddr, args));
+//		node.setIrAddr(elemAddr);
+
+		// FIXME : when we use java convention, all array type element is a pointer or built-in type.
+//		VarTypeRef arrElemType = node.arrInstance.varTypeRef.innerType;
+//		IrValue elemSize = MakeInt(arrElemType.GetTypeSpace());
+		IrValue elemSize = MakeInt(8);
 		
 		// now we need a MUL quad for offset calculation
 		// shift index, because the first one is reserved to be array size.
+		IrValue lenSpare = MakeInt(8);
 		IrValue acsIndex = GetArithResult(node.subscript);
-		Reg offset = ctx.cFun.GetTmpReg();
+		Reg offsetNoLen = ctx.cFun.GetTmpReg();
+		Reg offsetWithLen = ctx.cFun.GetTmpReg();
 		
 		// calculate array member access and reserve for length shift, add them up.
-		ctx.EmplaceInst(new Binary(offset, SHL, acsIndex, MakeInt(3)));
-		ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offset));
+		ctx.EmplaceInst(new Binary(offsetNoLen, MUL, acsIndex, elemSize));
+		ctx.EmplaceInst(new Binary(offsetWithLen, ADD, offsetNoLen, lenSpare));
+		ctx.EmplaceInst(new Binary(elemAddr, ADD, baseAddr, offsetWithLen));
 		node.setIrAddr(elemAddr);
 		
 		return null;
 	}
 	
-	private boolean noJumpLogic = false;
 	@Override
 	public Void visit(AssignExp node) {
 		node.dst.Accept(this);
-		
-		// refuse to do short circuit evaluation if it's on the right
-		// handside of an assignment.
-		
-		noJumpLogic = !node.src.weile;
 		node.src.Accept(this);
-		noJumpLogic = false;
 		
 		Reg dstPtr = node.dst.getIrAddr();
 		IrValue srcVal = GetArithResult(node.src);
@@ -640,18 +639,6 @@ public class Builder extends AstBaseVisitor<Void> {
 	
 	@Override
 	public Void visit(LogicBinaryExp node) {
-		if (noJumpLogic) {
-			Reg ans = ctx.cFun.GetTmpReg();
-			node.lhs.Accept(this);
-			node.rhs.Accept(this);
-			IrValue lVal = GetArithResult(node.lhs);
-			IrValue rVal = GetArithResult(node.rhs);
-			Binary.Op op = (node.op.equals("||")) ? OR : AND;
-			ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
-			node.setIrValue(ans);
-			return null;
-		}
-		
 		assert (node.ifTrue == null) == (node.ifFalse == null);
 		
 		boolean startLogic = node.ifFalse == null;

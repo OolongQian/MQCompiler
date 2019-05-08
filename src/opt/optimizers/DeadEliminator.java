@@ -39,6 +39,9 @@ public class DeadEliminator {
 		Queue<Quad> worklist = new ArrayDeque<>();
 		for (BasicBlock cur = funct.bbs.list.Head(); cur != null; cur = cur.next) {
 			for (Quad inst : cur.quads) {
+				if (inst.blk != cur) {
+					int a=  1;
+				}
 				// push all useful quads into worklist.
 				// keep critical quads alive.
 				// iteratively add var's def quad, where the vars are used to
@@ -85,6 +88,9 @@ public class DeadEliminator {
 //				System.out.println(cur.name);
 //				rgInfos.get(curB).domFrontier.forEach(x -> System.out.print(x.name + " "));
 //				System.out.print("\n\n");
+				if (!rgInfos.containsKey(curB)) {
+					int a = 1;
+				}
 				for (BasicBlock rdf : rgInfos.get(curB).domFrontier) {
 					Quad last = rdf.quads.get(rdf.quads.size() - 1);
 					if (last instanceof Branch) {

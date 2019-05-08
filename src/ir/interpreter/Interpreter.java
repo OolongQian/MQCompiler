@@ -468,10 +468,6 @@ public class Interpreter {
 					args.add(GetReg(ctx, arg));
 				}
 				
-				if (INTERP_LOG) {
-					logout.println("call" + funcName);
-				}
-				
 				if (LOG) {
 					System.err.print("call, name " + funcName + ", args");
 					args.forEach(x -> System.err.print(" " + x.name + ":" + x.GetValue()));
@@ -722,7 +718,7 @@ public class Interpreter {
 				assert args.size() == 1;
 				int arrAddr = args.get(0).GetValue();
 				// load arrayLen from headAddr
-				int arrSize = mem.LoadInt(arrAddr - 8);
+				int arrSize = mem.LoadInt(arrAddr);
 				return arrSize;
 			
 //			assert args.size() == 2;

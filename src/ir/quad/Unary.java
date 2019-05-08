@@ -1,7 +1,6 @@
 package ir.quad;
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -20,13 +19,6 @@ public class Unary extends Quad {
 
 
   public Unary(Reg ans, Op op, IrValue src) {
-    this.ans = ans;
-    this.op = op;
-    this.src = src;
-  }
-  
-  public Unary(BasicBlock blk, Reg ans, Op op, IrValue src) {
-    this.blk = blk;
     this.ans = ans;
     this.op = op;
     this.src = src;

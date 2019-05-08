@@ -18,13 +18,6 @@ public class Branch extends Quad {
     this.ifTrue = ifTrue;
     this.ifFalse = ifFalse;
   }
-	
-	public Branch(BasicBlock blk, IrValue cond, BasicBlock ifTrue, BasicBlock ifFalse) {
-  	this.blk = blk;
-		this.cond = cond;
-		this.ifTrue = ifTrue;
-		this.ifFalse = ifFalse;
-	}
   
   @Override
   public void GetUseRegs(List<Reg> list_) {

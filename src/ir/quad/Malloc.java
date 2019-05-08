@@ -1,7 +1,6 @@
 package ir.quad;
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -19,12 +18,6 @@ public class Malloc extends Quad {
     this.memAddr = memAddr;
     this.size_ = size_;
   }
-	
-	public Malloc(BasicBlock blk, Reg memAddr, IrValue size_) {
-  	this.blk = blk;
-		this.memAddr = memAddr;
-		this.size_ = size_;
-	}
   
   @Override
   public Reg GetDefReg() {

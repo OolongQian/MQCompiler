@@ -1,7 +1,6 @@
 package ir.quad;
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -30,14 +29,6 @@ public class Binary extends Quad {
     this.src1 = src1;
     this.src2 = src2;
   }
-	
-	public Binary(BasicBlock blk, Reg ans, Op op, IrValue src1, IrValue src2) {
-  	this.blk = blk;
-		this.ans = ans;
-		this.op = op;
-		this.src1 = src1;
-		this.src2 = src2;
-	}
   
   @Override
   public Reg GetDefReg() {

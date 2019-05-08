@@ -2,7 +2,6 @@ package ir.quad;
 
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -17,12 +16,6 @@ public class Load extends Quad {
     this.val = val;
     this.addr = addr;
   }
-	
-	public Load(BasicBlock blk, Reg val, Reg addr) {
-  	this.blk = blk;
-		this.val = val;
-		this.addr = addr;
-	}
 	
   // define, although no use.
 	@Override

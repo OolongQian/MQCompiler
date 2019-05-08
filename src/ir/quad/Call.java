@@ -1,7 +1,6 @@
 package ir.quad;
 
 import ir.Printer;
-import ir.structure.BasicBlock;
 import ir.structure.IrValue;
 import ir.structure.Reg;
 import nasm.AsmTranslateVisitor;
@@ -14,13 +13,6 @@ public class Call extends Quad {
   public List<IrValue> args;
 	
 	public Call(String funcName, Reg ret, List<IrValue> args) {
-		this.funcName = funcName;
-		this.ret = ret;
-		this.args = args;
-	}
-	
-	public Call(BasicBlock blk, String funcName, Reg ret, List<IrValue> args) {
-		this.blk = blk;
 		this.funcName = funcName;
 		this.ret = ret;
 		this.args = args;
