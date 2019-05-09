@@ -16,10 +16,15 @@ import java.util.*;
 
 import static config.Config.CALLEESAVE;
 import static config.Config.CALLERSAVE;
-import static ir.quad.Binary.Op.DIV;
+import static ir.quad.Binary.Op.*;
 import static ir.quad.Binary.Op.SHL;
 import static nasm.Utils.*;
 import static nasm.inst.Oprt.Op.*;
+import static nasm.inst.Oprt.Op.ADD;
+import static nasm.inst.Oprt.Op.AND;
+import static nasm.inst.Oprt.Op.OR;
+import static nasm.inst.Oprt.Op.SUB;
+import static nasm.inst.Oprt.Op.XOR;
 import static nasm.reg.PhysicalReg.PhyRegType.*;
 
 /**
@@ -57,7 +62,65 @@ public class AsmTranslateVisitor {
 	/** need flexibility to get next quad or skip one quad. */
 	public void TranslateQuadList (List<Quad> quads) {
 //		allocated.clear();
-		quads.forEach(x -> x.AcceptTranslator(this));
+		for (int i = 0; i < quads.size(); i++) {
+			// if this is a compare and branch instruction, need to handle it separately,
+			// i.e. don't calculate the comparison value and then compare to 0, and then jump,
+			// but to compare and jump instantly.
+			if (i + 1 < quads.size() && quads.get(i + 1) instanceof Branch) {
+				if (SelectJump(quads, i)) {
+					// selectJump has processed current binary and the next branch.
+					++i;
+					continue;
+				}
+			}
+			// otherwise, directly translate biary.
+			quads.get(i).AcceptTranslator(this);
+		}
+	}
+	
+	private boolean SelectJump(List<Quad> quads, int i) {
+		// curq is binary, and nextq is branch.
+		if (!(quads.get(i) instanceof Binary))
+			return false;
+		
+		Binary curq = (Binary) quads.get(i);
+		Branch nextq = (Branch) quads.get(i + 1);
+		if (nextq.cond == curq.ans) {
+			Jmp.JmpOption jop = null;
+			switch (curq.op) {
+				case GT:
+					jop = Jmp.JmpOption.JLE;
+					break;
+				case GE:
+					jop = Jmp.JmpOption.JL;
+					break;
+				case LT:
+					jop = Jmp.JmpOption.JGE;
+					break;
+				case LE:
+					jop = Jmp.JmpOption.JG;
+					break;
+				case EQ:
+					jop = Jmp.JmpOption.JNE;
+					break;
+				case NE:
+					jop = Jmp.JmpOption.JE;
+					break;
+				case LAND:
+					jop = Jmp.JmpOption.JZ;
+					break;
+				case LOR:
+					jop = Jmp.JmpOption.JZ;
+					break;
+				default:
+					return false;
+			}
+			TransCmpJmp(curq);
+			cur.insts.add(new Jmp(cur, jop, BasicBlockRenamer(nextq.ifFalse)));
+			cur.insts.add(new Jmp(cur, Jmp.JmpOption.JMP, BasicBlockRenamer(nextq.ifTrue)));
+			return true;
+		}
+		return false;
 	}
 	
 	/******************* concrete visit actions ***********************/
@@ -158,6 +221,21 @@ public class AsmTranslateVisitor {
 		cur.insts.add(cmp);
 		// move compared flag reg to ans. Maybe coalesce.
 		cur.insts.add (new Mov (GetAsmReg(quad.ans), cmp.flagReg, cur));
+	}
+	
+	private void TransCmpJmp(Binary quad) {
+		// FIXME : cmp inst is strange, promote them into registers consistently.
+		AsmReg src1 = GetAsmReg(quad.src1);
+		if (!(src1 instanceof Reg)) {
+			Reg tmp1 = GetTmpReg();
+			cur.insts.add(new Mov (tmp1, src1, cur));
+			src1 = tmp1;
+		}
+		AsmReg src2 = GetAsmReg(quad.src2);
+		// NOTE : src2 can be immediate.
+		// FIXME : set cmp.flagReg rax temporarily.
+		Cmp cmp = new Cmp(src1, src2, cur);
+		cur.insts.add(cmp);
 	}
 	
 	public void visit (Unary quad) {
@@ -298,10 +376,10 @@ public class AsmTranslateVisitor {
 						// align stack frame by adding offset divisible by 16.
 						assert curf.stackLocalOffset % 16 == 0;
 						if (curf.stackLocalOffset != 0)
-							bb.insts.add(i++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), bb, Oprt.Op.ADD));
+							bb.insts.add(i++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), bb, ADD));
 					} else {
 						// to print nasm before register allocation.
-						bb.insts.add(i++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), bb, Oprt.Op.ADD));
+						bb.insts.add(i++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), bb, ADD));
 					}
 					
 					// assign rsp's value back to rbp.
@@ -590,11 +668,11 @@ public class AsmTranslateVisitor {
 			// after register allocation, and backfill rewriting, rspOffset shouldn't be null
 			curf.stackLocalOffset = (curf.stackLocalOffset + 15) / 16 * 16;
 			if (curf.stackLocalOffset != 0)
-				head.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), head, Oprt.Op.SUB));
+				head.insts.add(cnt++, new Oprt(GetPReg(rsp), new Imm(curf.stackLocalOffset), head, SUB));
 		}
 		else {
 			// to print nasm before register allocation.
-			head.insts.add(cnt++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), head, Oprt.Op.SUB));
+			head.insts.add(cnt++, new Oprt(GetPReg(rsp), GetPReg("not allocated rsp offset", dummy), head, SUB));
 		}
 		
 		if (CALLEESAVE) {

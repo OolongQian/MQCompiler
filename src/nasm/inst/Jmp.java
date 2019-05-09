@@ -8,7 +8,7 @@ public class Jmp extends Inst {
 	public enum JmpOption {
 		JMP, // unconditional.
 		JG, // jump if greater than.
-		JE, JL, JZ, JNE, JGE, JLE,
+		JE, JL, JZ, JNE, JGE, JLE, JNZ
 	}
 
 	public JmpOption jpOp;

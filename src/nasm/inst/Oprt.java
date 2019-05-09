@@ -11,8 +11,8 @@ public class Oprt extends Inst {
 		IMUL, IDIV,
 		AND, OR, XOR,
 		SHL, SAR,
-		
-		NEG, BIT_NOT
+		NEG, BIT_NOT,
+		INC
 	}
 	public Op op;
 	public Boolean isDiv = null;
@@ -24,7 +24,7 @@ public class Oprt extends Inst {
 	
 	public Oprt(AsmReg dst, AsmBB blk, Op op) {
 		super(dst, null, blk);
-		assert op == Op.NEG || op == Op.BIT_NOT;
+		assert op == Op.NEG || op == Op.BIT_NOT || op == Op.INC;
 		this.op = op;
 	}
 	

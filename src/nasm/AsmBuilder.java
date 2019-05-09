@@ -2,6 +2,8 @@ package nasm;
 
 import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 import ir.IrProg;
+import ir.quad.Binary;
+import ir.quad.Quad;
 import ir.structure.BasicBlock;
 import ir.structure.IrFunct;
 import ir.structure.Reg;
@@ -17,6 +19,7 @@ import static config.Config.ALLOCAREGS;
 import static config.Config.COMMENTNASM;
 import static nasm.Utils.*;
 import static nasm.inst.Oprt.Op.ADD;
+import static nasm.inst.Oprt.Op.INC;
 import static nasm.inst.Oprt.Op.SUB;
 import static nasm.reg.PhysicalReg.PhyRegType.rsp;
 
@@ -131,6 +134,7 @@ public class AsmBuilder {
 				}
 			}
 		}
+		IncNotAdd();
 	}
 	
 	private void ReplaceLabel(AsmFunct asmFunct, String oldLabel, String newLabel) {
@@ -144,6 +148,21 @@ public class AsmBuilder {
 			for (Jmp jp : jmps) {
 				if (jp.label.equals(oldLabel))
 					jp.label = newLabel;
+			}
+		}
+	}
+	
+	// use inc instead of add.
+	private void IncNotAdd() {
+		for (AsmFunct asmFunct : asmFuncts.values()) {
+			for (int i = 0; i < asmFunct.bbs.size(); ++i) {
+				AsmBB bb = asmFunct.bbs.get(i);
+				for (int j = 0; j < bb.insts.size(); ++j) {
+					Inst inst = bb.insts.get(j);
+					if (inst instanceof Oprt && ((Oprt) inst).op == ADD && inst.src instanceof Imm && ((Imm) inst.src).imm == 1) {
+						bb.insts.set(j, new Oprt(inst.dst, bb, INC));
+					}
+				}
 			}
 		}
 	}
