@@ -290,5 +290,26 @@ public class Utils {
 		regName = regName.replace("]", "");
 		return regName;
 	}
+	
+	
+	public static Map<String, String> reg64TOreg32 = new HashMap<>();
+	static {
+		reg64TOreg32.put("rax", "eax");
+		reg64TOreg32.put("rbx", "ebx");
+		reg64TOreg32.put("rcx", "ecx");
+		reg64TOreg32.put("rdx", "edx");
+		reg64TOreg32.put("rsi", "esi");
+		reg64TOreg32.put("rdi", "edi");
+		reg64TOreg32.put("rbp", "ebp");
+		reg64TOreg32.put("rsp", "esp");
+		reg64TOreg32.put("r8", "r8d");
+		reg64TOreg32.put("r9", "r9d");
+		reg64TOreg32.put("r10", "r10d");
+		reg64TOreg32.put("r11", "r11d");
+		reg64TOreg32.put("r12", "r12d");
+		reg64TOreg32.put("r13", "r13d");
+		reg64TOreg32.put("r14", "r14d");
+		reg64TOreg32.put("r15", "r15d");
+	}
 }
 

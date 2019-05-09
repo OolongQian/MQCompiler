@@ -15,6 +15,7 @@ import static config.Config.DEBUGPRINT_VREG;
 import static ir.Utility.unescape;
 import static nasm.Utils.FunctRenamer;
 import static nasm.Utils.StringLiteralRenamer;
+import static nasm.Utils.reg64TOreg32;
 
 public class AsmPrinter {
 
@@ -122,8 +123,17 @@ public class AsmPrinter {
 		}
 	}
 	
+	
+	
 	public void Print (Oprt asm) {
 		if (DEBUGPRINT_VREG) {
+			if (asm.op == Oprt.Op.IDIV) {
+				assert asm.dst == null && asm.src != null;
+				assert reg64TOreg32.containsKey(asm.src.GetText());
+				System.err.println(asm.src.GetText());
+				PrintLine(asm.op.name(), reg64TOreg32.get(asm.src.GetText()), ";", asm.src.GetVreg());
+				return;
+			}
 			if (asm.dst == null)
 				PrintLine(asm.op.name(), asm.src.GetText(), ";", asm.src.GetVreg());
 			else if (asm.src == null)
@@ -131,6 +141,13 @@ public class AsmPrinter {
 			else
 				PrintLine(asm.op.name(), asm.dst.GetText(), asm.src.GetText(), ";", asm.dst.GetVreg(), asm.src.GetVreg());
 			return ;
+		}
+		if (asm.op == Oprt.Op.IDIV) {
+			assert asm.dst == null && asm.src != null;
+			assert reg64TOreg32.containsKey(asm.src.GetText());
+			System.err.println(asm.src.GetText());
+			PrintLine(asm.op.name(), reg64TOreg32.get(asm.src.GetText()));
+			return;
 		}
 		if (asm.dst == null)
 			PrintLine(asm.op.name(), asm.src.GetText());
@@ -228,13 +245,7 @@ public class AsmPrinter {
 		StringBuilder line = new StringBuilder(String.format("\t\t%-8s", inst));
 		boolean comment = false;
 		for (int i = 0; i < args.length; ++i) {
-			try {
-				if (args[i].equals(";")) comment = true;
-				
-			}
-			catch (NullPointerException e) {
-				int a=  1;
-			}
+			if (args[i].equals(";")) comment = true;
 			if (i != 0) {
 				if (!comment)
 					line.append(", ");
