@@ -871,19 +871,28 @@ public class Builder extends AstBaseVisitor<Void> {
 	public Void visit(ForStm node) {
 		assert ctx.cFun.curBB.loopLevel != null;
 //		BasicBlock preheader = ctx.NewBBAfter(ctx.cFun.curBB, "pre_forCond", ctx.cFun.curBB.loopLevel);
-//		BasicBlock check = ctx.NewBBAfter(preheader, "forCond", ctx.cFun.curBB.loopLevel);
-		BasicBlock check = ctx.NewBBAfter(ctx.cFun.curBB, "forCond", ctx.cFun.curBB.loopLevel);
+//		BasicBlock check = ctx.NewBBAfter(preheader, "forCond", ctx.cFun.curBB.loopLevel)
+		BasicBlock update = ctx.NewBBAfter(ctx.cFun.curBB, "forUpdate", ctx.cFun.curBB.loopLevel);
+		BasicBlock check = ctx.NewBBAfter(update, "forCond", ctx.cFun.curBB.loopLevel);
 		BasicBlock step = ctx.NewBBAfter(check, "forStep", ctx.cFun.curBB.loopLevel + 1);
 		BasicBlock after = ctx.NewBBAfter(step, "forAfter", ctx.cFun.curBB.loopLevel);
-		ctx.RecordLoop(check, after);
-
-//		ctx.SetCurBB(preheader);
+		// continue to update basic block.
+		ctx.RecordLoop(update, after);
+	
+		// first jump to check.
 		// forInit is executed before loop BB
 		if (node.initIsDec) {
 			if (node.initDec != null) node.initDec.Accept(this);
 		} else {
 			if (node.initExps != null) node.initExps.forEach(x -> x.Accept(this));
 		}
+		ctx.EmplaceInst(new Jump(check));
+
+		// later, first come to update, then to check.
+		ctx.SetCurBB(update);
+		node.updateExps.forEach(x -> x.Accept(this));
+		
+//		ctx.SetCurBB(preheader);
 
 		ctx.SetCurBB(check);
 		if (node.check != null) {
@@ -902,8 +911,7 @@ public class Builder extends AstBaseVisitor<Void> {
 		
 		ctx.SetCurBB(step);
 		node.body.Accept(this);
-		node.updateExps.forEach(x -> x.Accept(this));
-		ctx.EmplaceInst(new Jump(check));
+		ctx.EmplaceInst(new Jump(update));
 		// ctx.CompleteCurBB();
 		
 		ctx.ExitLoop();

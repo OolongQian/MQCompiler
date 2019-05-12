@@ -166,7 +166,7 @@ public class Main {
 				System.err.println("continue to codegen");
 				
 				ForIfMover forIfMover = new ForIfMover();
-//				forIfMover.MoveForIf(prog);
+				forIfMover.MoveForIf(prog);
 				
 				BuilderContext irCtx = new BuilderContext(checker.functTable);
 				ir.Builder irBuilder = new ir.Builder(irCtx);
@@ -174,7 +174,7 @@ public class Main {
 				IrProg irProg = irCtx.ir;
 				
 				FunctInliner inliner = new FunctInliner();
-//				inliner.FunctInline(irProg);
+				inliner.FunctInline(irProg);
 				
 				CFGCleaner cleaner = new CFGCleaner();
 				cleaner.CFGclean(irProg, true);

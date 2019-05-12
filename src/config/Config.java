@@ -25,5 +25,5 @@ public class Config {
 	
 	public static final int INLINE_LEVEL = 4;
 
-	public static final boolean INTERP_LOG = true;
+	public static final boolean INTERP_LOG = false;
 }
