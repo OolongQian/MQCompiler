@@ -224,7 +224,7 @@ public class Main {
 //				Printer irPrinter = new Printer("Mx_ir.txt");
 //			Printer irPrinter = new Printer(null);
 //				irProg.Print(irPrinter);
-				
+
 //			 asm builder uses cfg info.
 				AsmBuilder asmer = new AsmBuilder();
 				irProg.BuildCFG();

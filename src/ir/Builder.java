@@ -97,7 +97,7 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.AddGlobalVar(node, var);
 			
 			if (node.inital != null) {
-				shortEval = false;
+				shortEval = true;
 				node.inital.Accept(this);
 				shortEval = true;
 				IrValue initVal = GetArithResult(node.inital);
@@ -111,7 +111,7 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Alloca(var));
 //			ctx.cFun.AddLocalVar(var);
 			if (node.inital != null && !node.inital.type.isNull()) {
-				shortEval = false;
+				shortEval = true;
 				node.inital.Accept(this);
 				shortEval = true;
 				IrValue initVal = GetArithResult(node.inital);
@@ -533,7 +533,7 @@ public class Builder extends AstBaseVisitor<Void> {
 	@Override
 	public Void visit(AssignExp node) {
 		node.dst.Accept(this);
-		shortEval = false;
+		shortEval = true;
 		node.src.Accept(this);
 		shortEval = true;
 		
@@ -657,11 +657,11 @@ public class Builder extends AstBaseVisitor<Void> {
 		if (!shortEval) {
 			node.lhs.Accept(this);
 			node.rhs.Accept(this);
-			
+
 			Reg ans = ctx.cFun.GetTmpReg();
 			IrValue lVal = GetArithResult(node.lhs);
 			IrValue rVal = GetArithResult(node.rhs);
-			
+
 			Binary.Op op = node.op.equals("||") ? OR : AND;
 			ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
 			node.setIrValue(ans);
