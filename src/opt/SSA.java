@@ -33,7 +33,7 @@ public class SSA {
 	public void OptimSSA(IrProg ir) {
 		CopyPropagator copier = new CopyPropagator();
 		copier.PropagateCopy(ir);
-		
+
 		GlobalValueNumbering GVN = new GlobalValueNumbering();
 		GVN.LocalValueNumbering(ir);
 

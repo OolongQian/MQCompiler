@@ -97,7 +97,9 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.AddGlobalVar(node, var);
 			
 			if (node.inital != null) {
+				shortEval = false;
 				node.inital.Accept(this);
+				shortEval = true;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -109,7 +111,9 @@ public class Builder extends AstBaseVisitor<Void> {
 			ctx.EmplaceInst(new Alloca(var));
 //			ctx.cFun.AddLocalVar(var);
 			if (node.inital != null && !node.inital.type.isNull()) {
+				shortEval = false;
 				node.inital.Accept(this);
+				shortEval = true;
 				IrValue initVal = GetArithResult(node.inital);
 				ctx.EmplaceInst(new Store(var, initVal));
 			}
@@ -524,10 +528,14 @@ public class Builder extends AstBaseVisitor<Void> {
 		return null;
 	}
 	
+	
+	private boolean shortEval = true;
 	@Override
 	public Void visit(AssignExp node) {
 		node.dst.Accept(this);
+		shortEval = false;
 		node.src.Accept(this);
+		shortEval = true;
 		
 		Reg dstPtr = node.dst.getIrAddr();
 		IrValue srcVal = GetArithResult(node.src);
@@ -645,6 +653,20 @@ public class Builder extends AstBaseVisitor<Void> {
 		assert (node.ifTrue == null) == (node.ifFalse == null);
 		
 		boolean startLogic = node.ifFalse == null;
+		
+		if (!shortEval) {
+			node.lhs.Accept(this);
+			node.rhs.Accept(this);
+			
+			Reg ans = ctx.cFun.GetTmpReg();
+			IrValue lVal = GetArithResult(node.lhs);
+			IrValue rVal = GetArithResult(node.rhs);
+			
+			Binary.Op op = node.op.equals("||") ? OR : AND;
+			ctx.EmplaceInst(new Binary(ans, op, lVal, rVal));
+			node.setIrValue(ans);
+			return null;
+		}
 		
 		if (startLogic) {
 			// create logicVar to place logic result.

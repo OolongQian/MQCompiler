@@ -62,7 +62,7 @@ public class GlobalVariablePromotion {
 			Set<Reg> validDirectRegSet = new HashSet<>();
 			for (Reg reg : directRegMap.get(funct.name)) {
 				assert directRegNo.containsKey(reg);
-				if (directRegNo.get(reg) < 30) {
+				if (directRegNo.get(reg) < 1000) {
 					validDirectRegSet.add(reg);
 				}
 			}

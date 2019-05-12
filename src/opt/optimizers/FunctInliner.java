@@ -23,7 +23,8 @@ public class FunctInliner {
 		RecordFunctOriginCopy(ir);
 		ScanOriginFunctInfo ();
 		
-		for (inlineNo = 0; inlineNo < INLINE_LEVEL; ++inlineNo) {
+		inlineNo = 0;
+		for (int j = 0; j < INLINE_LEVEL; ++j) {
 			inlineCall.clear();
 			// scan ir to find possible inline position.
 			ScanInlineCall(ir);
@@ -329,6 +330,6 @@ class InlineInfo {
 	Integer callNo = 0;
 	
 	boolean HeuristicInline () {
-		return instNo < 30 && callNo <= 2;
+		return instNo < 100 && callNo <= 3;
 	}
 }
