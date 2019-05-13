@@ -1,6 +1,5 @@
 package nasm;
 
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 import ir.IrProg;
 import ir.quad.Binary;
 import ir.quad.Quad;
